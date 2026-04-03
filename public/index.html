@@ -926,6 +926,39 @@ nav .avatar-sub{font-size:9px;color:#666}
 /* Results */
 .rift-results-card{padding:28px;border-radius:16px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.06);text-align:center}
 .rift-stat-box{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CUSTOM GAME MODES — Admin Panel Styles
+   ═══════════════════════════════════════════════════════════════════════ */
+.mode-admin-wrap{position:relative;z-index:10;max-width:700px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:20px}
+.admin-form{background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.2);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.admin-field{display:flex;flex-direction:column;gap:8px}
+.admin-label{font-family:Orbitron,monospace;font-size:0.65rem;font-weight:600;color:#ccd6f6;text-transform:uppercase;letter-spacing:0.1em}
+.admin-input,.admin-textarea,.admin-select{background:rgba(255,255,255,0.05);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:10px 12px;color:#e0e0e0;font-family:Inter,sans-serif;font-size:0.65rem;transition:all 0.2s}
+.admin-input:focus,.admin-textarea:focus,.admin-select:focus{outline:none;border-color:rgba(0,229,255,0.6);background:rgba(0,229,255,0.05);box-shadow:0 0 12px rgba(0,229,255,0.15)}
+.admin-textarea{resize:vertical;min-height:80px}
+.admin-field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.admin-img-upload{border:2px dashed rgba(0,229,255,0.3);border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:rgba(0,229,255,0.03);transition:all 0.2s;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.admin-img-upload:hover{border-color:rgba(0,229,255,0.6);background:rgba(0,229,255,0.08)}
+.admin-img-upload-label{font-size:0.7rem;color:#999}
+.admin-img-preview{max-width:100%;max-height:120px;border-radius:6px;margin-top:8px}
+.admin-mode-list{border-top:1px solid rgba(0,229,255,0.1);padding-top:16px;display:flex;flex-direction:column;gap:12px}
+.admin-mode-item{background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.15);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.admin-mode-item-info{flex:1}
+.admin-mode-item-name{font-family:Orbitron,monospace;font-size:0.65rem;font-weight:600;color:#00e5ff}
+.admin-mode-item-cat{font-size:0.55rem;color:#999;margin-top:4px}
+.admin-mode-delete-btn{background:rgba(255,23,68,0.2);border:1px solid rgba(255,23,68,0.4);color:#ff1744;padding:6px 12px;border-radius:4px;font-size:0.55rem;cursor:pointer;transition:all 0.2s}
+.admin-mode-delete-btn:hover{background:rgba(255,23,68,0.4);border-color:#ff1744}
+.admin-actions{display:flex;gap:12px;justify-content:flex-end}
+.admin-back-btn{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:10px 20px;border-radius:6px;font-size:0.65rem;cursor:pointer;transition:all 0.2s;font-family:Orbitron,monospace}
+.admin-back-btn:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3)}
+.admin-submit-btn{background:linear-gradient(135deg,rgba(0,229,255,0.3),rgba(0,229,255,0.1));border:1px solid rgba(0,229,255,0.4);color:#00e5ff;padding:10px 24px;border-radius:6px;font-size:0.65rem;cursor:pointer;transition:all 0.2s;font-family:Orbitron,monospace;font-weight:600}
+.admin-submit-btn:hover{background:linear-gradient(135deg,rgba(0,229,255,0.5),rgba(0,229,255,0.2));border-color:rgba(0,229,255,0.7);box-shadow:0 0 12px rgba(0,229,255,0.2)}
+.admin-add-btn{position:fixed;bottom:28px;right:28px;z-index:15;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#00e5ff,#00bcd4);border:none;color:#0a0e17;font-size:1.4rem;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 20px rgba(0,229,255,0.3);display:flex;align-items:center;justify-content:center}
+.admin-add-btn:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(0,229,255,0.5)}
+.live-play-empty{text-align:center;padding:40px 20px;color:#999}
+.live-play-empty-icon{font-size:3rem;margin-bottom:16px}
+.live-play-empty-text{font-size:0.7rem;color:#666;margin-top:12px}
 </style>
 </head>
 <body>
@@ -962,85 +995,80 @@ function getRankInfo(ap) {
 // In production, both apps will read from the same Supabase backend.
 // Battle Arena extends each user with arena-specific stats & badge counts.
 // ═══════════════════════════════════════════════════════════════════════════
-const XCOIN_ROSTER = [
-  {
-    id: "admin-0", name: "PrototypeFLX", brandName: "PrototypeFLX",
-    role: "admin", avatar: "PF", cohort: "N/A", pathway: "Host",
-    email: "host@prototypeflx.com", pin: "0000", claimed: true, isHost: false,
-    digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10,
-  },
-  {
-    id: "admin-1", name: "Mr. Johnson", brandName: "TheTomorrowTeacher",
-    role: "admin", avatar: "MJ", cohort: "N/A", pathway: "Host",
-    email: "ennisjohnsonjr@thetomorrowteacher.org", pin: "1111", claimed: true, isHost: false,
-    digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10,
-  },
-  {
-    id: "player-1", name: "Alex Rivera", brandName: "PixelProphet",
-    role: "player", avatar: "AR", cohort: "Cohort 2", pathway: "Digital Design",
-    email: "alex.rivera@school.edu", pin: "3847", claimed: true, isHost: false,
-    digitalBadges: 28, xcoin: 1850, totalXcoin: 8500, level: 9, rank: 3,
-  },
-  {
-    id: "player-2", name: "Jordan Lee", brandName: "MotionMaster",
-    role: "player", avatar: "JL", cohort: "Cohort 3", pathway: "Content Creator",
-    email: "jordan.lee@school.edu", pin: "5291", claimed: false, isHost: false,
-    digitalBadges: 42, xcoin: 2900, totalXcoin: 12500, level: 13, rank: 4,
-  },
-  {
-    id: "player-3", name: "Sam Chen", brandName: "CodeCrafter",
-    role: "player", avatar: "SC", cohort: "Cohort 2", pathway: "Web Dev",
-    email: "sam.chen@school.edu", pin: "7063", claimed: false, isHost: false,
-    digitalBadges: 15, xcoin: 450, totalXcoin: 2100, level: 4, rank: 2,
-  },
+// ── X-Coin Roster: Fetched dynamically from X-Coin app seed data ──
+let XCOIN_ROSTER = [];
+let PLAYERS = [];
+const XCOIN_SEED_URL = 'https://pflx-xcoin-app.vercel.app/seed-data.json';
+
+// Fallback roster in case fetch fails
+const FALLBACK_ROSTER = [
+  { id: "admin-0", name: "PrototypeFLX", brandName: "PrototypeFLX", role: "admin", avatar: "PF", cohort: "N/A", pathway: "Host", email: "host@prototypeflx.com", pin: "0000", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
+  { id: "admin-1", name: "Mr. Johnson", brandName: "TheTomorrowTeacher", role: "admin", avatar: "MJ", cohort: "N/A", pathway: "Host", email: "ennisjohnsonjr@thetomorrowteacher.org", pin: "1111", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
 ];
 
 function isHostUser(u) { return u.role === "admin" || u.isHost === true; }
 
-// Merge any stored profile images from X-Coin app (shared localStorage)
-(function applyStoredImages() {
+function buildPlayers(roster) {
+  XCOIN_ROSTER = roster;
+  // Merge any stored profile images from X-Coin app (shared localStorage)
   try {
     const raw = localStorage.getItem('pflx_player_images');
-    if (!raw) return;
-    const imageMap = JSON.parse(raw);
-    XCOIN_ROSTER.forEach(u => { if (imageMap[u.id]) u.image = imageMap[u.id]; });
+    if (raw) {
+      const imageMap = JSON.parse(raw);
+      XCOIN_ROSTER.forEach(u => { if (imageMap[u.id]) u.image = imageMap[u.id]; });
+    }
   } catch (e) { /* ignore */ }
-})();
+
+  const defaultStats = { battles:0,wins:0,losses:0,draws:0,streak:0,bestStreak:0,wagered:0,won:0,lost:0,ap:0 };
+  PLAYERS = XCOIN_ROSTER.map(u => {
+    const initials = u.avatar || u.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
+    const img = u.image || null;
+    return {
+      id: u.id, name: u.name, brand: u.brandName || u.name,
+      role: u.role || "player",
+      avatar: img ? `<img src="${img}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : initials,
+      avatarText: initials,
+      badges: u.digitalBadges || 0, xc: u.xcoin || 0, totalXc: u.totalXcoin || 0,
+      level: u.level || 1, rank: u.rank || 1,
+      cohort: u.cohort || "N/A", pathway: u.pathway || "Unknown",
+      email: u.email || "", pin: u.pin || "0000",
+      claimed: u.claimed || false, isHost: u.isHost || false,
+      image: img,
+      bc: u.badgeCounts || { sig:0, exe:0, pre:0, pri:0 },
+      stats: defaultStats,
+    };
+  });
+}
+
+// Fetch roster from X-Coin app
+async function loadRoster() {
+  try {
+    const res = await fetch(XCOIN_SEED_URL);
+    if (!res.ok) throw new Error('Fetch failed');
+    const data = await res.json();
+    if (data.users && data.users.length > 0) {
+      buildPlayers(data.users);
+      console.log(`✅ Loaded ${data.users.length} players from X-Coin`);
+    } else {
+      throw new Error('No users in response');
+    }
+  } catch (e) {
+    console.warn('⚠️ Could not fetch X-Coin roster, using fallback:', e.message);
+    buildPlayers(FALLBACK_ROSTER);
+  }
+  render();
+}
+
+// Initialize with fallback immediately, then fetch live data
+buildPlayers(FALLBACK_ROSTER);
+loadRoster();
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BATTLE ARENA PLAYER RECORDS — built from the X-Coin roster
-// Adds arena-specific stats so the roster stays in sync with X-Coin.
+// Players are built dynamically via buildPlayers() above.
 // ═══════════════════════════════════════════════════════════════════════════
-const ARENA_STATS_DEFAULTS = {
-  "admin-0": { battles:0,wins:0,losses:0,draws:0,streak:0,bestStreak:0,wagered:0,won:0,lost:0,ap:0 },
-  "admin-1": { battles:0,wins:0,losses:0,draws:0,streak:0,bestStreak:0,wagered:0,won:0,lost:0,ap:0 },
-  "player-1": { battles:28,wins:18,losses:8,draws:2,streak:4,bestStreak:7,wagered:14000,won:9200,lost:4800,ap:2100 },
-  "player-2": { battles:45,wins:32,losses:10,draws:3,streak:8,bestStreak:12,wagered:22500,won:18400,lost:4100,ap:3800 },
-  "player-3": { battles:15,wins:9,losses:5,draws:1,streak:2,bestStreak:5,wagered:7500,won:4800,lost:2700,ap:980 },
-};
 
-const PLAYERS = XCOIN_ROSTER.map(u => ({
-  id: u.id,
-  name: u.name,
-  brand: u.brandName || u.name,
-  avatar: u.image ? `<img src="${u.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : u.avatar,
-  avatarText: u.avatar,       // fallback initials
-  badges: u.digitalBadges,
-  xc: u.xcoin,
-  totalXc: u.totalXcoin,
-  level: u.level,
-  rank: u.rank,
-  cohort: u.cohort,
-  pathway: u.pathway,
-  email: u.email,
-  role: u.role,
-  isHost: u.isHost,
-  pin: u.pin,
-  claimed: u.claimed,
-  image: u.image || null,
-  bc: { sig:0, exe:0, pre:0, pri:0 }, // badge categories (placeholder until synced)
-  stats: ARENA_STATS_DEFAULTS[u.id] || { battles:0,wins:0,losses:0,draws:0,streak:0,bestStreak:0,wagered:0,won:0,lost:0,ap:0 },
-}));
+// Legacy static PLAYERS mapping removed — now built dynamically by buildPlayers()
 
 // ── Top-level game categories ──
 const CATEGORIES = [
@@ -1053,6 +1081,31 @@ const MODES = [
   { id:"cipher", name:"Cipher", desc:"Trust No One — Escape Before Time Runs Out. Social deduction meets knowledge battles in this multiplayer escape room.", icon:"", min:4, max:16, team:true, mins:15, bgImage:"Cipher.png" },
   { id:"rift", name:"RIFT", desc:"Breach the Rift — Team-based MOBA arena. Pick your Pathway class, clear PvE waves, then clash PvP.", icon:"", min:3, max:6, team:true, mins:10, bgImage:"Rift.png" },
 ];
+
+// ── Custom Game Modes (user-created via Admin Panel) ──
+let CUSTOM_MODES = [];
+function loadCustomModes() {
+  try { CUSTOM_MODES = JSON.parse(localStorage.getItem('pflx_custom_modes') || '[]'); } catch(e) { CUSTOM_MODES = []; }
+}
+function saveCustomModes() {
+  localStorage.setItem('pflx_custom_modes', JSON.stringify(CUSTOM_MODES));
+}
+function addCustomMode(mode) {
+  mode.id = 'custom_' + Date.now();
+  mode.custom = true;
+  CUSTOM_MODES.push(mode);
+  saveCustomModes();
+}
+function deleteCustomMode(id) {
+  CUSTOM_MODES = CUSTOM_MODES.filter(m => m.id !== id);
+  saveCustomModes();
+}
+function getAllModes(category) {
+  const builtIn = category === 'side_quests' ? MODES : [];
+  const custom = CUSTOM_MODES.filter(m => m.category === category);
+  return [...builtIn, ...custom];
+}
+loadCustomModes();
 
 // ── Cipher Configuration (Admin Host settings) ──
 const CIPHER_CONFIG = {
@@ -1667,6 +1720,9 @@ let state = {
   pinVisible: false,
   pinError: "",
   panelOpen: false,
+  // ── Admin panel state ──
+  adminImagePreview: null,
+  adminPreCategory: null,
   // ── Cipher state ──
   cipher: {
     phase: null, // "lobby" | "role" | "hunt" | "sabotage" | "vote" | "endgame"
@@ -1751,6 +1807,8 @@ function render() {
   if (state.screen === "login") { app.innerHTML = bg + renderLogin(); }
   else if (state.screen === "home") { app.innerHTML = bg + panel + renderNav() + renderHome(); }
   else if (state.screen === "side_quests") { app.innerHTML = bg + panel + renderNav() + renderSideQuests(); }
+  else if (state.screen === "mode_admin") { app.innerHTML = bg + panel + renderNav() + renderModeAdmin(); }
+  else if (state.screen === "live_play") { app.innerHTML = bg + panel + renderNav() + renderLivePlay(); }
   else if (state.screen === "cipher_select") { app.innerHTML = bg + panel + renderNav() + renderCipherSelect(); }
   else if (state.screen === "rift_select") { app.innerHTML = bg + panel + renderNav() + renderRiftSelect(); }
   else if (state.screen === "rift_class") { app.innerHTML = bg + panel + renderNav() + renderRiftClassSelect(); }
@@ -1793,7 +1851,7 @@ function renderNav() {
         <span class="bar"></span><span class="bar"></span><span class="bar"></span>
       </button>
       <a class="logo" href="#" onclick="goHome()">
-        <div class="logo-icon"><img src="public/Battle%20Arena.png" alt="Battle Arena" /></div>
+        <div class="logo-icon"><img src="Battle%20Arena.png" alt="Battle Arena" /></div>
         <div class="logo-text"><h1 class="text-glow-cyan">PFLX BATTLE ARENA</h1><p>Enter • Fight • Conquer</p></div>
       </a>
     </div>
@@ -1928,7 +1986,7 @@ function renderLogin() {
     ).join("");
 
     return `${hudCorners}<div class="login-wrap"><div class="login-box">
-      <div class="login-logo"><img src="public/Battle%20Arena.png" alt="PFLX Battle Arena" /></div>
+      <div class="login-logo"><img src="Battle%20Arena.png" alt="PFLX Battle Arena" /></div>
 
       <div class="login-form">
         <div class="login-form-label">Select Your Brand</div>
@@ -1955,7 +2013,7 @@ function renderLogin() {
     : `<span style="font-size:14px;font-weight:800;color:#fff;letter-spacing:0.05em">${p.avatarText || p.avatar}</span>`;
 
   return `${hudCorners}<div class="login-wrap"><div class="login-box">
-    <div class="login-logo"><img src="public/Battle%20Arena.png" alt="PFLX Battle Arena" /></div>
+    <div class="login-logo"><img src="Battle%20Arena.png" alt="PFLX Battle Arena" /></div>
 
     <div class="login-form">
       <!-- Selected Player Card -->
@@ -1997,32 +2055,38 @@ function renderLogin() {
 
 function renderHome() {
   const catCards = CATEGORIES.map(c => {
-    const isDisabled = c.tag === 'coming-soon';
-    return `<div class="cat-card ${isDisabled ? 'disabled' : ''}" data-cat="${c.id}">
+    return `<div class="cat-card" data-cat="${c.id}">
       <span class="cat-tag ${c.tag}">${c.tagLabel}</span>
       <div>
         <div class="cat-icon">${c.icon}</div>
         <div class="cat-name">${c.name}</div>
         <div class="cat-desc">${c.desc}</div>
       </div>
-      ${!isDisabled ? `<div class="cat-arrow">Enter →</div>` : ''}
+      <div class="cat-arrow">Enter →</div>
     </div>`;
   }).join("");
 
   return `<div class="home-wrap">
-    <div class="home-hero"><img src="public/Battle%20Arena.png" alt="Battle Arena" style="height:120px;margin:0 auto 16px;display:block;filter:drop-shadow(0 0 15px rgba(0,229,255,0.3))" /><h2 class="text-glow-cyan">Choose Your Battle</h2><p>Select a game mode and enter the arena. Victory rewards XC — defeat costs it.</p></div>
+    <div class="home-hero"><img src="Battle%20Arena.png" alt="Battle Arena" style="height:120px;margin:0 auto 16px;display:block;filter:drop-shadow(0 0 15px rgba(0,229,255,0.3))" /><h2 class="text-glow-cyan">Choose Your Battle</h2><p>Select a game mode and enter the arena. Victory rewards XC — defeat costs it.</p></div>
     <div class="cat-grid">${catCards}</div>
+    ${isHostUser(state.player) ? `<button class="admin-add-btn" onclick="goScreen('mode_admin')" title="Add Game Mode">+</button>` : ''}
   </div>`;
 }
 
 function renderSideQuests() {
-  const modeCards = MODES.map(m => {
+  const allModes = getAllModes('side_quests');
+  const modeCards = allModes.map(m => {
     const isCipher = m.id === 'cipher';
     const isRift = m.id === 'rift';
-    const onclick = isCipher ? "goScreen('cipher_select')" : isRift ? "goScreen('rift_select')" : '';
+    let onclick = '';
+    if (isCipher) { onclick = "goScreen('cipher_select')"; }
+    else if (isRift) { onclick = "goScreen('rift_select')"; }
+    else if (m.linkType === 'external' && m.linkUrl) { onclick = `window.open('${m.linkUrl}','_blank')`; }
+    else if (m.linkType === 'internal' && m.linkUrl) { onclick = `goScreen('${m.linkUrl}')`; }
+
     const displayName = isCipher ? CIPHER_CONFIG.displayName : m.name;
     const desc = isCipher ? CIPHER_CONFIG.description : m.desc;
-    const status = isCipher ? CIPHER_CONFIG.status : 'active';
+    const status = isCipher ? CIPHER_CONFIG.status : m.status || 'active';
     const timer = isCipher ? CIPHER_CONFIG.sessionTimer : m.mins;
 
     return `<div class="mode-card glass-panel glass-panel-hover" style="cursor:pointer" onclick="${onclick}">
@@ -2031,15 +2095,17 @@ function renderSideQuests() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div class="mode-head" style="margin:0">
             ${m.icon ? `<div class="mode-icon">${m.icon}</div>` : ''}
-            <div><div class="mode-name">${displayName}</div><div class="mode-meta">${m.min}-${m.max} players • ~${timer} min</div></div>
+            <div><div class="mode-name">${displayName}</div><div class="mode-meta">${m.min || 2}-${m.max || 8} players • ~${timer || 15} min</div></div>
           </div>
           <span class="cipher-status-badge ${status}" style="font-size:0.5rem">${status}</span>
         </div>
         <div class="mode-desc">${desc}</div>
         <div class="mode-tags" style="margin-top:12px">
-          <span class="mode-tag team">Multiplayer</span>
-          ${isRift ? '<span class="mode-tag ranked">PvE + PvP</span>' : '<span class="mode-tag ranked">Ranked</span>'}
-          <span class="mode-tag beta">Side Quest</span>
+          ${m.tags && m.tags.includes('Multiplayer') ? '<span class="mode-tag team">Multiplayer</span>' : ''}
+          ${m.tags && m.tags.includes('Solo') ? '<span class="mode-tag team">Solo</span>' : ''}
+          ${m.tags && m.tags.includes('PvP') ? '<span class="mode-tag ranked">PvP</span>' : ''}
+          ${m.tags && m.tags.includes('PvE') ? '<span class="mode-tag ranked">PvE</span>' : ''}
+          ${m.custom ? '<span class="mode-tag beta">Custom</span>' : '<span class="mode-tag beta">Side Quest</span>'}
         </div>
       </div>
     </div>`;
@@ -2053,6 +2119,170 @@ function renderSideQuests() {
     <div style="max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
       ${modeCards}
     </div>
+    ${isHostUser(state.player) ? `<button class="admin-add-btn" onclick="state.adminPreCategory='side_quests';goScreen('mode_admin')" title="Add Side Quest">+</button>` : ''}
+  </div>`;
+}
+
+function renderLivePlay() {
+  const customModes = getAllModes('live_play');
+  const modeCards = customModes.map(m => {
+    let onclick = '';
+    if (m.linkType === 'external' && m.linkUrl) { onclick = `window.open('${m.linkUrl}','_blank')`; }
+    else if (m.linkType === 'internal' && m.linkUrl) { onclick = `goScreen('${m.linkUrl}')`; }
+
+    return `<div class="mode-card glass-panel glass-panel-hover" style="cursor:pointer" onclick="${onclick}">
+      ${m.bgImage ? `<div class="mode-bg" style="background-image:url(${m.bgImage})"></div><div class="mode-bg-overlay"></div>` : ''}
+      <div class="mode-content">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="mode-head" style="margin:0">
+            ${m.icon ? `<div class="mode-icon">${m.icon}</div>` : ''}
+            <div><div class="mode-name">${m.name}</div><div class="mode-meta">${m.min || 2}-${m.max || 8} players • ~${m.mins || 15} min</div></div>
+          </div>
+          <span class="cipher-status-badge ${m.status || 'active'}" style="font-size:0.5rem">${m.status || 'active'}</span>
+        </div>
+        <div class="mode-desc">${m.desc}</div>
+        <div class="mode-tags" style="margin-top:12px">
+          ${m.tags && m.tags.includes('Multiplayer') ? '<span class="mode-tag team">Multiplayer</span>' : ''}
+          ${m.tags && m.tags.includes('PvP') ? '<span class="mode-tag ranked">PvP</span>' : ''}
+          ${m.tags && m.tags.includes('Ranked') ? '<span class="mode-tag ranked">Ranked</span>' : ''}
+          <span class="mode-tag beta">Live Play</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="home-wrap">
+    <div class="sq-header">
+      <button class="sq-back" onclick="goHome()">← Back</button>
+      <div class="sq-title">🔴 Live Play <span class="mode-tag beta" style="vertical-align:middle;margin-left:8px">Live</span></div>
+    </div>
+    <div style="max-width:600px;margin:0 auto;">
+      ${customModes.length > 0 ? `<div style="display:flex;flex-direction:column;gap:16px">${modeCards}</div>` : `<div class="live-play-empty"><div class="live-play-empty-icon">🎮</div><div class="live-play-empty-text">No Live Play modes yet. Tap + to add one.</div></div>`}
+    </div>
+    ${isHostUser(state.player) ? `<button class="admin-add-btn" onclick="state.adminPreCategory='live_play';goScreen('mode_admin')" title="Add Live Play Mode">+</button>` : ''}
+  </div>`;
+}
+
+function renderModeAdmin() {
+  const customModesList = CUSTOM_MODES.map((m, i) => `
+    <div class="admin-mode-item">
+      ${m.bgImage ? `<img src="${m.bgImage}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0" />` : `<div style="width:40px;height:40px;border-radius:6px;background:rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0">🎮</div>`}
+      <div class="admin-mode-item-info">
+        <div class="admin-mode-item-name">${m.name}</div>
+        <div class="admin-mode-item-cat">${m.category === 'side_quests' ? '🗡️ Side Quest' : '🔴 Live Play'} ${m.linkType === 'external' ? '• 🔗 External' : m.linkType === 'internal' ? '• 📺 Internal' : ''}</div>
+      </div>
+      <button class="admin-mode-delete-btn" onclick="deleteCustomMode('${m.id}');render()">✕</button>
+    </div>
+  `).join('');
+
+  return `<div class="mode-admin-wrap">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <button class="admin-back-btn" onclick="${state.adminPreCategory ? `goScreen('${state.adminPreCategory}')` : 'goHome()'}">← Back</button>
+      <h2 style="font-family:Orbitron,monospace;color:#00e5ff;font-size:1rem;margin:0">🎮 Game Mode Manager</h2>
+    </div>
+
+    <form class="admin-form" id="adminForm">
+      <div class="admin-field">
+        <label class="admin-label">Mode Name</label>
+        <input type="text" class="admin-input" id="adminModeName" placeholder="e.g., Team Deathmatch" required />
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Description</label>
+        <textarea class="admin-textarea" id="adminModeDesc" placeholder="Describe the game mode..."></textarea>
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Category</label>
+        <select class="admin-select" id="adminModeCategory" required>
+          <option value="">Select category...</option>
+          <option value="side_quests" ${state.adminPreCategory==='side_quests'?'selected':''}>Side Quests</option>
+          <option value="live_play" ${state.adminPreCategory==='live_play'?'selected':''}>Live Play</option>
+        </select>
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Link Type</label>
+        <select class="admin-select" id="adminLinkType">
+          <option value="none">None (No link)</option>
+          <option value="external">External URL</option>
+          <option value="internal">Internal Screen</option>
+        </select>
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Link URL / Screen ID</label>
+        <input type="text" class="admin-input" id="adminLinkUrl" placeholder="https://example.com or screen_id" />
+      </div>
+
+      <div class="admin-field-row">
+        <div class="admin-field">
+          <label class="admin-label">Min Players</label>
+          <input type="number" class="admin-input" id="adminMinPlayers" min="1" value="2" />
+        </div>
+        <div class="admin-field">
+          <label class="admin-label">Max Players</label>
+          <input type="number" class="admin-input" id="adminMaxPlayers" min="1" value="8" />
+        </div>
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Duration (minutes)</label>
+        <input type="number" class="admin-input" id="adminDuration" min="1" value="15" />
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Card Background Image</label>
+        ${state.adminImagePreview ? `
+          <div style="position:relative;display:inline-block;margin-bottom:8px">
+            <img src="${state.adminImagePreview}" class="admin-img-preview" style="display:block;max-width:100%;max-height:140px;border-radius:8px;border:1px solid rgba(0,229,255,0.3)" />
+            <button type="button" class="admin-img-remove-btn" onclick="state.adminImagePreview=null;render()" style="position:absolute;top:4px;right:4px;background:rgba(255,0,0,0.7);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:0.7rem;display:flex;align-items:center;justify-content:center">✕</button>
+          </div>
+        ` : `
+          <div class="admin-img-upload" id="adminImageUpload">
+            <span style="font-size:1.4rem">📸</span>
+            <span class="admin-img-upload-label">Click to upload or drag & drop</span>
+          </div>
+        `}
+        <input type="file" id="adminImageInput" accept="image/*" style="display:none" />
+      </div>
+
+      <div class="admin-field">
+        <label class="admin-label">Tags</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:#aaa;cursor:pointer">
+            <input type="checkbox" id="adminTagMultiplayer" /> Multiplayer
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:#aaa;cursor:pointer">
+            <input type="checkbox" id="adminTagSolo" /> Solo
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:#aaa;cursor:pointer">
+            <input type="checkbox" id="adminTagRanked" /> Ranked
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:#aaa;cursor:pointer">
+            <input type="checkbox" id="adminTagPvP" /> PvP
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:#aaa;cursor:pointer">
+            <input type="checkbox" id="adminTagPvE" /> PvE
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.65rem;color:#aaa;cursor:pointer">
+            <input type="checkbox" id="adminTagBeta" /> Beta
+          </label>
+        </div>
+      </div>
+
+      <div class="admin-actions">
+        <button type="button" class="admin-back-btn" onclick="${state.adminPreCategory ? `goScreen('${state.adminPreCategory}')` : 'goHome()'}">Cancel</button>
+        <button type="submit" class="admin-submit-btn">Add Mode</button>
+      </div>
+    </form>
+
+    ${CUSTOM_MODES.length > 0 ? `
+      <div>
+        <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:#999;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.1em">Custom Modes (${CUSTOM_MODES.length})</div>
+        <div class="admin-mode-list">${customModesList}</div>
+      </div>
+    ` : ''}
   </div>`;
 }
 
@@ -2787,7 +3017,7 @@ function renderResult() {
   const o = state.opponent;
   const won = state.myScore > state.oppScore;
   return `<div class="result-wrap"><div class="result-box glass-panel" style="border-color:${won?'rgba(255,215,64,0.3)':'rgba(255,23,68,0.3)'};${won?'box-shadow:0 0 30px rgba(255,215,64,0.2)':''}">
-    ${won?'<img src="public/Battle%20Arena.png" alt="Victory" style="height:120px;margin-bottom:16px;filter:drop-shadow(0 0 20px rgba(255,215,64,0.5))" />':'<div class="result-emoji">💀</div>'}
+    ${won?'<img src="Battle%20Arena.png" alt="Victory" style="height:120px;margin-bottom:16px;filter:drop-shadow(0 0 20px rgba(255,215,64,0.5))" />':'<div class="result-emoji">💀</div>'}
     <div class="result-title ${won?'text-glow-gold':'text-glow-red'}" style="color:${won?'#ffd740':'#ff1744'}">${won?'Victory!':'Defeat'}</div>
     <div class="result-sub">${won?'You won '+(state.wager*2).toLocaleString()+' XC!':'You lost '+state.wager.toLocaleString()+' XC.'}</div>
     <div class="result-scores">
@@ -2858,7 +3088,7 @@ function renderLeaderboard() {
   }).join("");
 
   return `<div class="lb-wrap">
-    <div class="lb-hero"><img src="public/Battle%20Arena.png" alt="Battle Arena" style="height:100px;margin:0 auto 12px;display:block;filter:drop-shadow(0 0 12px rgba(0,229,255,0.3))" /><h2 class="text-glow-cyan">Arena Leaderboard</h2><p>Top fighters ranked by Arena Points. Synced with <img src="PFLX.png" alt="PFLX" style="height:14px;vertical-align:middle;margin:0 2px;filter:drop-shadow(0 0 4px rgba(0,229,255,0.3))" /> X-Coin.</p></div>
+    <div class="lb-hero"><img src="Battle%20Arena.png" alt="Battle Arena" style="height:100px;margin:0 auto 12px;display:block;filter:drop-shadow(0 0 12px rgba(0,229,255,0.3))" /><h2 class="text-glow-cyan">Arena Leaderboard</h2><p>Top fighters ranked by Arena Points. Synced with <img src="PFLX.png" alt="PFLX" style="height:14px;vertical-align:middle;margin:0 2px;filter:drop-shadow(0 0 4px rgba(0,229,255,0.3))" /> X-Coin.</p></div>
     <div class="podium">${podium}</div>
     <div class="lb-table glass-panel">
       <div class="lb-row header"><div style="text-align:center">#</div><div>Player</div><div style="text-align:center">Rank</div><div style="text-align:center">W</div><div style="text-align:center">L</div><div style="text-align:center">Win%</div><div style="text-align:center">🔥</div><div style="text-align:right">AP</div></div>
@@ -3331,6 +3561,109 @@ function bindEvents() {
         reader.readAsDataURL(file);
       };
     }
+
+  // ── Admin Mode Admin Panel handlers ──
+  const adminImageInput = document.getElementById('adminImageInput');
+  const adminImageUpload = document.getElementById('adminImageUpload');
+  if (adminImageInput && adminImageUpload) {
+    // Click the zone to trigger file picker
+    adminImageUpload.onclick = () => adminImageInput.click();
+    // Drag & drop
+    adminImageUpload.ondragover = (e) => { e.preventDefault(); adminImageUpload.style.borderColor='#00e5ff'; };
+    adminImageUpload.ondragleave = () => { adminImageUpload.style.borderColor=''; };
+    adminImageUpload.ondrop = (e) => {
+      e.preventDefault();
+      adminImageUpload.style.borderColor='';
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (ev) => { state.adminImagePreview = ev.target.result; render(); };
+        reader.readAsDataURL(file);
+      }
+    };
+    // File input change
+    adminImageInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        state.adminImagePreview = ev.target.result;
+        render();
+      };
+      reader.readAsDataURL(file);
+    };
+  }
+
+  const adminForm = document.getElementById('adminForm');
+  if (adminForm) {
+    adminForm.onsubmit = (e) => {
+      e.preventDefault();
+      
+      // Gather form data
+      const name = document.getElementById('adminModeName')?.value || '';
+      const desc = document.getElementById('adminModeDesc')?.value || '';
+      const category = document.getElementById('adminModeCategory')?.value || 'side_quests';
+      const linkType = document.getElementById('adminLinkType')?.value || 'none';
+      const linkUrl = document.getElementById('adminLinkUrl')?.value || '';
+      const min = parseInt(document.getElementById('adminMinPlayers')?.value) || 2;
+      const max = parseInt(document.getElementById('adminMaxPlayers')?.value) || 6;
+      const mins = parseInt(document.getElementById('adminDuration')?.value) || 15;
+
+      // Gather selected tags
+      const tags = [];
+      if (document.getElementById('adminTagMultiplayer')?.checked) tags.push('Multiplayer');
+      if (document.getElementById('adminTagSolo')?.checked) tags.push('Solo');
+      if (document.getElementById('adminTagRanked')?.checked) tags.push('Ranked');
+      if (document.getElementById('adminTagPvP')?.checked) tags.push('PvP');
+      if (document.getElementById('adminTagPvE')?.checked) tags.push('PvE');
+      if (document.getElementById('adminTagBeta')?.checked) tags.push('Beta');
+
+      // Validate
+      if (!name.trim()) {
+        alert('Mode name is required');
+        return;
+      }
+      if (!desc.trim()) {
+        alert('Mode description is required');
+        return;
+      }
+      if (linkType !== 'none' && !linkUrl.trim()) {
+        alert('Link URL is required for this link type');
+        return;
+      }
+
+      // Create custom mode object
+      const customMode = {
+        name: name,
+        desc: desc,
+        category: category,
+        linkType: linkType,
+        linkUrl: linkUrl,
+        min: min,
+        max: max,
+        mins: mins,
+        tags: tags,
+        bgImage: state.adminImagePreview || null,
+        icon: '',
+        status: 'active',
+        createdAt: new Date().toISOString()
+      };
+
+      // Add the mode
+      addCustomMode(customMode);
+
+      // Reset form and preview
+      adminForm.reset();
+      state.adminImagePreview = null;
+
+      // Navigate back to the appropriate screen
+      SFX.modeSelect();
+      const returnTo = customMode.category || state.adminPreCategory || 'home';
+      state.adminPreCategory = null;
+      state.screen = returnTo;
+      render();
+    };
+  }
   });
 }
 
