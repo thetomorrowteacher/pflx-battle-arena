@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useArenaStore } from "../lib/store";
 import { mockArenaPlayers } from "../lib/mock-data";
+import { fetchAllPlayers } from "../lib/xcoin-bridge";
 
 export default function LoginScreen() {
   const { login } = useArenaStore();
@@ -16,15 +17,28 @@ export default function LoginScreen() {
     const params = new URLSearchParams(window.location.search);
     const sso = params.get("sso");
     const brand = params.get("brand");
-    if (sso === "pflx" && brand) {
-      const player = mockArenaPlayers.find(
+    if (sso !== "pflx" || !brand) return;
+
+    // First try mock data (instant)
+    const mockMatch = mockArenaPlayers.find(
+      (p) => p.brandName?.toLowerCase() === brand.toLowerCase()
+    );
+    if (mockMatch) {
+      login(mockMatch);
+      return;
+    }
+
+    // Then fetch from Supabase via X-Coin bridge
+    fetchAllPlayers().then((players) => {
+      const player = players.find(
         (p) => p.brandName?.toLowerCase() === brand.toLowerCase()
       );
       if (player) {
         login(player);
-        return;
       }
-    }
+    }).catch((err) => {
+      console.log('[Battle Arena] SSO bridge fetch failed:', err);
+    });
   }, [login]);
 
   const handleLogin = () => {
