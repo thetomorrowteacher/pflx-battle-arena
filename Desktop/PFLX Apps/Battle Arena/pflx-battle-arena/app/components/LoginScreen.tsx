@@ -12,11 +12,12 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const [showQuickSelect, setShowQuickSelect] = useState(true);
 
-  // PFLX SSO AUTO-LOGIN — bypass login when embedded in PFLX Overlay
+  // PFLX SSO AUTO-LOGIN — bypass login when embedded in PFLX Platform
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sso = params.get("sso");
     const brand = params.get("brand");
+    const ssoPin = params.get("pin");
     if (sso !== "pflx" || !brand) return;
 
     // First try mock data (instant)
@@ -24,8 +25,12 @@ export default function LoginScreen() {
       (p) => p.brandName?.toLowerCase() === brand.toLowerCase()
     );
     if (mockMatch) {
-      login(mockMatch);
-      return;
+      const correctPin = mockMatch.pin || (mockMatch.role === "admin" ? "0000" : "1234");
+      if (!ssoPin || ssoPin === correctPin) {
+        console.log("[Battle Arena] SSO auto-login for:", mockMatch.brandName || mockMatch.name);
+        login(mockMatch);
+        return;
+      }
     }
 
     // Then fetch from Supabase via X-Coin bridge
@@ -34,7 +39,11 @@ export default function LoginScreen() {
         (p) => p.brandName?.toLowerCase() === brand.toLowerCase()
       );
       if (player) {
-        login(player);
+        const correctPin = player.pin || (player.role === "admin" ? "0000" : "1234");
+        if (!ssoPin || ssoPin === correctPin) {
+          console.log("[Battle Arena] SSO auto-login (Supabase) for:", player.brandName || player.name);
+          login(player);
+        }
       }
     }).catch((err) => {
       console.log('[Battle Arena] SSO bridge fetch failed:', err);

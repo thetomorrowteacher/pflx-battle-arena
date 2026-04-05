@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 /**
  * PflxBridge — Cross-app message listener for Battle Arena.
- * Receives data sync messages from the PFLX Overlay (Mission Control)
+ * Receives data sync messages from the PFLX Platform (Mission Control)
  * and responds with fresh data when requested.
  */
 export default function PflxBridge() {
