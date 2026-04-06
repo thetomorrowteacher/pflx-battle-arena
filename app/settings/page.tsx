@@ -1,6 +1,6 @@
 "use client";
 /**
- * Battle Arena Settings — per-entity settings surface.
+ * Battle Arena Settings — per-entity arena settings surface.
  *
  * Battle Arena does not own Season / Checkpoint / Project / Job / Task
  * entities. It only layers arena-specific config on top of them:
@@ -8,17 +8,23 @@
  *   Season      → activeGameModes, wager curve, tournament bracket, rewards
  *   Checkpoint  → modes, theme, wager caps, XC multiplier, double-XP windows
  *   Project     → arenaQuest, questionPack, arenaBoss, wager pool, spectators
- *   Job         → arenaTryout mode, cutoff, max applicants, winner rewards
  *   Task        → micro-challenge, criterion→arena map, bot opponents, fallback
  *
- * The host picks an entity type + entity id, and this form writes into
- * the same mock data via postMessage back to the PFLX shell which persists
- * to Supabase through the X-Coin bridge.
+ * The host picks an entity type + entity id, then tunes arena rules.
+ * All settings are persisted to Supabase via xcoin-bridge + cloud save indicator.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import {
+  loadArenaSettings,
+  saveArenaSettings,
+  fetchEntitiesFromSupabase,
+  showCloudSaveIndicator,
+} from "../lib/xcoin-bridge";
+import { GAME_MODES } from "../lib/types";
+import Navbar from "../components/Navbar";
 
-type EntityType = "season" | "checkpoint" | "project" | "job" | "task";
+type EntityType = "season" | "checkpoint" | "project" | "task";
 
 interface EntityLite {
   id: string;
@@ -36,7 +42,6 @@ interface ArenaSettings {
   checkpointTheme?: string;
   checkpointWagerCaps?: { min: number; max: number };
   checkpointXcMultiplier?: number;
-  checkpointDoubleXpWindows?: { start: string; end: string }[];
   // Project
   projectArenaQuest?: boolean;
   projectQuestionPack?: string;
@@ -44,66 +49,83 @@ interface ArenaSettings {
   projectWagerPool?: number;
   projectArenaXcMultiplier?: number;
   projectSpectators?: boolean;
-  // Job
-  jobArenaTryout?: boolean;
-  jobTryoutMode?: string;
-  jobTryoutCutoff?: number;
-  jobArenaMaxApplicants?: number;
-  jobWinnerRewards?: string[];
   // Task
   taskArenaMicroChallenge?: string;
-  taskCriterionArenaMap?: Record<string, string>;
   taskArenaBestOf?: number;
   taskArenaBotOpponents?: boolean;
-  taskArenaFallback?: string;
   taskArenaRequiredForCompletion?: boolean;
+  taskArenaFallback?: string;
 }
 
-const STORAGE_KEY = "pflx_arena_settings_overrides";
-
 export default function BattleArenaSettingsPage() {
-  const [entityType, setEntityType] = useState<EntityType>("checkpoint");
+  const [entityType, setEntityType] = useState<EntityType>("season");
   const [entityId, setEntityId] = useState("");
   const [entities, setEntities] = useState<EntityLite[]>([]);
   const [settings, setSettings] = useState<ArenaSettings>({});
   const [overrides, setOverrides] = useState<Record<string, ArenaSettings>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
 
-  // Load overrides from localStorage on mount
+  // Load overrides from Supabase on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setOverrides(JSON.parse(raw));
-    } catch {}
+    (async () => {
+      try {
+        const data = await loadArenaSettings();
+        if (data && typeof data === "object") {
+          setOverrides(data as Record<string, ArenaSettings>);
+        }
+      } catch {}
+      setLoading(false);
+    })();
   }, []);
 
-  // Ask the shell for the list of entities whenever entityType changes
-  useEffect(() => {
+  // Load entities when entityType changes — try postMessage first, then Supabase direct
+  const loadEntities = useCallback(async (type: EntityType) => {
+    const key = pluralize(type);
+    setEntities([]);
+
+    // 1. Ask parent shell via postMessage
     if (window.parent !== window) {
       try {
         window.parent.postMessage(
-          JSON.stringify({ type: "pflx_data_request", key: pluralize(entityType) }),
+          JSON.stringify({ type: "pflx_data_request", key }),
           "*"
         );
       } catch {}
     }
-  }, [entityType]);
 
-  // Listen for the shell's response
+    // 2. Fetch directly from Supabase as fallback
+    try {
+      const rows = await fetchEntitiesFromSupabase(key);
+      if (rows.length > 0) {
+        const list: EntityLite[] = rows.map((e: any) => ({
+          id: e.id,
+          name: e.name || e.title || e.id,
+        }));
+        setEntities((prev) => (prev.length === 0 ? list : prev));
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
-    function handleMessage(ev: MessageEvent) {
-      try {
-        const msg = typeof ev.data === "string" ? JSON.parse(ev.data) : ev.data;
-        if (msg?.type === "pflx_cloud_data" && msg.key === pluralize(entityType)) {
-          const list: EntityLite[] = (msg.data || []).map((e: { id: string; name?: string; title?: string }) => ({
-            id: e.id,
-            name: e.name || e.title || e.id,
-          }));
-          setEntities(list);
-        }
-      } catch {}
+    loadEntities(entityType);
+  }, [entityType, loadEntities]);
+
+  // Listen for postMessage responses from parent
+  useEffect(() => {
+    function handleEntities(ev: Event) {
+      const detail = (ev as CustomEvent).detail;
+      if (detail?.key === pluralize(entityType) && Array.isArray(detail.data)) {
+        const list: EntityLite[] = detail.data.map((e: any) => ({
+          id: e.id,
+          name: e.name || e.title || e.id,
+        }));
+        if (list.length > 0) setEntities(list);
+      }
     }
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    window.addEventListener("pflx_entities_received", handleEntities);
+    return () => window.removeEventListener("pflx_entities_received", handleEntities);
   }, [entityType]);
 
   // When entity selection changes, load that entity's current override
@@ -115,110 +137,151 @@ export default function BattleArenaSettingsPage() {
     setSettings(overrides[entityKey(entityType, entityId)] || {});
   }, [entityId, entityType, overrides]);
 
-  const saveSettings = () => {
+  const handleSave = async () => {
     if (!entityId) return;
+    setSaving(true);
     const next = { ...overrides, [entityKey(entityType, entityId)]: settings };
     setOverrides(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {}
-    // Broadcast to MC / X-Coin bridge so the economy + MC surfaces see it
-    if (window.parent !== window) {
-      window.parent.postMessage(
-        JSON.stringify({
-          type: "pflx_arena_entity_settings_saved",
-          entityType,
-          entityId,
-          settings,
-        }),
-        "*"
-      );
+
+    // Save to Supabase
+    const ok = await saveArenaSettings(next);
+    if (ok) {
+      showCloudSaveIndicator("Arena settings saved");
+      setSaveMsg("Saved to cloud");
+    } else {
+      setSaveMsg("Save failed — retrying...");
+      // Retry once
+      const retry = await saveArenaSettings(next);
+      setSaveMsg(retry ? "Saved to cloud" : "Save failed");
     }
+    setSaving(false);
+
+    // Also broadcast to Platform shell
+    if (window.parent !== window) {
+      try {
+        window.parent.postMessage(
+          JSON.stringify({
+            type: "pflx_arena_entity_settings_saved",
+            entityType,
+            entityId,
+            settings,
+          }),
+          "*"
+        );
+      } catch {}
+    }
+
+    setTimeout(() => setSaveMsg(""), 3000);
   };
 
+  const entityTypes: EntityType[] = ["season", "checkpoint", "project", "task"];
+
   return (
-    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto", color: "#fff" }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900 }}>Battle Arena Settings</h1>
-      <p style={{ opacity: 0.7, marginBottom: 20 }}>
-        Layer arena-specific configuration onto entities owned by Mission
-        Control. Pick an entity type, pick an entity, tune arena rules.
-      </p>
-
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        {(["season", "checkpoint", "project", "job", "task"] as EntityType[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => {
-              setEntityType(t);
-              setEntityId("");
-            }}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.2)",
-              background: entityType === t ? "linear-gradient(135deg,#00d4ff,#7c3aed)" : "transparent",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: "pointer",
-              textTransform: "uppercase",
-              fontSize: 12,
-              letterSpacing: "0.1em",
-            }}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <select
-        value={entityId}
-        onChange={(e) => setEntityId(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "10px 12px",
-          marginBottom: 20,
-          background: "rgba(0,0,0,0.4)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          color: "#fff",
-          borderRadius: 8,
-        }}
-      >
-        <option value="">— Pick {entityType} —</option>
-        {entities.map((e) => (
-          <option key={e.id} value={e.id}>
-            {e.name}
-          </option>
-        ))}
-      </select>
-
-      {entityId && (
-        <div style={{ padding: 20, background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
-          <ArenaSettingsForm entityType={entityType} settings={settings} onChange={setSettings} />
-          <button
-            onClick={saveSettings}
-            style={{
-              marginTop: 20,
-              padding: "12px 24px",
-              background: "linear-gradient(135deg,#00d4ff,#7c3aed)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              fontWeight: 800,
-              cursor: "pointer",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-            }}
-          >
-            Save Arena Settings
-          </button>
+    <div className="min-h-screen">
+      <Navbar />
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h2 className="font-mono text-2xl font-bold tracking-wider text-pflx-cyan text-glow-cyan uppercase mb-2">
+            Arena Settings
+          </h2>
+          <p className="text-xs text-gray-500 max-w-lg mx-auto">
+            Layer arena-specific configuration onto entities owned by Mission Control.
+            Pick an entity type, select an entity, and tune the arena rules.
+          </p>
         </div>
-      )}
+
+        {/* Entity Type Tabs */}
+        <div className="flex gap-2 mb-6 flex-wrap justify-center">
+          {entityTypes.map((t) => (
+            <button
+              key={t}
+              onClick={() => { setEntityType(t); setEntityId(""); }}
+              className={`font-mono text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-lg border transition-all duration-300 ${
+                entityType === t
+                  ? "border-pflx-cyan/50 bg-gradient-to-r from-pflx-cyan/15 to-pflx-purple/15 text-pflx-cyan shadow-cyan-glow"
+                  : "border-pflx-cyan/10 bg-transparent text-gray-400 hover:border-pflx-cyan/25 hover:text-gray-300"
+              }`}
+            >
+              {t === "season" ? "🏆" : t === "checkpoint" ? "🎯" : t === "project" ? "🚀" : "⚡"}{" "}
+              {t}s
+            </button>
+          ))}
+        </div>
+
+        {/* Entity Selector */}
+        <div className="glass-panel p-5 mb-6">
+          <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-wider mb-2">
+            Select {entityType}
+          </label>
+          {loading ? (
+            <div className="text-xs text-gray-500 py-3">Loading...</div>
+          ) : entities.length === 0 ? (
+            <div className="text-xs text-gray-500 py-3">
+              No {entityType}s found. Create them in Mission Control first.
+            </div>
+          ) : (
+            <select
+              value={entityId}
+              onChange={(e) => setEntityId(e.target.value)}
+              className="w-full bg-pflx-darker border border-pflx-cyan/20 rounded-lg px-4 py-2.5 font-mono text-sm text-pflx-cyan focus:border-pflx-cyan/50 focus:outline-none"
+            >
+              <option value="">— Select {entityType} —</option>
+              {entities.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Settings Form */}
+        {entityId && (
+          <div className="glass-panel p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-mono text-sm font-bold text-pflx-cyan uppercase tracking-wider">
+                {entityType === "season" ? "🏆" : entityType === "checkpoint" ? "🎯" : entityType === "project" ? "🚀" : "⚡"}{" "}
+                Arena Config — {entities.find((e) => e.id === entityId)?.name || entityId}
+              </h3>
+              {saveMsg && (
+                <span className={`text-[10px] font-mono uppercase tracking-wider ${
+                  saveMsg.includes("failed") ? "text-pflx-red" : "text-pflx-green"
+                }`}>
+                  {saveMsg}
+                </span>
+              )}
+            </div>
+
+            <ArenaSettingsForm entityType={entityType} settings={settings} onChange={setSettings} />
+
+            <div className="flex items-center gap-4 mt-6 pt-5 border-t border-pflx-cyan/10">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="btn-arena btn-arena-gold text-xs py-2.5 px-8"
+              >
+                {saving ? "Saving..." : "Save to Cloud"}
+              </button>
+              <button
+                onClick={() => setSettings({})}
+                className="text-[10px] font-mono text-gray-500 uppercase tracking-wider hover:text-pflx-red transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function pluralize(t: EntityType): string {
-  return t === "season" ? "seasons" : t + "s";
+  if (t === "season") return "gamePeriods"; // seasons are stored as gamePeriods in X-Coin
+  if (t === "checkpoint") return "checkpoints";
+  if (t === "project") return "projects";
+  return "tasks";
 }
 function entityKey(t: EntityType, id: string) {
   return `${t}:${id}`;
@@ -233,102 +296,186 @@ function ArenaSettingsForm({
   settings: ArenaSettings;
   onChange: (s: ArenaSettings) => void;
 }) {
-  const field = (label: string, el: React.ReactNode) => (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ display: "block", fontSize: 11, opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
-        {label}
-      </label>
-      {el}
-    </div>
+  const gameModeOptions = GAME_MODES.map((m) => m.id);
+
+  const fieldLabel = (label: string) => (
+    <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-wider mb-1.5">
+      {label}
+    </label>
   );
-  const inp = (v: string | number | undefined, k: keyof ArenaSettings, type = "text") => (
+
+  const textInput = (value: string | number | undefined, key: keyof ArenaSettings, type = "text", placeholder = "") => (
     <input
       type={type}
-      value={String(v ?? "")}
+      value={String(value ?? "")}
+      placeholder={placeholder}
       onChange={(e) =>
         onChange({
           ...settings,
-          [k]: type === "number" ? parseFloat(e.target.value) || 0 : e.target.value,
+          [key]: type === "number" ? parseFloat(e.target.value) || 0 : e.target.value,
         })
       }
-      style={{
-        width: "100%",
-        padding: "8px 12px",
-        background: "rgba(0,0,0,0.35)",
-        border: "1px solid rgba(255,255,255,0.15)",
-        color: "#fff",
-        borderRadius: 6,
-      }}
+      className="w-full bg-pflx-darker border border-pflx-cyan/15 rounded-lg px-3 py-2 font-mono text-xs text-gray-200 focus:border-pflx-cyan/40 focus:outline-none placeholder:text-gray-600"
     />
   );
-  const chk = (v: boolean | undefined, k: keyof ArenaSettings, label: string) => (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+
+  const checkbox = (value: boolean | undefined, key: keyof ArenaSettings, label: string) => (
+    <label className="flex items-center gap-3 py-1.5 cursor-pointer group">
+      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+        value ? "bg-pflx-cyan/20 border-pflx-cyan/50" : "border-gray-600 bg-transparent group-hover:border-gray-500"
+      }`}>
+        {value && <span className="text-pflx-cyan text-[10px]">✓</span>}
+      </div>
       <input
         type="checkbox"
-        checked={!!v}
-        onChange={(e) => onChange({ ...settings, [k]: e.target.checked })}
+        checked={!!value}
+        onChange={(e) => onChange({ ...settings, [key]: e.target.checked })}
+        className="hidden"
       />
-      {label}
+      <span className="text-xs text-gray-300">{label}</span>
     </label>
+  );
+
+  const multiSelect = (selected: string[], key: keyof ArenaSettings, options: string[], labels?: string[]) => (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt, i) => {
+        const isActive = selected.includes(opt);
+        return (
+          <button
+            key={opt}
+            onClick={() => {
+              const next = isActive ? selected.filter((s) => s !== opt) : [...selected, opt];
+              onChange({ ...settings, [key]: next });
+            }}
+            className={`px-3 py-1.5 rounded-lg font-mono text-[10px] uppercase tracking-wider border transition-all ${
+              isActive
+                ? "border-pflx-cyan/40 bg-pflx-cyan/10 text-pflx-cyan"
+                : "border-gray-700 bg-transparent text-gray-500 hover:border-gray-600"
+            }`}
+          >
+            {labels?.[i] || opt.replace(/_/g, " ")}
+          </button>
+        );
+      })}
+    </div>
   );
 
   switch (entityType) {
     case "season":
       return (
-        <>
-          {field("Active Game Modes (comma-separated)", inp((settings.activeGameModes || []).join(","), "activeGameModes" as keyof ArenaSettings))}
-          {field("Wager Curve", (
-            <select
-              value={settings.seasonWagerCurve || "linear"}
-              onChange={(e) => onChange({ ...settings, seasonWagerCurve: e.target.value as ArenaSettings["seasonWagerCurve"] })}
-              style={{ width: "100%", padding: "8px 12px", background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", borderRadius: 6 }}
-            >
-              <option value="flat">Flat</option>
-              <option value="linear">Linear</option>
-              <option value="exponential">Exponential</option>
-            </select>
-          ))}
-          {chk(settings.seasonTournamentBracket, "seasonTournamentBracket", "Enable tournament bracket")}
-          {field("Season Rewards (comma-separated)", inp((settings.seasonRewards || []).join(","), "seasonRewards" as keyof ArenaSettings))}
-        </>
+        <div className="space-y-4">
+          <div>
+            {fieldLabel("Active Game Modes")}
+            {multiSelect(
+              settings.activeGameModes || [],
+              "activeGameModes" as keyof ArenaSettings,
+              gameModeOptions,
+              GAME_MODES.map((m) => `${m.icon} ${m.name}`)
+            )}
+          </div>
+          <div>
+            {fieldLabel("Wager Curve")}
+            <div className="flex gap-2">
+              {(["flat", "linear", "exponential"] as const).map((curve) => (
+                <button
+                  key={curve}
+                  onClick={() => onChange({ ...settings, seasonWagerCurve: curve })}
+                  className={`px-4 py-2 rounded-lg font-mono text-[10px] uppercase tracking-wider border transition-all ${
+                    settings.seasonWagerCurve === curve
+                      ? "border-pflx-gold/40 bg-pflx-gold/10 text-pflx-gold"
+                      : "border-gray-700 bg-transparent text-gray-500 hover:border-gray-600"
+                  }`}
+                >
+                  {curve}
+                </button>
+              ))}
+            </div>
+          </div>
+          {checkbox(settings.seasonTournamentBracket, "seasonTournamentBracket", "Enable tournament bracket mode")}
+          <div>
+            {fieldLabel("Season Rewards (comma-separated)")}
+            {textInput((settings.seasonRewards || []).join(", "), "seasonRewards" as keyof ArenaSettings, "text", "e.g. XC bonus, exclusive badge, rank boost")}
+          </div>
+        </div>
       );
+
     case "checkpoint":
       return (
-        <>
-          {field("Allowed Modes", inp((settings.checkpointModes || []).join(","), "checkpointModes" as keyof ArenaSettings))}
-          {field("Theme", inp(settings.checkpointTheme, "checkpointTheme"))}
-          {field("XC Multiplier", inp(settings.checkpointXcMultiplier, "checkpointXcMultiplier", "number"))}
-        </>
+        <div className="space-y-4">
+          <div>
+            {fieldLabel("Allowed Game Modes")}
+            {multiSelect(
+              settings.checkpointModes || [],
+              "checkpointModes" as keyof ArenaSettings,
+              gameModeOptions,
+              GAME_MODES.map((m) => `${m.icon} ${m.name}`)
+            )}
+          </div>
+          <div>
+            {fieldLabel("Arena Theme")}
+            {textInput(settings.checkpointTheme, "checkpointTheme", "text", "e.g. Cyber Blitz, Neon Showdown")}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              {fieldLabel("Min Wager (XC)")}
+              {textInput(settings.checkpointWagerCaps?.min, "checkpointWagerCaps" as keyof ArenaSettings, "number", "50")}
+            </div>
+            <div>
+              {fieldLabel("Max Wager (XC)")}
+              {textInput(settings.checkpointWagerCaps?.max, "checkpointWagerCaps" as keyof ArenaSettings, "number", "5000")}
+            </div>
+          </div>
+          <div>
+            {fieldLabel("XC Multiplier")}
+            {textInput(settings.checkpointXcMultiplier, "checkpointXcMultiplier", "number", "1.0")}
+          </div>
+        </div>
       );
+
     case "project":
       return (
-        <>
-          {chk(settings.projectArenaQuest, "projectArenaQuest", "Treat as arena quest")}
-          {field("Question Pack", inp(settings.projectQuestionPack, "projectQuestionPack"))}
-          {field("Arena Boss", inp(settings.projectArenaBoss, "projectArenaBoss"))}
-          {field("Wager Pool (XC)", inp(settings.projectWagerPool, "projectWagerPool", "number"))}
-          {field("XC Multiplier", inp(settings.projectArenaXcMultiplier, "projectArenaXcMultiplier", "number"))}
-          {chk(settings.projectSpectators, "projectSpectators", "Allow spectators")}
-        </>
+        <div className="space-y-4">
+          {checkbox(settings.projectArenaQuest, "projectArenaQuest", "Treat this project as an Arena Quest")}
+          <div>
+            {fieldLabel("Question Pack")}
+            {textInput(settings.projectQuestionPack, "projectQuestionPack", "text", "e.g. entrepreneurship-101, pflx-lore")}
+          </div>
+          <div>
+            {fieldLabel("Arena Boss")}
+            {textInput(settings.projectArenaBoss, "projectArenaBoss", "text", "e.g. X-Bot Level 3, Final Guardian")}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              {fieldLabel("Wager Pool (XC)")}
+              {textInput(settings.projectWagerPool, "projectWagerPool", "number", "1000")}
+            </div>
+            <div>
+              {fieldLabel("XC Multiplier")}
+              {textInput(settings.projectArenaXcMultiplier, "projectArenaXcMultiplier", "number", "1.5")}
+            </div>
+          </div>
+          {checkbox(settings.projectSpectators, "projectSpectators", "Allow spectators to watch arena battles")}
+        </div>
       );
-    case "job":
-      return (
-        <>
-          {chk(settings.jobArenaTryout, "jobArenaTryout", "Use arena tryout")}
-          {field("Tryout Mode", inp(settings.jobTryoutMode, "jobTryoutMode"))}
-          {field("Tryout Cutoff (score)", inp(settings.jobTryoutCutoff, "jobTryoutCutoff", "number"))}
-          {field("Max Applicants", inp(settings.jobArenaMaxApplicants, "jobArenaMaxApplicants", "number"))}
-        </>
-      );
+
     case "task":
       return (
-        <>
-          {field("Micro-challenge", inp(settings.taskArenaMicroChallenge, "taskArenaMicroChallenge"))}
-          {field("Arena Best-of", inp(settings.taskArenaBestOf, "taskArenaBestOf", "number"))}
-          {chk(settings.taskArenaBotOpponents, "taskArenaBotOpponents", "Allow bot opponents")}
-          {chk(settings.taskArenaRequiredForCompletion, "taskArenaRequiredForCompletion", "Required for task completion")}
-          {field("Fallback", inp(settings.taskArenaFallback, "taskArenaFallback"))}
-        </>
+        <div className="space-y-4">
+          <div>
+            {fieldLabel("Micro-Challenge")}
+            {textInput(settings.taskArenaMicroChallenge, "taskArenaMicroChallenge", "text", "e.g. Speed Quiz, Code Sprint")}
+          </div>
+          <div>
+            {fieldLabel("Arena Best-of (rounds)")}
+            {textInput(settings.taskArenaBestOf, "taskArenaBestOf", "number", "3")}
+          </div>
+          {checkbox(settings.taskArenaBotOpponents, "taskArenaBotOpponents", "Allow bot opponents when no human available")}
+          {checkbox(settings.taskArenaRequiredForCompletion, "taskArenaRequiredForCompletion", "Arena challenge required for task completion")}
+          <div>
+            {fieldLabel("Fallback mode")}
+            {textInput(settings.taskArenaFallback, "taskArenaFallback", "text", "e.g. quiz_duel, skip")}
+          </div>
+        </div>
       );
   }
 }

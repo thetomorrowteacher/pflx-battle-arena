@@ -356,6 +356,30 @@ export async function syncLeaderboard(): Promise<void> {
   await publishBridgeEvent("LEADERBOARD_UPDATE", { topPlayers });
 }
 
+// ── Arena Settings Persistence ────────────────────────────────────
+// Stores per-entity arena settings (season/checkpoint/project/job/task overlays)
+export async function loadArenaSettings(): Promise<Record<string, unknown>> {
+  const data = await supabaseLoad("arena_settings_overrides");
+  if (data && typeof data === "object") return data as Record<string, unknown>;
+  return {};
+}
+
+export async function saveArenaSettings(overrides: Record<string, unknown>): Promise<boolean> {
+  return supabaseSave("arena_settings_overrides", overrides);
+}
+
+// ── Fetch entities from Supabase (shared data owned by X-Coin/MC) ──
+export async function fetchEntitiesFromSupabase(key: string): Promise<unknown[]> {
+  const data = await supabaseLoad(key);
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
+// ── Cloud Save Indicator ─────────────────────────────────────────
+let _saveToastFn: ((msg?: string) => void) | null = null;
+export function registerSaveToast(fn: (msg?: string) => void) { _saveToastFn = fn; }
+export function showCloudSaveIndicator(msg?: string) { _saveToastFn?.(msg); }
+
 // ── Message Logger ────────────────────────────────────────────────
 const messageLog: XCoinMessage[] = [];
 

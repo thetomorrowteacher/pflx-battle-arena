@@ -45,6 +45,12 @@ export default function Navbar() {
           >
             Leaderboard
           </Link>
+          <Link
+            href="/settings"
+            className="font-mono text-xs tracking-wider text-gray-400 hover:text-pflx-purple transition-colors uppercase host-only admin-only"
+          >
+            Settings
+          </Link>
         </div>
 
         {/* Player Info / Login */}

@@ -235,6 +235,12 @@ body {
   50% { opacity: 0.6; }
 }
 
+/* ── Cloud save toast animation ───────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* PFLX role visibility fallback */
 body[data-pflx-role="player"] .host-only,
 body[data-pflx-role="player"] .admin-only { display: none \!important; }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import PflxBridge from "./components/PflxBridge";
 import RoleGuard from "./components/RoleGuard";
+import CloudSaveToast from "./components/CloudSaveToast";
 
 export const metadata: Metadata = {
   title: "PFLX Battle Arena",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Cross-app PFLX message bridge */}
         <PflxBridge />
         <RoleGuard />
+        <CloudSaveToast />
       </body>
     </html>
   );
