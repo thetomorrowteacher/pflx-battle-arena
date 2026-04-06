@@ -1,0 +1,241 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════
+   PFLX Battle Arena — Global Styles
+   Cyberpunk / Sci-Fi Aesthetic
+   ═══════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --pflx-dark: #0a0e17;
+  --pflx-darker: #060a12;
+  --pflx-cyan: #00e5ff;
+  --pflx-teal: #00bcd4;
+  --pflx-purple: #7c4dff;
+  --pflx-magenta: #e040fb;
+  --pflx-gold: #ffd740;
+  --pflx-red: #ff1744;
+  --pflx-green: #00e676;
+  --pflx-blue: #2979ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--pflx-darker);
+  color: #e0e0e0;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--pflx-darker);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 229, 255, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 229, 255, 0.5);
+}
+
+/* ── Glassmorphism panels ──────────────────────────────────────── */
+.glass-panel {
+  background: rgba(10, 14, 23, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 229, 255, 0.12);
+  border-radius: 16px;
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(0, 229, 255, 0.3);
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.08);
+}
+
+/* ── Glow text ─────────────────────────────────────────────────── */
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5), 0 0 30px rgba(0, 229, 255, 0.2);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 10px rgba(124, 77, 255, 0.5), 0 0 30px rgba(124, 77, 255, 0.2);
+}
+
+.text-glow-red {
+  text-shadow: 0 0 10px rgba(255, 23, 68, 0.5), 0 0 30px rgba(255, 23, 68, 0.2);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 10px rgba(255, 215, 64, 0.5), 0 0 30px rgba(255, 215, 64, 0.2);
+}
+
+/* ── Battle-themed buttons ─────────────────────────────────────── */
+.btn-arena {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(124, 77, 255, 0.1));
+  color: var(--pflx-cyan);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.btn-arena::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(124, 77, 255, 0.2));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-arena:hover::before {
+  opacity: 1;
+}
+
+.btn-arena:hover {
+  border-color: var(--pflx-cyan);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.3), 0 0 60px rgba(0, 229, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.btn-arena-red {
+  border-color: rgba(255, 23, 68, 0.4);
+  background: linear-gradient(135deg, rgba(255, 23, 68, 0.1), rgba(124, 77, 255, 0.1));
+  color: var(--pflx-red);
+}
+
+.btn-arena-red:hover {
+  border-color: var(--pflx-red);
+  box-shadow: 0 0 20px rgba(255, 23, 68, 0.3), 0 0 60px rgba(255, 23, 68, 0.1);
+}
+
+.btn-arena-gold {
+  border-color: rgba(255, 215, 64, 0.4);
+  background: linear-gradient(135deg, rgba(255, 215, 64, 0.1), rgba(124, 77, 255, 0.05));
+  color: var(--pflx-gold);
+}
+
+.btn-arena-gold:hover {
+  border-color: var(--pflx-gold);
+  box-shadow: 0 0 20px rgba(255, 215, 64, 0.3), 0 0 60px rgba(255, 215, 64, 0.1);
+}
+
+/* ── Animated background grid ──────────────────────────────────── */
+.arena-grid-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridShift 20s linear infinite;
+}
+
+@keyframes gridShift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(60px, 60px); }
+}
+
+/* ── Scan line overlay ─────────────────────────────────────────── */
+.scan-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 229, 255, 0.015) 2px,
+    rgba(0, 229, 255, 0.015) 4px
+  );
+}
+
+/* ── Arena rank badge ──────────────────────────────────────────── */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ── VS divider ────────────────────────────────────────────────── */
+.vs-divider {
+  font-family: 'Orbitron', monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--pflx-red), var(--pflx-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 0 20px rgba(255, 23, 68, 0.5));
+}
+
+/* ── Pulse ring animation ──────────────────────────────────────── */
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--pflx-cyan);
+  animation: pulseRing 2s ease-out infinite;
+}
+
+/* ── Timer bar ─────────────────────────────────────────────────── */
+.timer-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--pflx-cyan), var(--pflx-purple));
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.timer-bar-warning {
+  background: linear-gradient(90deg, var(--pflx-gold), var(--pflx-red));
+}
+
+.timer-bar-critical {
+  background: var(--pflx-red);
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* PFLX role visibility fallback */
+body[data-pflx-role="player"] .host-only,
+body[data-pflx-role="player"] .admin-only { display: none \!important; }
+body[data-pflx-role="host"] .player-only { display: none \!important; }

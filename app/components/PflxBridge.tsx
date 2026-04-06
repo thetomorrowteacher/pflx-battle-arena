@@ -46,12 +46,36 @@ export default function PflxBridge() {
             localStorage.setItem("pflx_arena_session", JSON.stringify(msg.data));
           } catch { /* ignore */ }
         }
+
+        // ── SSO identity broadcast from shell (unified contract) ──
+        if (msg.type === "pflx_identity_broadcast" && msg.user) {
+          try {
+            localStorage.setItem("pflx_identity", JSON.stringify({
+              user: msg.user,
+              role: msg.role || "player",
+              onboardingComplete: !!msg.onboardingComplete,
+            }));
+            if (msg.role === "host" || msg.role === "player") {
+              localStorage.setItem("pflx_active_role", msg.role);
+              document.body.dataset.pflxRole = msg.role;
+            }
+          } catch { /* ignore */ }
+        }
       } catch {
         // Ignore non-JSON messages
       }
     }
 
     window.addEventListener("message", handleMessage);
+
+    // Announce readiness + request identity from shell
+    if (window.parent !== window) {
+      try {
+        window.parent.postMessage(JSON.stringify({ type: "pflx_subapp_ready", app: "battle-arena" }), "*");
+        window.parent.postMessage(JSON.stringify({ type: "pflx_identity_request" }), "*");
+      } catch { /* ignore */ }
+    }
+
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
