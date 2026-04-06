@@ -107,38 +107,6 @@ async function toArenaPlayer(xcPlayer: Record<string, unknown>): Promise<ArenaPl
   return {
     id,
     name: (xcPlayer.name as string) || "",
-    brandName: xcPlayer.brandName asbject") {
-    _arenaStatsCache = data as Record<string, ArenaStats>;
-  }
-  _arenaStatsLoaded = true;
-  return _arenaStatsCache;
-}
-
-async function saveArenaStats(): Promise<void> {
-  await supabaseSave("arena_stats", _arenaStatsCache);
-}
-
-async function getPlayerArenaStats(playerId: string): Promise<ArenaStats> {
-  const stats = await loadArenaStats();
-  return stats[playerId] || { ...DEFAULT_ARENA_STATS };
-}
-
-async function updatePlayerArenaStats(playerId: string, updater: (s: ArenaStats) => ArenaStats): Promise<ArenaStats> {
-  const stats = await loadArenaStats();
-  const current = stats[playerId] || { ...DEFAULT_ARENA_STATS };
-  const updated = updater(current);
-  _arenaStatsCache[playerId] = updated;
-  await saveArenaStats();
-  return updated;
-}
-
-// ── Merge X-Coin player data + arena stats → ArenaPlayer ──────────
-async function toArenaPlayer(xcPlayer: Record<string, unknown>): Promise<ArenaPlayer> {
-  const id = xcPlayer.id as string;
-  const stats = await getPlayerArenaStats(id);
-  return {
-    id,
-    name: (xcPlayer.name as string) || "",
     brandName: xcPlayer.brandName as string | undefined,
     role: (xcPlayer.role as "admin" | "player") || "player",
     avatar: (xcPlayer.avatar as string) || "",
