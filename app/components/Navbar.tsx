@@ -46,6 +46,12 @@ export default function Navbar() {
             Leaderboard
           </Link>
           <Link
+            href="/cartridges"
+            className="font-mono text-xs tracking-wider text-gray-400 hover:text-pflx-gold transition-colors uppercase"
+          >
+            Cartridges
+          </Link>
+          <Link
             href="/settings"
             className="font-mono text-xs tracking-wider text-gray-400 hover:text-pflx-purple transition-colors uppercase host-only admin-only"
           >

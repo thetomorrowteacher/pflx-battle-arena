@@ -375,6 +375,29 @@ export async function fetchEntitiesFromSupabase(key: string): Promise<unknown[]>
   return [];
 }
 
+// ── Cartridges (uploaded custom game modes) ──────────────────────
+// Persists to Supabase `arena_cartridges` key as an array of Cartridge objects
+import type { Cartridge } from "./types";
+export async function loadCartridges(): Promise<Cartridge[]> {
+  const data = await supabaseLoad("arena_cartridges");
+  if (Array.isArray(data)) return data as Cartridge[];
+  return [];
+}
+export async function saveCartridges(cartridges: Cartridge[]): Promise<boolean> {
+  return supabaseSave("arena_cartridges", cartridges);
+}
+export async function upsertCartridge(cart: Cartridge): Promise<boolean> {
+  const list = await loadCartridges();
+  const idx = list.findIndex(c => c.id === cart.id);
+  if (idx >= 0) list[idx] = cart;
+  else list.push(cart);
+  return saveCartridges(list);
+}
+export async function deleteCartridge(id: string): Promise<boolean> {
+  const list = await loadCartridges();
+  return saveCartridges(list.filter(c => c.id !== id));
+}
+
 // ── Cloud Save Indicator ─────────────────────────────────────────
 let _saveToastFn: ((msg?: string) => void) | null = null;
 export function registerSaveToast(fn: (msg?: string) => void) { _saveToastFn = fn; }

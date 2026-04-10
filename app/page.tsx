@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useArenaStore } from "./lib/store";
-import { GAME_MODES, GameMode } from "./lib/types";
+import { GAME_MODES, GameMode, Cartridge } from "./lib/types";
 import Navbar from "./components/Navbar";
-import LoginScreen from "./components/LoginScreen";
+import PlayGate from "./components/PlayGate";
 import PlayerCard from "./components/PlayerCard";
 import GameModeCard from "./components/GameModeCard";
 import WagerSelector from "./components/WagerSelector";
+import { loadCartridges } from "./lib/xcoin-bridge";
 import { useRouter } from "next/navigation";
 
 export default function ArenaHome() {
@@ -15,9 +16,29 @@ export default function ArenaHome() {
   const { currentPlayer, isLoggedIn, selectedMode, setSelectedMode, createBattle } = useArenaStore();
   const [showWager, setShowWager] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [cartridges, setCartridges] = useState<Cartridge[]>([]);
+  const [cartsLoading, setCartsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await loadCartridges();
+        if (cancelled) return;
+        // Only show live/approved + published carts on the home feed
+        const visible = list.filter((c) => c.published && (c.status === "live" || c.status === "approved"));
+        setCartridges(visible);
+      } catch {
+        if (!cancelled) setCartridges([]);
+      } finally {
+        if (!cancelled) setCartsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   if (!isLoggedIn || !currentPlayer) {
-    return <LoginScreen />;
+    return <PlayGate />;
   }
 
   const handleModeSelect = (mode: GameMode) => {
@@ -159,6 +180,77 @@ export default function ArenaHome() {
             <p className="text-xs text-gray-500">
               Join an existing battle in the lobby or create your own above.
             </p>
+          </div>
+        </div>
+
+        {/* Community Cartridges */}
+        <div className="mt-8">
+          <div className="glass-panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-mono text-sm font-bold text-pflx-gold uppercase tracking-wider">
+                  🎮 Community Cartridges
+                </h3>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">
+                  Player-made game modes. Host-approved & gating-enforced.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push("/cartridges")}
+                className="text-[10px] font-mono text-pflx-gold uppercase tracking-wider hover:text-pflx-gold/80"
+              >
+                View All →
+              </button>
+            </div>
+
+            {cartsLoading ? (
+              <div className="text-center py-6 text-xs text-gray-500 font-mono animate-pulse">
+                Loading cartridges…
+              </div>
+            ) : cartridges.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-xs text-gray-500 mb-3">
+                  No community cartridges published yet.
+                </p>
+                <button
+                  onClick={() => router.push("/cartridges")}
+                  className="btn-arena text-xs"
+                >
+                  + Upload a Cartridge
+                </button>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {cartridges.slice(0, 4).map((cart) => (
+                  <button
+                    key={cart.id}
+                    onClick={() => router.push("/cartridges")}
+                    className="glass-panel p-4 text-left hover:border-pflx-gold/40 transition-all duration-200 group"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="text-2xl">{cart.config.icon || "🎮"}</div>
+                      <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-pflx-gold/10 text-pflx-gold">
+                        {cart.status}
+                      </span>
+                    </div>
+                    <h4 className="font-mono text-sm font-bold text-white group-hover:text-pflx-gold transition-colors line-clamp-1">
+                      {cart.name}
+                    </h4>
+                    <p className="text-[10px] text-gray-500 mb-3 line-clamp-1">
+                      by {cart.author}
+                    </p>
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-pflx-green">+{cart.config.winXC} XC</span>
+                      <span className="text-pflx-red">−{cart.config.loseXC} XC</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] text-gray-500 mt-1 uppercase tracking-wider">
+                      <span>{cart.config.minPlayers}–{cart.config.maxPlayers} players</span>
+                      <span>{cart.playCount || 0} plays</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

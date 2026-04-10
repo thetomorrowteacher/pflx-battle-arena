@@ -273,6 +273,74 @@ export interface LeaderboardEntry {
   streak: number;
 }
 
+// ── Cartridges (uploaded custom game modes) ──────────────────────
+// A "cartridge" is a self-contained HTML file defining a custom game mode.
+// Hosts configure rewards/fines, coin type, badge/rank gating, then players play.
+
+export type CoinType = "primary" | "premium";
+
+export interface CartridgeConfig {
+  // Reward / fine economy (XC)
+  winXC: number;       // XC awarded to winner(s)
+  loseXC: number;      // XC deducted from loser(s) — set 0 for no fine
+  drawXC?: number;     // XC for draws
+  // Coin types (primary/premium) awarded on win
+  coinType: CoinType;  // Which coin slot the rewards credit
+  winCoins: number;    // Amount of coinType credited on win
+  // Gating
+  requiredBadges: string[]; // Badge IDs/names required to enter
+  minArenaRank?: ArenaRankTier;
+  minEvolutionRank?: number;
+  // Entry
+  entryFee: number;    // XC required to enter (0 = free)
+  minPlayers: number;
+  maxPlayers: number;
+  estimatedMinutes: number;
+  // Optional per-mode metadata
+  description?: string;
+  icon?: string;       // Emoji or image URL
+}
+
+export interface Cartridge {
+  id: string;
+  name: string;
+  version: string;
+  author: string;       // Brand of uploader
+  authorId: string;     // Player id of uploader
+  uploadedAt: string;
+  // The HTML payload (self-contained game HTML file content)
+  htmlContent: string;
+  // How big the file was (bytes)
+  sizeBytes: number;
+  // SHA-256 of the content for integrity
+  checksum?: string;
+  // Current host-configured game settings
+  config: CartridgeConfig;
+  // Lifecycle
+  status: "pending" | "approved" | "live" | "archived";
+  // Published = visible in lobby and playable
+  published: boolean;
+  // Cached thumbnail (optional)
+  thumbnail?: string;
+  // Audit
+  playCount: number;
+  rating?: number;
+  tags?: string[];
+}
+
+export const DEFAULT_CARTRIDGE_CONFIG: CartridgeConfig = {
+  winXC: 100,
+  loseXC: 25,
+  drawXC: 0,
+  coinType: "primary",
+  winCoins: 1,
+  requiredBadges: [],
+  entryFee: 10,
+  minPlayers: 2,
+  maxPlayers: 4,
+  estimatedMinutes: 10,
+};
+
 // ── X-Coin Integration Messages ───────────────────────────────────
 // Messages sent between Battle Arena and X-Coin app
 
