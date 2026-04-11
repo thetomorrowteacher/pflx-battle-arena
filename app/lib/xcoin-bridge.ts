@@ -10,11 +10,14 @@
 import { ArenaPlayer, ArenaStats, XCoinMessage, getArenaRankTier } from "./types";
 
 // ── Configuration ─────────────────────────────────────────────────
+// In production Battle Arena is served from its own origin, so falling back
+// to `window.location.origin` would point /api/pflx-bridge at a 404. Hard-code
+// the canonical X-Coin deployment so SSO/fetch-players works out of the box.
 const XCOIN_URL =
   process.env.NEXT_PUBLIC_XCOIN_APP_URL ||
-  (typeof window !== "undefined"
+  (typeof window !== "undefined" && /localhost|127\.0\.0\.1/.test(window.location.origin)
     ? window.location.origin.replace(":3002", ":3000")
-    : "http://localhost:3000");
+    : "https://pflx-xcoin-app.vercel.app");
 
 const BRIDGE = `${XCOIN_URL}/api/pflx-bridge`;
 
@@ -165,16 +168,35 @@ export async function fetchPlayerData(playerId: string): Promise<ArenaPlayer | n
 }
 
 export async function fetchAllPlayers(): Promise<ArenaPlayer[]> {
+  // ── Primary: X-Coin bridge endpoint ────────────────────────────
   try {
     const res = await fetch(`${BRIDGE}?action=users`);
-    if (!res.ok) return [];
-    const { players } = await res.json();
-    if (!players || !Array.isArray(players)) return [];
-    return Promise.all(players.map((p: Record<string, unknown>) => toArenaPlayer(p)));
+    if (res.ok) {
+      const { players } = await res.json();
+      if (players && Array.isArray(players) && players.length > 0) {
+        return Promise.all(
+          players.map((p: Record<string, unknown>) => toArenaPlayer(p))
+        );
+      }
+    }
   } catch (err) {
-    console.error("[Battle Arena] fetchAllPlayers error:", err);
-    return [];
+    console.warn("[Battle Arena] bridge fetch failed, falling back to Supabase:", err);
   }
+
+  // ── Fallback: read shared Supabase app_data/users directly ─────
+  // This mirrors what DarkCampus and Pathway Portal do, so Battle Arena
+  // can resolve the signed-in player even if X-Coin is cold/offline.
+  try {
+    const raw = await supabaseLoad("users");
+    if (raw && Array.isArray(raw)) {
+      return Promise.all(
+        (raw as Record<string, unknown>[]).map((p) => toArenaPlayer(p))
+      );
+    }
+  } catch (err) {
+    console.error("[Battle Arena] Supabase users fallback failed:", err);
+  }
+  return [];
 }
 
 // ── XC Transactions (via PFLX Bridge) ─────────────────────────────
