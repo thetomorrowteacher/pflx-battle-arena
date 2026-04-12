@@ -1,7 +1,7 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
-  "outputDirectory": ".next",
+  "rewrites": [
+    { "source": "/", "destination": "/preview.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
