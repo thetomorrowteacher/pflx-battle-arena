@@ -1056,11 +1056,66 @@ async function loadRoster() {
     console.warn('⚠️ Could not fetch X-Coin roster, using fallback:', e.message);
     buildPlayers(FALLBACK_ROSTER);
   }
+  // After live roster loads, retry SSO auto-login if we haven't already locked onto a real player
+  try {
+    if (!state.player || (state.player && state.player.id && state.player.id.indexOf('sso-') === 0)) {
+      attemptSsoAutoLogin();
+    }
+  } catch (err) {}
   render();
+}
+
+// ── SSO auto-login from Platform ────────────────────────────────
+// Platform passes: ?sso=pflx&user=...&brand=...&pin=...&role=...&cohort=...&autoselect=true
+function readSsoParams() {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('sso') !== 'pflx') return null;
+    const brand = q.get('brand');
+    const user = q.get('user');
+    if (!brand && !user) return null;
+    return {
+      user: user || '',
+      brand: brand || '',
+      pin: q.get('pin') || '',
+      role: q.get('role') || 'Student',
+      cohort: q.get('cohort') || 'PlayerPool',
+      xc: parseInt(q.get('xc') || '0', 10) || 0
+    };
+  } catch (e) { return null; }
+}
+function attemptSsoAutoLogin() {
+  const sso = readSsoParams();
+  if (!sso) return false;
+  // Match by brand (preferred) or by user name
+  let match = null;
+  if (sso.brand) match = PLAYERS.find(p => (p.brand || '').toLowerCase() === sso.brand.toLowerCase());
+  if (!match && sso.user) match = PLAYERS.find(p => (p.name || '').toLowerCase() === sso.user.toLowerCase());
+  if (match) {
+    state.player = match;
+  } else {
+    // Synthesize a minimal player from SSO params so Arena still works on brand-only
+    state.player = {
+      id: 'sso-' + (sso.brand || sso.user).toLowerCase().replace(/\s+/g, '-'),
+      brand: sso.brand || sso.user,
+      name: sso.user,
+      cohort: sso.cohort,
+      role: (sso.role || '').toLowerCase() === 'host' ? 'host' : 'player',
+      pin: sso.pin,
+      xc: sso.xc,
+      avatarText: (sso.brand || sso.user || '?').slice(0, 2).toUpperCase(),
+      stats: { battles: 0, wins: 0, ap: 0 }
+    };
+    PLAYERS.push(state.player);
+  }
+  state.ssoActive = true;
+  state.screen = 'home';
+  return true;
 }
 
 // Initialize with fallback immediately, then fetch live data
 buildPlayers(FALLBACK_ROSTER);
+attemptSsoAutoLogin();
 loadRoster();
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1974,29 +2029,18 @@ function renderLogin() {
     <div class="hud-corner hud-bl"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="rgba(0,229,255,0.25)" stroke-width="1"/><circle cx="12" cy="12" r="4" stroke="rgba(0,229,255,0.15)" stroke-width="1"/><line x1="12" y1="2" x2="12" y2="6" stroke="rgba(0,229,255,0.3)" stroke-width="1"/><line x1="12" y1="18" x2="12" y2="22" stroke="rgba(0,229,255,0.3)" stroke-width="1"/><line x1="2" y1="12" x2="6" y2="12" stroke="rgba(0,229,255,0.3)" stroke-width="1"/><line x1="18" y1="12" x2="22" y2="12" stroke="rgba(0,229,255,0.3)" stroke-width="1"/></svg></div>`;
 
   if (state.loginStep === "select") {
-    // Step 1: Brand selection dropdown — grouped Host / Players like X-Coin
-    const hosts = PLAYERS.filter(p => isHostUser(p));
-    const players = PLAYERS.filter(p => p.role === "player" && !p.isHost);
-
-    const hostOpts = hosts.map(h =>
-      `<option value="${h.id}">🛡 ${h.brand}</option>`
-    ).join("");
-    const playerOpts = players.map(p =>
-      `<option value="${p.id}">${p.brand} — ${p.name}</option>`
-    ).join("");
-
-    return `${hudCorners}<div class="login-wrap"><div class="login-box">
+    // Logo + PLAY only. No real names, no dropdown. Platform SSO is the source of truth.
+    // If we somehow landed here without an SSO session, the PLAY button shows a helpful hint.
+    const hasSso = !!readSsoParams();
+    const hint = hasSso
+      ? 'Signed in via PFLX Platform'
+      : 'Sign in on the PFLX Platform to play';
+    return `${hudCorners}<div class="login-wrap"><div class="login-box" style="text-align:center;">
       <div class="login-logo"><img src="Battle%20Arena.png" alt="PFLX Battle Arena" /></div>
-
-      <div class="login-form">
-        <div class="login-form-label">Select Your Brand</div>
-        <select class="brand-select" id="brandSelect">
-          <option value="" disabled selected>Choose your brand name...</option>
-          <optgroup label="── Host ──">${hostOpts}</optgroup>
-          <optgroup label="── Players ──">${playerOpts}</optgroup>
-        </select>
+      <div class="login-form" style="display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <button class="play-btn enabled" id="ssoPlayBtn" style="min-width:220px;font-size:18px;letter-spacing:2px;">▶ PLAY</button>
+        <div style="font-size:11px;color:rgba(0,229,255,0.55);letter-spacing:1px;text-transform:uppercase;">${hint}</div>
       </div>
-
       <div class="login-footer">System Version 1.0.0 // Secure Connection</div>
     </div></div>`;
   }
@@ -3349,19 +3393,19 @@ function renderSettings() {
 
 // Event binding
 function bindEvents() {
-  // ── Login Step 1: Brand select dropdown ──
-  const brandSelect = document.getElementById("brandSelect");
-  if (brandSelect) {
-    brandSelect.onchange = () => {
-      const pid = brandSelect.value;
-      if (!pid) return;
+  // ── Login Step 1: SSO PLAY button (logo + play, no dropdown) ──
+  const ssoPlayBtn = document.getElementById("ssoPlayBtn");
+  if (ssoPlayBtn) {
+    ssoPlayBtn.onclick = () => {
       SFX.click();
-      state.selectedLoginPlayer = PLAYERS.find(p => p.id === pid);
-      state.loginStep = "pin";
-      state.pinValue = "";
-      state.pinError = "";
-      state.pinVisible = false;
-      render();
+      // Try to auto-login from Platform SSO
+      if (attemptSsoAutoLogin()) {
+        SFX.loginSuccess();
+        render();
+        return;
+      }
+      // No SSO params — nudge the user back to Platform login
+      alert('No active session. Please sign in on the PFLX Platform to enter Battle Arena.');
     };
   }
 
