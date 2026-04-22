@@ -1113,6 +1113,40 @@ nav .avatar-sub{font-size:9px;color:#666}
 .er-rank-num{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:900;color:#666;width:24px;text-align:center}
 .er-standing-row.winner .er-rank-num{color:var(--pflx-gold)}
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   ESPORTS HOST SETTINGS
+   ═══════════════════════════════════════════════════════════════════ */
+.es-config-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.es-config-tab{padding:8px 14px;border-radius:8px;background:rgba(10,14,23,0.6);border:1px solid rgba(0,229,255,0.08);cursor:pointer;font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.es-config-tab:hover{border-color:rgba(0,229,255,0.25);color:#ccc}
+.es-config-tab.active{border-color:var(--pflx-cyan);color:var(--pflx-cyan);background:rgba(0,229,255,0.08)}
+.es-config-tab .tab-icon{font-size:1rem}
+
+.es-config-panel{background:rgba(10,14,23,0.5);border:1px solid rgba(0,229,255,0.08);border-radius:14px;padding:20px;margin-bottom:16px}
+.es-config-panel h4{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+.es-tier-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.es-tier-col{background:rgba(10,14,23,0.4);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:14px}
+.es-tier-col h5{font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;text-align:center}
+
+.es-field{margin-bottom:10px}
+.es-field label{display:block;font-size:10px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;font-family:'Orbitron',monospace;font-weight:600}
+.es-field input[type="number"],.es-field select{width:100%;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.12);border-radius:6px;padding:8px 10px;color:#ccc;font-size:12px;font-family:inherit;outline:none}
+.es-field input[type="number"]:focus,.es-field select:focus{border-color:rgba(0,229,255,0.35)}
+.es-field select option{background:#0a1218;color:#ccc}
+
+.es-badge-row{display:flex;align-items:center;gap:12px;padding:10px;background:rgba(10,14,23,0.4);border:1px solid rgba(255,255,255,0.04);border-radius:8px;margin-bottom:8px}
+.es-badge-row label{flex:0 0 120px;font-size:11px;color:#aaa;font-weight:600}
+.es-badge-row select{flex:1;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.12);border-radius:6px;padding:8px 10px;color:#ccc;font-size:12px;font-family:inherit;outline:none}
+.es-badge-row select option{background:#0a1218;color:#ccc}
+
+.es-global-box{background:rgba(10,14,23,0.5);border:1px solid rgba(255,215,64,0.1);border-radius:14px;padding:20px;margin-bottom:16px}
+.es-global-box h4{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:var(--pflx-gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+.es-save-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.es-save-bar .save-status{font-family:'Orbitron',monospace;font-size:0.6rem;color:#00e676;font-weight:600}
+
 </style>
 </head>
 <body>
@@ -3497,6 +3531,166 @@ function renderSettings() {
         <button class="btn-arena" style="font-size:0.7rem;padding:10px 24px" onclick="goScreen('cipher_select')">Open Cipher Dashboard →</button>
       </div>
     </div>
+
+    
+    <!-- ESPORTS DESIGN CHALLENGE SETTINGS -->
+    <div class="settings-section">
+      <div class="settings-section-title">🏟️ Design Challenge Settings <span class="host-only-badge">Host Only</span></div>
+
+      <!-- Mode tabs -->
+      <div class="es-config-tabs">
+        ${ESPORTS_MODES.map(m => `
+          <div class="es-config-tab ${esportsSettingsTab === m.id ? 'active' : ''}" onclick="esportsConfigSetTab('${m.id}')" style="${esportsSettingsTab === m.id ? 'border-color:' + m.color : ''}">
+            <span class="tab-icon">${m.icon}</span> ${m.name}
+          </div>
+        `).join('')}
+      </div>
+
+      ${(() => {
+        const mode = ESPORTS_MODES.find(m => m.id === esportsSettingsTab);
+        if (!mode) return '';
+        const cfg = esportsHostConfig[mode.id];
+        const partBadges = PFLX_BADGES.filter(b => b.type === 'participation');
+        const achBadges = PFLX_BADGES.filter(b => b.type === 'achievement');
+        const allBadges = PFLX_BADGES;
+
+        return `
+          <!-- Mode Enable/Disable -->
+          <div class="setting-row" style="margin-bottom:16px">
+            <div class="setting-label">
+              <span class="sl-title">${mode.icon} ${mode.name} — ${mode.pathway}</span>
+              <span class="sl-desc">Enable or disable this game mode for players</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" ${cfg.enabled ? 'checked' : ''} id="esc_enabled_${mode.id}" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
+          <!-- Timer Configuration per Difficulty -->
+          <div class="es-config-panel">
+            <h4>⏱️ Timer Settings (Minutes)</h4>
+            <div class="es-tier-grid">
+              <div class="es-tier-col" style="border-color:rgba(0,230,118,0.15)">
+                <h5 style="color:#00e676">🚀 Cadet</h5>
+                <div class="es-field">
+                  <label>Time Limit</label>
+                  <input type="number" id="esc_timer_${mode.id}_cadet" value="${cfg.timers.cadet}" min="5" max="120" step="5" />
+                </div>
+                <div style="font-size:9px;color:#666;text-align:center">${mode.tiers[0].tools.join(', ')}</div>
+              </div>
+              <div class="es-tier-col" style="border-color:rgba(255,215,64,0.15)">
+                <h5 style="color:#ffd740">⚡ Officer</h5>
+                <div class="es-field">
+                  <label>Time Limit</label>
+                  <input type="number" id="esc_timer_${mode.id}_officer" value="${cfg.timers.officer}" min="5" max="120" step="5" />
+                </div>
+                <div style="font-size:9px;color:#666;text-align:center">${mode.tiers[1].tools.join(', ')}</div>
+              </div>
+              <div class="es-tier-col" style="border-color:rgba(255,23,68,0.15)">
+                <h5 style="color:#ff1744">🔥 Commander</h5>
+                <div class="es-field">
+                  <label>Time Limit</label>
+                  <input type="number" id="esc_timer_${mode.id}_commander" value="${cfg.timers.commander}" min="5" max="120" step="5" />
+                </div>
+                <div style="font-size:9px;color:#666;text-align:center">${mode.tiers[2].tools.join(', ')}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- XC Reward Configuration -->
+          <div class="es-config-panel">
+            <h4>💰 XC Rewards</h4>
+            <div class="es-field" style="max-width:280px;margin-bottom:16px">
+              <label>Base XC Reward</label>
+              <input type="number" id="esc_basexc_${mode.id}" value="${cfg.xcBase}" min="50" max="10000" step="50" />
+            </div>
+            <div class="es-tier-grid">
+              <div class="es-tier-col" style="border-color:rgba(0,230,118,0.15)">
+                <h5 style="color:#00e676">Cadet Multiplier</h5>
+                <div class="es-field">
+                  <label>XC Multiplier</label>
+                  <select id="esc_xc_${mode.id}_cadet">
+                    ${[0.5,0.75,1,1.25,1.5,2,2.5,3].map(v => `<option value="${v}" ${cfg.xcMultipliers.cadet===v?'selected':''}>${v}x</option>`).join('')}
+                  </select>
+                </div>
+                <div style="font-size:10px;color:var(--pflx-gold);text-align:center;font-family:Orbitron,monospace;font-weight:700">= ${Math.round(cfg.xcBase * cfg.xcMultipliers.cadet)} XC</div>
+              </div>
+              <div class="es-tier-col" style="border-color:rgba(255,215,64,0.15)">
+                <h5 style="color:#ffd740">Officer Multiplier</h5>
+                <div class="es-field">
+                  <label>XC Multiplier</label>
+                  <select id="esc_xc_${mode.id}_officer">
+                    ${[0.5,0.75,1,1.25,1.5,2,2.5,3].map(v => `<option value="${v}" ${cfg.xcMultipliers.officer===v?'selected':''}>${v}x</option>`).join('')}
+                  </select>
+                </div>
+                <div style="font-size:10px;color:var(--pflx-gold);text-align:center;font-family:Orbitron,monospace;font-weight:700">= ${Math.round(cfg.xcBase * cfg.xcMultipliers.officer)} XC</div>
+              </div>
+              <div class="es-tier-col" style="border-color:rgba(255,23,68,0.15)">
+                <h5 style="color:#ff1744">Commander Multiplier</h5>
+                <div class="es-field">
+                  <label>XC Multiplier</label>
+                  <select id="esc_xc_${mode.id}_commander">
+                    ${[0.5,0.75,1,1.25,1.5,2,2.5,3].map(v => `<option value="${v}" ${cfg.xcMultipliers.commander===v?'selected':''}>${v}x</option>`).join('')}
+                  </select>
+                </div>
+                <div style="font-size:10px;color:var(--pflx-gold);text-align:center;font-family:Orbitron,monospace;font-weight:700">= ${Math.round(cfg.xcBase * cfg.xcMultipliers.commander)} XC</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Badge Configuration -->
+          <div class="es-config-panel">
+            <h4>🏅 Badge Rewards</h4>
+            <div class="es-badge-row">
+              <label>Participation</label>
+              <select id="esc_badge_part_${mode.id}">
+                ${allBadges.map(b => `<option value="${b.id}" ${cfg.participationBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="es-badge-row">
+              <label>Winner</label>
+              <select id="esc_badge_win_${mode.id}">
+                ${allBadges.map(b => `<option value="${b.id}" ${cfg.winnerBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="es-badge-row">
+              <label>Co-op Team</label>
+              <select id="esc_badge_coop_${mode.id}">
+                ${allBadges.map(b => `<option value="${b.id}" ${cfg.coopBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <!-- Max Players -->
+          <div class="es-config-panel">
+            <h4>👥 Player Limits</h4>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="es-field">
+                <label>Max Multiplayer Contestants</label>
+                <input type="number" id="esc_maxmulti_${mode.id}" value="${cfg.maxContestantsMulti}" min="2" max="32" />
+              </div>
+              <div class="es-field">
+                <label>Max Co-op Total Players</label>
+                <input type="number" id="esc_maxcoop_${mode.id}" value="${cfg.maxContestantsCoop}" min="4" max="32" />
+              </div>
+            </div>
+          </div>
+        `;
+      })()}
+
+      <!-- Save / Reset Bar -->
+      <div class="es-save-bar">
+        <div>
+          ${esportsSettingsSaved ? '<span class="save-status">✅ Settings saved!</span>' : '<span style="font-size:10px;color:#666">Changes are not saved until you click Save</span>'}
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-arena btn-arena-red" style="font-size:0.6rem;padding:8px 16px" onclick="esportsConfigReset()">Reset Defaults</button>
+          <button class="btn-arena btn-arena-gold" style="font-size:0.7rem;padding:10px 24px" onclick="esportsConfigSave()">💾 Save All Settings</button>
+        </div>
+      </div>
+    </div>
+
     ` : ''}
 
     <div style="text-align:center;margin-top:24px">
@@ -6724,6 +6918,166 @@ const PLAY_MODES = [
   { id: 'coop', name: 'Co-op', icon: '🤝', desc: 'Team vs team — squads of 2-5 players', minPlayers: 4, maxPlayers: 10 },
 ];
 
+
+
+// ═══════════════════════════════════════════════════════════════════
+// ESPORTS HOST CONFIG — Per-mode overrides for timers, XC, badges
+// ═══════════════════════════════════════════════════════════════════
+const PFLX_BADGES = [
+  // Participation badges
+  { id: 'positive_participant', name: 'Positive Participant', icon: '🏅', type: 'participation', desc: 'Awarded for competing and showing up' },
+  { id: 'team_player', name: 'Team Player', icon: '🤝', type: 'participation', desc: 'Collaborated in co-op mode' },
+  { id: 'streak_warrior', name: 'Streak Warrior', icon: '🔥', type: 'participation', desc: 'Competed in 3+ consecutive challenges' },
+  { id: 'first_timer', name: 'First Timer', icon: '⭐', type: 'participation', desc: 'Completed first design challenge' },
+  { id: 'creative_spirit', name: 'Creative Spirit', icon: '🎨', type: 'participation', desc: 'Submitted a creative entry' },
+  { id: 'peer_supporter', name: 'Peer Supporter', icon: '💬', type: 'participation', desc: 'Voted and gave feedback to peers' },
+  // Achievement badges
+  { id: 'arena_champion', name: 'Battle Arena Champion', icon: '🏆', type: 'achievement', desc: 'Won a ranked multiplayer challenge' },
+  { id: 'dojo_master', name: 'Design Dojo Master', icon: '🥋', type: 'achievement', desc: 'Won 5+ design challenges' },
+  { id: 'season_mvp', name: 'Season MVP', icon: '👑', type: 'achievement', desc: 'Most wins in a season' },
+  { id: 'untouchable', name: 'Untouchable', icon: '💎', type: 'achievement', desc: 'Won 3 challenges in a row without losing' },
+  { id: 'pathway_legend', name: 'Pathway Legend', icon: '🔱', type: 'achievement', desc: 'Mastered all difficulty tiers in one pathway' },
+  { id: 'commander_badge', name: 'Commander Elite', icon: '🎖️', type: 'achievement', desc: 'Won a Commander-tier challenge' },
+  { id: 'speed_demon', name: 'Speed Demon', icon: '⚡', type: 'achievement', desc: 'Submitted before half the timer elapsed' },
+  { id: 'crowd_favorite', name: 'Crowd Favorite', icon: '📣', type: 'achievement', desc: 'Received the most votes in judging' },
+];
+
+// Default config per mode — host can override these
+function getDefaultEsportsConfig() {
+  const config = {};
+  ESPORTS_MODES.forEach(mode => {
+    config[mode.id] = {
+      enabled: true,
+      timers: {},
+      xcBase: 500,
+      xcMultipliers: {},
+      participationBadge: 'positive_participant',
+      winnerBadge: 'arena_champion',
+      coopBadge: 'team_player',
+      maxContestantsMulti: 8,
+      maxContestantsCoop: 10,
+    };
+    mode.tiers.forEach(tier => {
+      config[mode.id].timers[tier.diff] = tier.timeMins;
+      config[mode.id].xcMultipliers[tier.diff] = tier.xcMult;
+    });
+  });
+  return config;
+}
+
+let esportsHostConfig = getDefaultEsportsConfig();
+
+// Load persisted host config
+function loadEsportsConfig() {
+  try {
+    const saved = localStorage.getItem('pflx_esports_host_config');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge with defaults to handle new modes
+      const defaults = getDefaultEsportsConfig();
+      Object.keys(defaults).forEach(modeId => {
+        if (!parsed[modeId]) parsed[modeId] = defaults[modeId];
+        else {
+          // Fill in any missing keys from defaults
+          Object.keys(defaults[modeId]).forEach(key => {
+            if (parsed[modeId][key] === undefined) parsed[modeId][key] = defaults[modeId][key];
+          });
+        }
+      });
+      esportsHostConfig = parsed;
+    }
+  } catch(e) { esportsHostConfig = getDefaultEsportsConfig(); }
+}
+
+function saveEsportsConfig() {
+  try { localStorage.setItem('pflx_esports_host_config', JSON.stringify(esportsHostConfig)); } catch(e) {}
+}
+
+loadEsportsConfig();
+
+// Active settings tab
+let esportsSettingsTab = 'beat_lab';
+let esportsSettingsSaved = false;
+
+function esportsConfigSetTab(modeId) {
+  esportsSettingsTab = modeId;
+  esportsSettingsSaved = false;
+  SFX.click();
+  render();
+}
+
+function esportsConfigSave() {
+  ESPORTS_MODES.forEach(mode => {
+    const cfg = esportsHostConfig[mode.id];
+    // Read timers
+    ['cadet','officer','commander'].forEach(diff => {
+      const el = document.getElementById('esc_timer_' + mode.id + '_' + diff);
+      if (el) cfg.timers[diff] = parseInt(el.value) || cfg.timers[diff];
+    });
+    // Read XC multipliers
+    ['cadet','officer','commander'].forEach(diff => {
+      const el = document.getElementById('esc_xc_' + mode.id + '_' + diff);
+      if (el) cfg.xcMultipliers[diff] = parseFloat(el.value) || cfg.xcMultipliers[diff];
+    });
+    // Read base XC
+    const baseEl = document.getElementById('esc_basexc_' + mode.id);
+    if (baseEl) cfg.xcBase = parseInt(baseEl.value) || cfg.xcBase;
+    // Read badges
+    const partBadge = document.getElementById('esc_badge_part_' + mode.id);
+    if (partBadge) cfg.participationBadge = partBadge.value;
+    const winBadge = document.getElementById('esc_badge_win_' + mode.id);
+    if (winBadge) cfg.winnerBadge = winBadge.value;
+    const coopBadge = document.getElementById('esc_badge_coop_' + mode.id);
+    if (coopBadge) cfg.coopBadge = coopBadge.value;
+    // Read max contestants
+    const maxMulti = document.getElementById('esc_maxmulti_' + mode.id);
+    if (maxMulti) cfg.maxContestantsMulti = parseInt(maxMulti.value) || 8;
+    const maxCoop = document.getElementById('esc_maxcoop_' + mode.id);
+    if (maxCoop) cfg.maxContestantsCoop = parseInt(maxCoop.value) || 10;
+    // Read enabled
+    const enabledEl = document.getElementById('esc_enabled_' + mode.id);
+    if (enabledEl) cfg.enabled = enabledEl.checked;
+  });
+  saveEsportsConfig();
+  esportsSettingsSaved = true;
+  SFX.correct();
+  render();
+}
+
+function esportsConfigReset() {
+  esportsHostConfig = getDefaultEsportsConfig();
+  saveEsportsConfig();
+  esportsSettingsSaved = false;
+  SFX.wrong();
+  render();
+}
+
+// Get effective timer for a mode + difficulty (host override or default)
+function getEsportsTimer(modeId, diff) {
+  return esportsHostConfig[modeId]?.timers?.[diff] ?? ESPORTS_MODES.find(m => m.id === modeId)?.tiers.find(t => t.diff === diff)?.timeMins ?? 30;
+}
+
+function getEsportsXcMult(modeId, diff) {
+  return esportsHostConfig[modeId]?.xcMultipliers?.[diff] ?? ESPORTS_MODES.find(m => m.id === modeId)?.tiers.find(t => t.diff === diff)?.xcMult ?? 1;
+}
+
+function getEsportsBaseXc(modeId) {
+  return esportsHostConfig[modeId]?.xcBase ?? 500;
+}
+
+function getEsportsBadge(modeId, type) {
+  const cfg = esportsHostConfig[modeId];
+  if (!cfg) return 'positive_participant';
+  if (type === 'participation') return cfg.participationBadge;
+  if (type === 'winner') return cfg.winnerBadge;
+  if (type === 'coop') return cfg.coopBadge;
+  return 'positive_participant';
+}
+
+function isModeEnabled(modeId) {
+  return esportsHostConfig[modeId]?.enabled !== false;
+}
+
 // ── Esports State ──
 const esportsState = {
   selectedMode: null,    // ESPORTS_MODES entry
@@ -6762,6 +7116,13 @@ function esportsCreateMatch(title) {
   const tier = mode.tiers.find(t => t.diff === diffId);
   const prompt = getRandomPrompt(mode);
 
+  // Use host config overrides
+  const cfgTimeMins = getEsportsTimer(mode.id, diffId);
+  const cfgXcMult = getEsportsXcMult(mode.id, diffId);
+  const cfgBaseXC = getEsportsBaseXc(mode.id);
+  const cfgMaxMulti = esportsHostConfig[mode.id]?.maxContestantsMulti || 8;
+  const cfgMaxCoop = esportsHostConfig[mode.id]?.maxContestantsCoop || 10;
+
   const match = {
     id: nextMatchId(),
     modeId: mode.id,
@@ -6774,17 +7135,21 @@ function esportsCreateMatch(title) {
     title: title || mode.name + ' Challenge',
     prompt: prompt,
     tools: tier.tools,
-    timeMins: tier.timeMins,
-    timeLeft: tier.timeMins * 60,
-    xcMult: tier.xcMult,
-    baseXC: 500,
-    status: 'open', // open | in_progress | judging | completed
+    timeMins: cfgTimeMins,
+    timeLeft: cfgTimeMins * 60,
+    xcMult: cfgXcMult,
+    baseXC: cfgBaseXC,
+    status: 'open',
     contestants: [{ id: state.player.id, name: state.player.name, brand: state.player.brand, avatar: state.player.avatarText, image: state.player.image, submission: null, votes: 0 }],
-    maxContestants: playMode === 'solo' ? 1 : (playMode === 'coop' ? 10 : 8),
+    maxContestants: playMode === 'solo' ? 1 : (playMode === 'coop' ? cfgMaxCoop : cfgMaxMulti),
     hostId: state.player.id,
     createdAt: Date.now(),
     winner: null,
-    badges: [],
+    badges: {
+      participation: getEsportsBadge(mode.id, 'participation'),
+      winner: getEsportsBadge(mode.id, 'winner'),
+      coop: getEsportsBadge(mode.id, 'coop'),
+    },
   };
 
   esportsState.matches.unshift(match);
@@ -6961,7 +7326,8 @@ function esportsSetPlay(p) { esportsState.selectedPlay = p; SFX.click(); render(
 
 // ── Render: Esports Hub (8 mode cards) ──
 function renderEsportsHub() {
-  const cards = ESPORTS_MODES.map(m => {
+  const visibleModes = ESPORTS_MODES.filter(m => isModeEnabled(m.id));
+  const cards = visibleModes.map(m => {
     return `<div class="esports-mode-card" onclick="esportsSelectMode('${m.id}')" style="border-left:3px solid ${m.color}">
       <div class="emc-icon">${m.icon}</div>
       <div class="emc-name">${m.name}</div>
@@ -6994,12 +7360,14 @@ function renderEsportsLobby() {
   const diffCards = DIFF_TIERS.map(d => {
     const tier = mode.tiers.find(t => t.diff === d.id);
     const isActive = esportsState.selectedDiff === d.id;
+    const cfgTime = getEsportsTimer(mode.id, d.id);
+    const cfgMult = getEsportsXcMult(mode.id, d.id);
     return `<div class="diff-card ${isActive ? 'active' : ''}" onclick="esportsSetDiff('${d.id}')" style="${isActive ? 'border-color:' + d.color + ';box-shadow:0 0 20px ' + d.color + '30' : ''}">
       <div class="dc-icon">${d.icon}</div>
       <div class="dc-name" style="${isActive ? 'color:' + d.color : ''}">${d.name}</div>
-      <div class="dc-xc">${tier.xcMult}x XC</div>
+      <div class="dc-xc">${cfgMult}x XC</div>
       <div class="dc-tools">${tier.tools.join(', ')}</div>
-      <div class="dc-time">⏱️ ${tier.timeMins} min</div>
+      <div class="dc-time">⏱️ ${cfgTime} min</div>
     </div>`;
   }).join('');
 
@@ -7256,8 +7624,8 @@ function renderEsportsResults() {
     <div class="er-rewards">
       <div class="er-reward"><div class="err-val">+${xcWin} XC</div><div class="err-label">${isSolo ? 'Completion Reward' : 'Winner Reward'}</div></div>
       <div class="er-reward"><div class="err-val">+${xcParticipate} XC</div><div class="err-label">Participation</div></div>
-      <div class="er-reward"><div class="err-val">🏅</div><div class="err-label">${isSolo ? 'Practice Complete' : 'Positive Participant'}</div></div>
-      ${!isSolo && winner ? `<div class="er-reward"><div class="err-val">🏆</div><div class="err-label">Arena Champion</div></div>` : `<div class="er-reward"><div class="err-val">${match.xcMult}x</div><div class="err-label">XC Multiplier</div></div>`}
+      <div class="er-reward"><div class="err-val">${(PFLX_BADGES.find(b=>b.id===(match.badges?.participation||'positive_participant'))||{icon:'🏅'}).icon}</div><div class="err-label">${(PFLX_BADGES.find(b=>b.id===(match.badges?.participation||'positive_participant'))||{name:'Positive Participant'}).name}</div></div>
+      ${!isSolo && winner ? `<div class="er-reward"><div class="err-val">${(PFLX_BADGES.find(b=>b.id===(match.badges?.winner||'arena_champion'))||{icon:'🏆'}).icon}</div><div class="err-label">${(PFLX_BADGES.find(b=>b.id===(match.badges?.winner||'arena_champion'))||{name:'Arena Champion'}).name}</div></div>` : `<div class="er-reward"><div class="err-val">${match.xcMult}x</div><div class="err-label">XC Multiplier</div></div>`}
     </div>
 
     ${!isSolo ? `<div class="er-standings"><h4>Final Standings</h4>${standingRows}</div>` : ''}
