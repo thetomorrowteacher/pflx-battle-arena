@@ -147,7 +147,7 @@ body{background:var(--pflx-darker);color:#e0e0e0;font-family:'Inter',system-ui,s
 .pflx-glass{background:rgba(0,229,255,0.08)}
 .content{position:relative;z-index:10}
 /* Ensure all screen wraps render above the spaceship background layers */
-.home-wrap,.lb-wrap,.wager-wrap,.result-wrap,.battle-wrap,.settings-wrap,.login-wrap{position:relative;z-index:10}
+.home-wrap,.lb-wrap,.wager-wrap,.result-wrap,.battle-wrap,.settings-wrap,.login-wrap,.esports-hub,.esports-lobby,.esports-match,.esports-judging,.esports-results{position:relative;z-index:10}
 
 /* Nav */
 nav{background:rgba(10,14,23,0.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,229,255,0.1);position:sticky;top:0;z-index:50}
@@ -959,6 +959,194 @@ nav .avatar-sub{font-size:9px;color:#666}
 .live-play-empty{text-align:center;padding:40px 20px;color:#999}
 .live-play-empty-icon{font-size:3rem;margin-bottom:16px}
 .live-play-empty-text{font-size:0.7rem;color:#666;margin-top:12px}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ESPORTS DESIGN CHALLENGE PLATFORM
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Esports Hub — 8-mode selector grid */
+.esports-hub{max-width:1100px;margin:0 auto;padding:32px 24px;position:relative;z-index:10}
+.esports-hero{text-align:center;margin-bottom:32px}
+.esports-hero h2{font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.1em}
+.esports-hero p{font-size:13px;color:#888;margin-top:6px}
+
+.esports-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+
+.esports-mode-card{position:relative;overflow:hidden;border-radius:16px;background:rgba(10,14,23,0.85);border:1px solid rgba(0,229,255,0.1);cursor:pointer;transition:all 0.3s ease;padding:20px}
+.esports-mode-card:hover{border-color:rgba(0,229,255,0.4);box-shadow:0 0 30px rgba(0,229,255,0.1);transform:translateY(-3px)}
+.esports-mode-card .emc-icon{font-size:2.2rem;margin-bottom:10px;filter:drop-shadow(0 0 8px rgba(0,229,255,0.3))}
+.esports-mode-card .emc-name{font-family:'Orbitron',monospace;font-size:0.85rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px}
+.esports-mode-card .emc-pathway{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;font-family:'Orbitron',monospace}
+.esports-mode-card .emc-desc{font-size:12px;color:#aaa;line-height:1.5;margin-bottom:12px}
+.esports-mode-card .emc-meta{display:flex;gap:8px;flex-wrap:wrap}
+.esports-mode-card .emc-tag{font-family:'Orbitron',monospace;font-size:0.5rem;font-weight:600;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em}
+.emc-tag.solo{background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.25);color:#00e676}
+.emc-tag.multi{background:rgba(41,121,255,0.1);border:1px solid rgba(41,121,255,0.25);color:#2979ff}
+.emc-tag.coop{background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.25);color:#7c4dff}
+
+/* Esports Mode Lobby */
+.esports-lobby{max-width:900px;margin:0 auto;padding:32px 24px;position:relative;z-index:10}
+.esports-lobby-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.esports-lobby-header .elh-icon{font-size:2.5rem}
+.esports-lobby-header .elh-info h2{font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em}
+.esports-lobby-header .elh-info p{font-size:12px;color:#888;margin-top:2px}
+
+/* Difficulty tier selector */
+.diff-selector{display:flex;gap:12px;margin-bottom:24px}
+.diff-card{flex:1;padding:16px;border-radius:12px;background:rgba(10,14,23,0.6);border:2px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.3s;text-align:center}
+.diff-card:hover{border-color:rgba(0,229,255,0.3)}
+.diff-card.active{border-color:var(--pflx-cyan);box-shadow:0 0 20px rgba(0,229,255,0.15)}
+.diff-card .dc-icon{font-size:1.5rem;margin-bottom:6px}
+.diff-card .dc-name{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:#ccc;text-transform:uppercase;letter-spacing:0.08em}
+.diff-card .dc-xc{font-family:'Orbitron',monospace;font-size:0.6rem;color:var(--pflx-gold);margin-top:4px}
+.diff-card .dc-tools{font-size:10px;color:#888;margin-top:6px;line-height:1.4}
+.diff-card .dc-time{font-size:10px;color:var(--pflx-cyan);margin-top:4px;font-family:'Orbitron',monospace}
+
+/* Play mode selector */
+.play-selector{display:flex;gap:12px;margin-bottom:24px}
+.play-card{flex:1;padding:14px;border-radius:12px;background:rgba(10,14,23,0.6);border:2px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.3s;text-align:center}
+.play-card:hover{border-color:rgba(0,229,255,0.3)}
+.play-card.active{border-color:var(--pflx-green);box-shadow:0 0 20px rgba(0,230,118,0.15)}
+.play-card .pc-icon{font-size:1.3rem;margin-bottom:4px}
+.play-card .pc-name{font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:700;color:#ccc;text-transform:uppercase}
+.play-card .pc-desc{font-size:10px;color:#888;margin-top:4px}
+
+/* Match creation area */
+.match-create-box{background:rgba(10,14,23,0.7);border:1px solid rgba(0,229,255,0.1);border-radius:16px;padding:24px;margin-bottom:24px}
+.match-create-box h3{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px}
+.mcb-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.mcb-label{font-size:12px;color:#aaa}
+.mcb-input{background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.15);border-radius:8px;padding:8px 12px;color:#ccc;font-size:12px;outline:none;width:200px;font-family:inherit}
+.mcb-input:focus{border-color:rgba(0,229,255,0.4);box-shadow:0 0 10px rgba(0,229,255,0.1)}
+
+/* Open matches list */
+.open-matches{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.open-match-card{background:rgba(10,14,23,0.6);border:1px solid rgba(0,229,255,0.08);border-radius:14px;padding:16px;display:flex;align-items:center;gap:16px;transition:all 0.3s}
+.open-match-card:hover{border-color:rgba(0,229,255,0.25)}
+.omc-info{flex:1}
+.omc-title{font-family:'Orbitron',monospace;font-size:0.75rem;font-weight:700;color:#ccc;text-transform:uppercase}
+.omc-meta{font-size:10px;color:#888;margin-top:4px}
+.omc-players{display:flex;gap:-4px;margin-top:6px}
+.omc-avatar{width:28px;height:28px;border-radius:50%;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--pflx-cyan);margin-left:-6px}
+.omc-avatar:first-child{margin-left:0}
+.omc-diff{font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:600;padding:3px 8px;border-radius:4px}
+.omc-diff.cadet{background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.25);color:#00e676}
+.omc-diff.officer{background:rgba(255,215,64,0.1);border:1px solid rgba(255,215,64,0.25);color:#ffd740}
+.omc-diff.commander{background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.25);color:#ff1744}
+
+/* In-match view */
+.esports-match{max-width:900px;margin:0 auto;padding:24px;position:relative;z-index:10}
+.esports-match-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding:16px 20px;background:rgba(10,14,23,0.8);border:1px solid rgba(0,229,255,0.1);border-radius:14px}
+.emh-mode{display:flex;align-items:center;gap:10px}
+.emh-mode-icon{font-size:1.5rem}
+.emh-mode-name{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase}
+.emh-timer{text-align:center}
+.emh-timer .timer-value{font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;color:#fff}
+.emh-timer .timer-label{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:0.1em}
+.emh-status{font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;padding:6px 14px;border-radius:8px}
+.emh-status.working{background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);color:#00e676}
+.emh-status.judging{background:rgba(255,215,64,0.1);border:1px solid rgba(255,215,64,0.3);color:#ffd740}
+
+/* Timer bar */
+.esports-timer-bar{height:8px;border-radius:4px;background:rgba(255,255,255,0.05);margin-bottom:20px;overflow:hidden}
+.esports-timer-fill{height:100%;border-radius:4px;transition:width 1s linear}
+
+/* Prompt card */
+.esports-prompt{background:rgba(10,14,23,0.8);border:1px solid rgba(255,215,64,0.15);border-radius:14px;padding:20px;margin-bottom:20px;text-align:center}
+.esports-prompt .ep-label{font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:700;color:var(--pflx-gold);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px}
+.esports-prompt .ep-text{font-size:16px;color:#e0e0e0;line-height:1.6;font-weight:500}
+
+/* Tools allowed card */
+.esports-tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:20px}
+.esports-tool-tag{font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:600;padding:4px 10px;border-radius:6px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.25);color:#7c4dff;text-transform:uppercase}
+
+/* Contestants panel */
+.esports-contestants{background:rgba(10,14,23,0.6);border:1px solid rgba(0,229,255,0.08);border-radius:14px;padding:16px;margin-bottom:20px}
+.esports-contestants h4{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px}
+.ec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.ec-player{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.06)}
+.ec-player .ec-av{width:28px;height:28px;border-radius:50%;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--pflx-cyan);flex-shrink:0;overflow:hidden}
+.ec-player .ec-name{font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:600;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ec-player.submitted{border-color:rgba(0,230,118,0.3);background:rgba(0,230,118,0.06)}
+.ec-player.submitted .ec-name{color:#00e676}
+
+/* Submission area */
+.esports-submit{background:rgba(10,14,23,0.7);border:1px solid rgba(0,229,255,0.12);border-radius:14px;padding:20px;margin-bottom:20px}
+.esports-submit h4{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px}
+.es-textarea{width:100%;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.12);border-radius:10px;padding:12px;color:#ccc;font-size:13px;resize:vertical;min-height:60px;font-family:inherit;outline:none}
+.es-textarea:focus{border-color:rgba(0,229,255,0.3)}
+.es-link-input{width:100%;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.12);border-radius:10px;padding:12px;color:#ccc;font-size:13px;font-family:inherit;outline:none;margin-top:8px}
+.es-link-input:focus{border-color:rgba(0,229,255,0.3)}
+
+/* Judging / Voting view */
+.esports-judging{max-width:900px;margin:0 auto;padding:24px;position:relative;z-index:10}
+.ej-submissions{display:flex;flex-direction:column;gap:16px;margin-bottom:24px}
+.ej-entry{background:rgba(10,14,23,0.7);border:1px solid rgba(0,229,255,0.1);border-radius:14px;padding:20px;transition:all 0.3s}
+.ej-entry:hover{border-color:rgba(0,229,255,0.25)}
+.ej-entry-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ej-player{display:flex;align-items:center;gap:10px}
+.ej-av{width:36px;height:36px;border-radius:50%;background:rgba(0,229,255,0.1);border:2px solid rgba(0,229,255,0.2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--pflx-cyan);overflow:hidden}
+.ej-name{font-family:'Orbitron',monospace;font-size:0.75rem;font-weight:700;color:#ccc}
+.ej-link{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2);color:#7c4dff;font-size:11px;text-decoration:none;margin-bottom:8px;transition:all 0.2s}
+.ej-link:hover{background:rgba(124,77,255,0.2);border-color:rgba(124,77,255,0.4)}
+.ej-notes{font-size:13px;color:#aaa;line-height:1.5}
+.ej-vote-btn{padding:10px 20px;border-radius:10px;background:rgba(255,215,64,0.08);border:1px solid rgba(255,215,64,0.2);color:var(--pflx-gold);font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;cursor:pointer;transition:all 0.3s;text-transform:uppercase}
+.ej-vote-btn:hover{background:rgba(255,215,64,0.15);border-color:rgba(255,215,64,0.4);box-shadow:0 0 15px rgba(255,215,64,0.15)}
+.ej-vote-btn.voted{background:rgba(255,215,64,0.2);border-color:var(--pflx-gold);color:var(--pflx-gold);box-shadow:0 0 20px rgba(255,215,64,0.2)}
+
+/* Results screen */
+.esports-results{max-width:700px;margin:0 auto;padding:32px 24px;text-align:center;position:relative;z-index:10}
+.er-trophy{font-size:4rem;margin-bottom:16px;filter:drop-shadow(0 0 20px rgba(255,215,64,0.5))}
+.er-title{font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:900;color:var(--pflx-gold);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px}
+.er-mode{font-size:12px;color:#888;margin-bottom:24px}
+.er-winner{background:rgba(255,215,64,0.08);border:2px solid rgba(255,215,64,0.2);border-radius:16px;padding:20px;margin-bottom:20px}
+.er-winner .erw-label{font-family:'Orbitron',monospace;font-size:0.6rem;color:var(--pflx-gold);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px}
+.er-winner .erw-name{font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:#fff}
+.er-rewards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.er-reward{background:rgba(10,14,23,0.6);border:1px solid rgba(0,229,255,0.08);border-radius:12px;padding:14px;text-align:center}
+.er-reward .err-val{font-family:'Orbitron',monospace;font-size:1.1rem;font-weight:700;color:var(--pflx-gold)}
+.er-reward .err-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px}
+.er-standings{text-align:left;margin-bottom:24px}
+.er-standings h4{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px}
+.er-standing-row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;margin-bottom:6px;background:rgba(10,14,23,0.4);border:1px solid rgba(255,255,255,0.03)}
+.er-standing-row.winner{background:rgba(255,215,64,0.06);border-color:rgba(255,215,64,0.15)}
+.er-rank-num{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:900;color:#666;width:24px;text-align:center}
+.er-standing-row.winner .er-rank-num{color:var(--pflx-gold)}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ESPORTS HOST SETTINGS
+   ═══════════════════════════════════════════════════════════════════ */
+.es-config-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.es-config-tab{padding:8px 14px;border-radius:8px;background:rgba(10,14,23,0.6);border:1px solid rgba(0,229,255,0.08);cursor:pointer;font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.es-config-tab:hover{border-color:rgba(0,229,255,0.25);color:#ccc}
+.es-config-tab.active{border-color:var(--pflx-cyan);color:var(--pflx-cyan);background:rgba(0,229,255,0.08)}
+.es-config-tab .tab-icon{font-size:1rem}
+
+.es-config-panel{background:rgba(10,14,23,0.5);border:1px solid rgba(0,229,255,0.08);border-radius:14px;padding:20px;margin-bottom:16px}
+.es-config-panel h4{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+.es-tier-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.es-tier-col{background:rgba(10,14,23,0.4);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:14px}
+.es-tier-col h5{font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;text-align:center}
+
+.es-field{margin-bottom:10px}
+.es-field label{display:block;font-size:10px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;font-family:'Orbitron',monospace;font-weight:600}
+.es-field input[type="number"],.es-field select{width:100%;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.12);border-radius:6px;padding:8px 10px;color:#ccc;font-size:12px;font-family:inherit;outline:none}
+.es-field input[type="number"]:focus,.es-field select:focus{border-color:rgba(0,229,255,0.35)}
+.es-field select option{background:#0a1218;color:#ccc}
+
+.es-badge-row{display:flex;align-items:center;gap:12px;padding:10px;background:rgba(10,14,23,0.4);border:1px solid rgba(255,255,255,0.04);border-radius:8px;margin-bottom:8px}
+.es-badge-row label{flex:0 0 120px;font-size:11px;color:#aaa;font-weight:600}
+.es-badge-row select{flex:1;background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.12);border-radius:6px;padding:8px 10px;color:#ccc;font-size:12px;font-family:inherit;outline:none}
+.es-badge-row select option{background:#0a1218;color:#ccc}
+
+.es-global-box{background:rgba(10,14,23,0.5);border:1px solid rgba(255,215,64,0.1);border-radius:14px;padding:20px;margin-bottom:16px}
+.es-global-box h4{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:var(--pflx-gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+.es-save-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.es-save-bar .save-status{font-family:'Orbitron',monospace;font-size:0.6rem;color:#00e676;font-weight:600}
+
 </style>
 </head>
 <body>
@@ -1072,6 +1260,7 @@ loadRoster();
 
 // ── Top-level game categories ──
 const CATEGORIES = [
+  { id:"esports", name:"Design Challenges", desc:"Compete in timed design competitions across 8 disciplines. Solo practice, ranked multiplayer, or co-op team battles. Earn XC and digital badges.", icon:"🏟️", tag:"beta", tagLabel:"New" },
   { id:"live_play", name:"Live Play", desc:"Real-time head-to-head arena battles. Compete live against other players with XC on the line. Matchmaking, spectators, and ranked leaderboards.", icon:"🔴", tag:"coming-soon", tagLabel:"Coming Soon" },
   { id:"side_quests", name:"Side Quests", desc:"Solo and async challenges you can tackle anytime. Sharpen your skills, earn XC, and climb the ranks at your own pace.", icon:"🗡️", tag:"beta", tagLabel:"Beta" },
 ];
@@ -1826,6 +2015,7 @@ function render() {
   else if (state.screen === "result") { app.innerHTML = bg + panel + renderNav() + renderResult(); }
   else if (state.screen === "leaderboard") { app.innerHTML = bg + panel + renderNav() + renderLeaderboard(); }
   else if (state.screen === "lobby") { app.innerHTML = bg + panel + renderNav() + renderLobby(); }
+  else if (state.screen === "esports") { app.innerHTML = bg + panel + renderNav() + renderEsportsScreen(); }
   else if (state.screen === "settings") { app.innerHTML = bg + panel + renderNav() + renderSettings(); }
   bindEvents();
   // Restore focus to active input after re-render
@@ -1859,6 +2049,7 @@ function renderNav() {
       <a href="#" onclick="goHome()" class="${state.screen==='home'||state.screen==='side_quests'?'active':''}">Arena</a>
       <a href="#" onclick="goLobby()" class="${state.screen==='lobby'?'active':''}">Lobby</a>
       <a href="#" onclick="goLeaderboard()" class="${state.screen==='leaderboard'?'active':''}">Leaderboard</a>
+      <a href="#" onclick="goScreen('esports')" class="${state.screen==='esports'?'active':''}">Challenges</a>
     </div>
     <div class="player-info">
       <div class="xc-bal">${p.xc.toLocaleString()} XC</div>
@@ -1942,6 +2133,7 @@ function renderSidePanel() {
           <a href="#" onclick="goHome();togglePanel()" class="${state.screen==='home'||state.screen==='side_quests'?'active':''}"><span class="nav-icon">⚔️</span> Arena</a>
           <a href="#" onclick="goLobby();togglePanel()" class="${state.screen==='lobby'?'active':''}"><span class="nav-icon">🏛️</span> Battle Lobby</a>
           <a href="#" onclick="goLeaderboard();togglePanel()" class="${state.screen==='leaderboard'?'active':''}"><span class="nav-icon">🏆</span> Leaderboard</a>
+          <a href="#" onclick="goScreen('esports');togglePanel()" class="${state.screen==='esports'?'active':''}"><span class="nav-icon">🏟️</span> Design Challenges</a>
           <a href="#" onclick="goSettings();togglePanel()" class="${state.screen==='settings'?'active':''}"><span class="nav-icon">⚙️</span> Settings${isHost ? ' <span style=\"font-size:8px;color:var(--pflx-gold);margin-left:4px\">HOST</span>' : ''}</a>
         </div>
       </div>
@@ -2055,7 +2247,7 @@ function renderLogin() {
 
 function renderHome() {
   const catCards = CATEGORIES.map(c => {
-    return `<div class="cat-card" data-cat="${c.id}">
+    return `<div class="cat-card" data-cat="${c.id}" onclick="goScreen('${c.id}')" style="cursor:pointer">
       <span class="cat-tag ${c.tag}">${c.tagLabel}</span>
       <div>
         <div class="cat-icon">${c.icon}</div>
@@ -3339,6 +3531,166 @@ function renderSettings() {
         <button class="btn-arena" style="font-size:0.7rem;padding:10px 24px" onclick="goScreen('cipher_select')">Open Cipher Dashboard →</button>
       </div>
     </div>
+
+    
+    <!-- ESPORTS DESIGN CHALLENGE SETTINGS -->
+    <div class="settings-section">
+      <div class="settings-section-title">🏟️ Design Challenge Settings <span class="host-only-badge">Host Only</span></div>
+
+      <!-- Mode tabs -->
+      <div class="es-config-tabs">
+        ${ESPORTS_MODES.map(m => `
+          <div class="es-config-tab ${esportsSettingsTab === m.id ? 'active' : ''}" onclick="esportsConfigSetTab('${m.id}')" style="${esportsSettingsTab === m.id ? 'border-color:' + m.color : ''}">
+            <span class="tab-icon">${m.icon}</span> ${m.name}
+          </div>
+        `).join('')}
+      </div>
+
+      ${(() => {
+        const mode = ESPORTS_MODES.find(m => m.id === esportsSettingsTab);
+        if (!mode) return '';
+        const cfg = esportsHostConfig[mode.id];
+        const partBadges = PFLX_BADGES.filter(b => b.type === 'participation');
+        const achBadges = PFLX_BADGES.filter(b => b.type === 'achievement');
+        const allBadges = PFLX_BADGES;
+
+        return `
+          <!-- Mode Enable/Disable -->
+          <div class="setting-row" style="margin-bottom:16px">
+            <div class="setting-label">
+              <span class="sl-title">${mode.icon} ${mode.name} — ${mode.pathway}</span>
+              <span class="sl-desc">Enable or disable this game mode for players</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" ${cfg.enabled ? 'checked' : ''} id="esc_enabled_${mode.id}" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
+          <!-- Timer Configuration per Difficulty -->
+          <div class="es-config-panel">
+            <h4>⏱️ Timer Settings (Minutes)</h4>
+            <div class="es-tier-grid">
+              <div class="es-tier-col" style="border-color:rgba(0,230,118,0.15)">
+                <h5 style="color:#00e676">🚀 Cadet</h5>
+                <div class="es-field">
+                  <label>Time Limit</label>
+                  <input type="number" id="esc_timer_${mode.id}_cadet" value="${cfg.timers.cadet}" min="5" max="120" step="5" />
+                </div>
+                <div style="font-size:9px;color:#666;text-align:center">${mode.tiers[0].tools.join(', ')}</div>
+              </div>
+              <div class="es-tier-col" style="border-color:rgba(255,215,64,0.15)">
+                <h5 style="color:#ffd740">⚡ Officer</h5>
+                <div class="es-field">
+                  <label>Time Limit</label>
+                  <input type="number" id="esc_timer_${mode.id}_officer" value="${cfg.timers.officer}" min="5" max="120" step="5" />
+                </div>
+                <div style="font-size:9px;color:#666;text-align:center">${mode.tiers[1].tools.join(', ')}</div>
+              </div>
+              <div class="es-tier-col" style="border-color:rgba(255,23,68,0.15)">
+                <h5 style="color:#ff1744">🔥 Commander</h5>
+                <div class="es-field">
+                  <label>Time Limit</label>
+                  <input type="number" id="esc_timer_${mode.id}_commander" value="${cfg.timers.commander}" min="5" max="120" step="5" />
+                </div>
+                <div style="font-size:9px;color:#666;text-align:center">${mode.tiers[2].tools.join(', ')}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- XC Reward Configuration -->
+          <div class="es-config-panel">
+            <h4>💰 XC Rewards</h4>
+            <div class="es-field" style="max-width:280px;margin-bottom:16px">
+              <label>Base XC Reward</label>
+              <input type="number" id="esc_basexc_${mode.id}" value="${cfg.xcBase}" min="50" max="10000" step="50" />
+            </div>
+            <div class="es-tier-grid">
+              <div class="es-tier-col" style="border-color:rgba(0,230,118,0.15)">
+                <h5 style="color:#00e676">Cadet Multiplier</h5>
+                <div class="es-field">
+                  <label>XC Multiplier</label>
+                  <select id="esc_xc_${mode.id}_cadet">
+                    ${[0.5,0.75,1,1.25,1.5,2,2.5,3].map(v => `<option value="${v}" ${cfg.xcMultipliers.cadet===v?'selected':''}>${v}x</option>`).join('')}
+                  </select>
+                </div>
+                <div style="font-size:10px;color:var(--pflx-gold);text-align:center;font-family:Orbitron,monospace;font-weight:700">= ${Math.round(cfg.xcBase * cfg.xcMultipliers.cadet)} XC</div>
+              </div>
+              <div class="es-tier-col" style="border-color:rgba(255,215,64,0.15)">
+                <h5 style="color:#ffd740">Officer Multiplier</h5>
+                <div class="es-field">
+                  <label>XC Multiplier</label>
+                  <select id="esc_xc_${mode.id}_officer">
+                    ${[0.5,0.75,1,1.25,1.5,2,2.5,3].map(v => `<option value="${v}" ${cfg.xcMultipliers.officer===v?'selected':''}>${v}x</option>`).join('')}
+                  </select>
+                </div>
+                <div style="font-size:10px;color:var(--pflx-gold);text-align:center;font-family:Orbitron,monospace;font-weight:700">= ${Math.round(cfg.xcBase * cfg.xcMultipliers.officer)} XC</div>
+              </div>
+              <div class="es-tier-col" style="border-color:rgba(255,23,68,0.15)">
+                <h5 style="color:#ff1744">Commander Multiplier</h5>
+                <div class="es-field">
+                  <label>XC Multiplier</label>
+                  <select id="esc_xc_${mode.id}_commander">
+                    ${[0.5,0.75,1,1.25,1.5,2,2.5,3].map(v => `<option value="${v}" ${cfg.xcMultipliers.commander===v?'selected':''}>${v}x</option>`).join('')}
+                  </select>
+                </div>
+                <div style="font-size:10px;color:var(--pflx-gold);text-align:center;font-family:Orbitron,monospace;font-weight:700">= ${Math.round(cfg.xcBase * cfg.xcMultipliers.commander)} XC</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Badge Configuration -->
+          <div class="es-config-panel">
+            <h4>🏅 Badge Rewards</h4>
+            <div class="es-badge-row">
+              <label>Participation</label>
+              <select id="esc_badge_part_${mode.id}">
+                ${allBadges.map(b => `<option value="${b.id}" ${cfg.participationBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="es-badge-row">
+              <label>Winner</label>
+              <select id="esc_badge_win_${mode.id}">
+                ${allBadges.map(b => `<option value="${b.id}" ${cfg.winnerBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="es-badge-row">
+              <label>Co-op Team</label>
+              <select id="esc_badge_coop_${mode.id}">
+                ${allBadges.map(b => `<option value="${b.id}" ${cfg.coopBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <!-- Max Players -->
+          <div class="es-config-panel">
+            <h4>👥 Player Limits</h4>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="es-field">
+                <label>Max Multiplayer Contestants</label>
+                <input type="number" id="esc_maxmulti_${mode.id}" value="${cfg.maxContestantsMulti}" min="2" max="32" />
+              </div>
+              <div class="es-field">
+                <label>Max Co-op Total Players</label>
+                <input type="number" id="esc_maxcoop_${mode.id}" value="${cfg.maxContestantsCoop}" min="4" max="32" />
+              </div>
+            </div>
+          </div>
+        `;
+      })()}
+
+      <!-- Save / Reset Bar -->
+      <div class="es-save-bar">
+        <div>
+          ${esportsSettingsSaved ? '<span class="save-status">✅ Settings saved!</span>' : '<span style="font-size:10px;color:#666">Changes are not saved until you click Save</span>'}
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-arena btn-arena-red" style="font-size:0.6rem;padding:8px 16px" onclick="esportsConfigReset()">Reset Defaults</button>
+          <button class="btn-arena btn-arena-gold" style="font-size:0.7rem;padding:10px 24px" onclick="esportsConfigSave()">💾 Save All Settings</button>
+        </div>
+      </div>
+    </div>
+
     ` : ''}
 
     <div style="text-align:center;margin-top:24px">
@@ -6385,6 +6737,911 @@ document.addEventListener('click', (e) => {
 
 // W key conflict: movement vs ability
 // W is movement. To use W ability, player must click the W button in the HUD.
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ESPORTS DESIGN CHALLENGE PLATFORM
+// 8 game modes × 3 difficulty tiers × 3 play modes (Solo/Multi/Co-op)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ESPORTS_MODES = [
+  {
+    id: 'beat_lab', name: 'Beat Lab', icon: '🎵', pathway: 'Sound Designer',
+    color: '#e040fb', desc: 'Producer battles — craft beats, loops, and soundscapes under the clock.',
+    tiers: [
+      { diff: 'cadet', tools: ['BandLab','Soundtrap','GarageBand (iOS)'], timeMins: 30, xcMult: 1 },
+      { diff: 'officer', tools: ['FL Studio','Ableton Live Lite','LMMS'], timeMins: 20, xcMult: 1.5 },
+      { diff: 'commander', tools: ['FL Studio (Full)','Ableton Live','Logic Pro'], timeMins: 15, xcMult: 2 },
+    ],
+    submissionType: 'audio_link', submissionLabel: 'Share your beat (SoundCloud/Drive/etc)',
+    prompts: [
+      'Create a 30-second lo-fi hip hop beat with at least 3 instruments',
+      'Produce a trap beat with a melody, 808s, and hi-hats',
+      'Design a cinematic soundscape for a space exploration scene',
+      'Make a dancehall/afrobeats instrumental with percussion layers',
+      'Create a jazz-inspired boom bap beat with a vinyl crackle effect',
+      'Produce a phonk beat with cowbell, distorted 808, and dark melody',
+      'Design an EDM drop sequence with build-up and breakdown',
+      'Create a R&B/soul beat with live instrument samples',
+    ]
+  },
+  {
+    id: 'pixel_forge', name: 'Pixel Forge', icon: '🎨', pathway: 'Digital Artist',
+    color: '#ff1744', desc: 'Graphic design battles — logos, posters, social media, and visual identity.',
+    tiers: [
+      { diff: 'cadet', tools: ['Canva','Google Slides','Figma (Free)'], timeMins: 30, xcMult: 1 },
+      { diff: 'officer', tools: ['Affinity Designer','Figma','Photopea'], timeMins: 20, xcMult: 1.5 },
+      { diff: 'commander', tools: ['Adobe Photoshop','Illustrator','InDesign'], timeMins: 15, xcMult: 2 },
+    ],
+    submissionType: 'image_link', submissionLabel: 'Share your design (image link or file)',
+    prompts: [
+      'Design a logo for a futuristic sneaker brand called "Velocity"',
+      'Create a concert poster for a fictional artist performing on Mars',
+      'Design a social media carousel (3 slides) for a tech startup launch',
+      'Create a brand identity moodboard with color palette and typography',
+      'Design a magazine cover for a design publication called "FORM"',
+      'Create an infographic about the history of video games',
+      'Design app icon variations for a fitness tracking application',
+      'Create a retro-futuristic movie poster in the style of cyberpunk',
+    ]
+  },
+  {
+    id: 'cut_room', name: 'Cut Room', icon: '🎬', pathway: 'Content Creator',
+    color: '#ff9100', desc: 'Video production battles — edit, produce, and deliver content under pressure.',
+    tiers: [
+      { diff: 'cadet', tools: ['CapCut','Canva Video','iMovie'], timeMins: 45, xcMult: 1 },
+      { diff: 'officer', tools: ['DaVinci Resolve','Shotcut','Clipchamp'], timeMins: 30, xcMult: 1.5 },
+      { diff: 'commander', tools: ['Adobe Premiere Pro','After Effects','Final Cut Pro'], timeMins: 20, xcMult: 2 },
+    ],
+    submissionType: 'video_link', submissionLabel: 'Share your video (YouTube/Drive/etc)',
+    prompts: [
+      'Create a 30-second product commercial for wireless earbuds',
+      'Edit a cinematic travel montage using provided stock footage',
+      'Produce a 15-second TikTok/Reel with text animations and transitions',
+      'Create a motion graphics title sequence for a podcast',
+      'Edit a "day in the life" vlog-style video with b-roll and music',
+      'Produce a 20-second brand announcement video with kinetic typography',
+      'Create a split-screen comparison video with synchronized timing',
+      'Design an animated lower third and end screen for a YouTube channel',
+    ]
+  },
+  {
+    id: 'dimension_lab', name: 'Dimension Lab', icon: '🧊', pathway: '3D Modeler',
+    color: '#00bcd4', desc: '3D modeling and visualization battles — sculpt, render, and present.',
+    tiers: [
+      { diff: 'cadet', tools: ['Tinkercad','SketchUp Free','SculptGL'], timeMins: 30, xcMult: 1 },
+      { diff: 'officer', tools: ['Blender (Basics)','Fusion 360','Vectary'], timeMins: 25, xcMult: 1.5 },
+      { diff: 'commander', tools: ['Blender (Full)','Cinema 4D','ZBrush'], timeMins: 20, xcMult: 2 },
+    ],
+    submissionType: 'model_link', submissionLabel: 'Share your 3D model (Sketchfab/screenshot/file)',
+    prompts: [
+      'Model a low-poly character for a mobile game',
+      'Create a futuristic vehicle concept (spacecraft, car, or bike)',
+      'Design an isometric room scene with furniture and lighting',
+      'Sculpt a fantasy creature head with detailed features',
+      'Model a product package design for a premium headphone box',
+      'Create an architectural visualization of a modern tiny house',
+      'Design a game-ready weapon or tool with clean topology',
+      'Model a stylized food item with appealing materials and lighting',
+    ]
+  },
+  {
+    id: 'game_jam', name: 'Game Jam', icon: '🕹️', pathway: 'Game Designer',
+    color: '#76ff03', desc: 'Rapid game prototyping — design, build, and playtest game concepts fast.',
+    tiers: [
+      { diff: 'cadet', tools: ['Scratch','GDevelop','Construct 3'], timeMins: 45, xcMult: 1 },
+      { diff: 'officer', tools: ['Godot','GameMaker','RPG Maker'], timeMins: 30, xcMult: 1.5 },
+      { diff: 'commander', tools: ['Unity','Unreal Engine','Custom Engine'], timeMins: 25, xcMult: 2 },
+    ],
+    submissionType: 'game_link', submissionLabel: 'Share your game (itch.io/hosted link/video)',
+    prompts: [
+      'Create a one-button game with a simple but addictive mechanic',
+      'Design a puzzle game level with 3 escalating challenges',
+      'Build a top-down shooter prototype with enemy AI and scoring',
+      'Create a platformer level with a unique movement mechanic',
+      'Design a card-based battle system prototype',
+      'Build an endless runner with procedural obstacle generation',
+      'Create a narrative choice system with branching dialogue',
+      'Design a tower defense prototype with 3 tower types',
+    ]
+  },
+  {
+    id: 'code_arena', name: 'Code Arena', icon: '💻', pathway: 'Computer Programmer',
+    color: '#00e5ff', desc: 'Coding challenges — build, debug, and deploy under competitive pressure.',
+    tiers: [
+      { diff: 'cadet', tools: ['Scratch','CodeHS','Replit (Basic)'], timeMins: 30, xcMult: 1 },
+      { diff: 'officer', tools: ['Replit','CodePen','Glitch'], timeMins: 20, xcMult: 1.5 },
+      { diff: 'commander', tools: ['VS Code','Terminal','Full Stack'], timeMins: 15, xcMult: 2 },
+    ],
+    submissionType: 'code_link', submissionLabel: 'Share your project (Replit/CodePen/GitHub)',
+    prompts: [
+      'Build a responsive landing page with CSS animations',
+      'Create a to-do app with local storage persistence',
+      'Build an API that returns random motivational quotes',
+      'Create a real-time chat interface using WebSockets',
+      'Build a calculator with keyboard support and history',
+      'Create a data visualization dashboard from a CSV dataset',
+      'Build a CLI tool that generates ASCII art from text',
+      'Create a browser extension that modifies page appearance',
+    ]
+  },
+  {
+    id: 'pitch_arena', name: 'Pitch Arena', icon: '📊', pathway: 'Professional Entrepreneur',
+    color: '#ffd740', desc: 'Business pitch battles — present ideas, build decks, and convince judges.',
+    tiers: [
+      { diff: 'cadet', tools: ['Google Slides','Canva Presentations','Prezi'], timeMins: 30, xcMult: 1 },
+      { diff: 'officer', tools: ['Figma','Keynote','Beautiful.ai'], timeMins: 20, xcMult: 1.5 },
+      { diff: 'commander', tools: ['PowerPoint','Pitch.com','Custom Design'], timeMins: 15, xcMult: 2 },
+    ],
+    submissionType: 'deck_link', submissionLabel: 'Share your pitch deck (Slides/PDF link)',
+    prompts: [
+      'Pitch a mobile app that solves a problem for students',
+      'Create a 5-slide investor deck for an AI-powered tutoring startup',
+      'Design a brand launch presentation for a sustainable fashion line',
+      'Pitch a community platform that connects mentors and mentees',
+      'Create a product roadmap presentation for a SaaS company',
+      'Design a nonprofit pitch deck for a youth education initiative',
+      'Pitch a game studio concept with 3 game ideas and revenue model',
+      'Create a social enterprise pitch that addresses food waste',
+    ]
+  },
+  {
+    id: 'form_lab', name: 'Form Lab', icon: '📐', pathway: 'Industrial Designer',
+    color: '#7c4dff', desc: 'Product and industrial design battles — sketch, model, and present concepts.',
+    tiers: [
+      { diff: 'cadet', tools: ['Tinkercad','SketchUp Free','Paper+Pencil Scan'], timeMins: 30, xcMult: 1 },
+      { diff: 'officer', tools: ['Shapr3D','Fusion 360','Figma'], timeMins: 25, xcMult: 1.5 },
+      { diff: 'commander', tools: ['SolidWorks','Rhino','KeyShot'], timeMins: 20, xcMult: 2 },
+    ],
+    submissionType: 'design_link', submissionLabel: 'Share your design (renders/sketches/model)',
+    prompts: [
+      'Design an ergonomic desk accessory for remote workers',
+      'Create a concept for a sustainable water bottle with unique features',
+      'Design a modular furniture piece for small living spaces',
+      'Sketch and render a next-gen gaming controller concept',
+      'Design packaging for a premium chocolate brand',
+      'Create a concept for a wearable device for outdoor athletes',
+      'Design a public bench that also charges devices via solar',
+      'Create a concept for a kids toy that teaches engineering principles',
+    ]
+  },
+];
+
+const DIFF_TIERS = [
+  { id: 'cadet', name: 'Cadet', icon: '🚀', shipIcon: '🛸', color: '#00e676', desc: 'Free/beginner tools, longest timer, 1x XC rewards' },
+  { id: 'officer', name: 'Officer', icon: '⚡', shipIcon: '🚀', color: '#ffd740', desc: 'Intermediate tools, standard timer, 1.5x XC rewards' },
+  { id: 'commander', name: 'Commander', icon: '🔥', shipIcon: '💎', color: '#ff1744', desc: 'Pro tools, shortest timer, 2x XC rewards' },
+];
+
+const PLAY_MODES = [
+  { id: 'solo', name: 'Solo', icon: '👤', desc: 'Practice mode — no ranking, just skill building', minPlayers: 1, maxPlayers: 1 },
+  { id: 'multiplayer', name: 'Multiplayer', icon: '⚔️', desc: 'Ranked FFA — compete head-to-head for XC', minPlayers: 2, maxPlayers: 8 },
+  { id: 'coop', name: 'Co-op', icon: '🤝', desc: 'Team vs team — squads of 2-5 players', minPlayers: 4, maxPlayers: 10 },
+];
+
+
+
+// ═══════════════════════════════════════════════════════════════════
+// ESPORTS HOST CONFIG — Per-mode overrides for timers, XC, badges
+// ═══════════════════════════════════════════════════════════════════
+const PFLX_BADGES = [
+  // Participation badges
+  { id: 'positive_participant', name: 'Positive Participant', icon: '🏅', type: 'participation', desc: 'Awarded for competing and showing up' },
+  { id: 'team_player', name: 'Team Player', icon: '🤝', type: 'participation', desc: 'Collaborated in co-op mode' },
+  { id: 'streak_warrior', name: 'Streak Warrior', icon: '🔥', type: 'participation', desc: 'Competed in 3+ consecutive challenges' },
+  { id: 'first_timer', name: 'First Timer', icon: '⭐', type: 'participation', desc: 'Completed first design challenge' },
+  { id: 'creative_spirit', name: 'Creative Spirit', icon: '🎨', type: 'participation', desc: 'Submitted a creative entry' },
+  { id: 'peer_supporter', name: 'Peer Supporter', icon: '💬', type: 'participation', desc: 'Voted and gave feedback to peers' },
+  // Achievement badges
+  { id: 'arena_champion', name: 'Battle Arena Champion', icon: '🏆', type: 'achievement', desc: 'Won a ranked multiplayer challenge' },
+  { id: 'dojo_master', name: 'Design Dojo Master', icon: '🥋', type: 'achievement', desc: 'Won 5+ design challenges' },
+  { id: 'season_mvp', name: 'Season MVP', icon: '👑', type: 'achievement', desc: 'Most wins in a season' },
+  { id: 'untouchable', name: 'Untouchable', icon: '💎', type: 'achievement', desc: 'Won 3 challenges in a row without losing' },
+  { id: 'pathway_legend', name: 'Pathway Legend', icon: '🔱', type: 'achievement', desc: 'Mastered all difficulty tiers in one pathway' },
+  { id: 'commander_badge', name: 'Commander Elite', icon: '🎖️', type: 'achievement', desc: 'Won a Commander-tier challenge' },
+  { id: 'speed_demon', name: 'Speed Demon', icon: '⚡', type: 'achievement', desc: 'Submitted before half the timer elapsed' },
+  { id: 'crowd_favorite', name: 'Crowd Favorite', icon: '📣', type: 'achievement', desc: 'Received the most votes in judging' },
+];
+
+// Default config per mode — host can override these
+function getDefaultEsportsConfig() {
+  const config = {};
+  ESPORTS_MODES.forEach(mode => {
+    config[mode.id] = {
+      enabled: true,
+      timers: {},
+      xcBase: 500,
+      xcMultipliers: {},
+      participationBadge: 'positive_participant',
+      winnerBadge: 'arena_champion',
+      coopBadge: 'team_player',
+      maxContestantsMulti: 8,
+      maxContestantsCoop: 10,
+    };
+    mode.tiers.forEach(tier => {
+      config[mode.id].timers[tier.diff] = tier.timeMins;
+      config[mode.id].xcMultipliers[tier.diff] = tier.xcMult;
+    });
+  });
+  return config;
+}
+
+let esportsHostConfig = getDefaultEsportsConfig();
+
+// Load persisted host config
+function loadEsportsConfig() {
+  try {
+    const saved = localStorage.getItem('pflx_esports_host_config');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge with defaults to handle new modes
+      const defaults = getDefaultEsportsConfig();
+      Object.keys(defaults).forEach(modeId => {
+        if (!parsed[modeId]) parsed[modeId] = defaults[modeId];
+        else {
+          // Fill in any missing keys from defaults
+          Object.keys(defaults[modeId]).forEach(key => {
+            if (parsed[modeId][key] === undefined) parsed[modeId][key] = defaults[modeId][key];
+          });
+        }
+      });
+      esportsHostConfig = parsed;
+    }
+  } catch(e) { esportsHostConfig = getDefaultEsportsConfig(); }
+}
+
+function saveEsportsConfig() {
+  try { localStorage.setItem('pflx_esports_host_config', JSON.stringify(esportsHostConfig)); } catch(e) {}
+}
+
+loadEsportsConfig();
+
+// Active settings tab
+let esportsSettingsTab = 'beat_lab';
+let esportsSettingsSaved = false;
+
+function esportsConfigSetTab(modeId) {
+  esportsSettingsTab = modeId;
+  esportsSettingsSaved = false;
+  SFX.click();
+  render();
+}
+
+function esportsConfigSave() {
+  ESPORTS_MODES.forEach(mode => {
+    const cfg = esportsHostConfig[mode.id];
+    // Read timers
+    ['cadet','officer','commander'].forEach(diff => {
+      const el = document.getElementById('esc_timer_' + mode.id + '_' + diff);
+      if (el) cfg.timers[diff] = parseInt(el.value) || cfg.timers[diff];
+    });
+    // Read XC multipliers
+    ['cadet','officer','commander'].forEach(diff => {
+      const el = document.getElementById('esc_xc_' + mode.id + '_' + diff);
+      if (el) cfg.xcMultipliers[diff] = parseFloat(el.value) || cfg.xcMultipliers[diff];
+    });
+    // Read base XC
+    const baseEl = document.getElementById('esc_basexc_' + mode.id);
+    if (baseEl) cfg.xcBase = parseInt(baseEl.value) || cfg.xcBase;
+    // Read badges
+    const partBadge = document.getElementById('esc_badge_part_' + mode.id);
+    if (partBadge) cfg.participationBadge = partBadge.value;
+    const winBadge = document.getElementById('esc_badge_win_' + mode.id);
+    if (winBadge) cfg.winnerBadge = winBadge.value;
+    const coopBadge = document.getElementById('esc_badge_coop_' + mode.id);
+    if (coopBadge) cfg.coopBadge = coopBadge.value;
+    // Read max contestants
+    const maxMulti = document.getElementById('esc_maxmulti_' + mode.id);
+    if (maxMulti) cfg.maxContestantsMulti = parseInt(maxMulti.value) || 8;
+    const maxCoop = document.getElementById('esc_maxcoop_' + mode.id);
+    if (maxCoop) cfg.maxContestantsCoop = parseInt(maxCoop.value) || 10;
+    // Read enabled
+    const enabledEl = document.getElementById('esc_enabled_' + mode.id);
+    if (enabledEl) cfg.enabled = enabledEl.checked;
+  });
+  saveEsportsConfig();
+  esportsSettingsSaved = true;
+  SFX.correct();
+  render();
+}
+
+function esportsConfigReset() {
+  esportsHostConfig = getDefaultEsportsConfig();
+  saveEsportsConfig();
+  esportsSettingsSaved = false;
+  SFX.wrong();
+  render();
+}
+
+// Get effective timer for a mode + difficulty (host override or default)
+function getEsportsTimer(modeId, diff) {
+  return esportsHostConfig[modeId]?.timers?.[diff] ?? ESPORTS_MODES.find(m => m.id === modeId)?.tiers.find(t => t.diff === diff)?.timeMins ?? 30;
+}
+
+function getEsportsXcMult(modeId, diff) {
+  return esportsHostConfig[modeId]?.xcMultipliers?.[diff] ?? ESPORTS_MODES.find(m => m.id === modeId)?.tiers.find(t => t.diff === diff)?.xcMult ?? 1;
+}
+
+function getEsportsBaseXc(modeId) {
+  return esportsHostConfig[modeId]?.xcBase ?? 500;
+}
+
+function getEsportsBadge(modeId, type) {
+  const cfg = esportsHostConfig[modeId];
+  if (!cfg) return 'positive_participant';
+  if (type === 'participation') return cfg.participationBadge;
+  if (type === 'winner') return cfg.winnerBadge;
+  if (type === 'coop') return cfg.coopBadge;
+  return 'positive_participant';
+}
+
+function isModeEnabled(modeId) {
+  return esportsHostConfig[modeId]?.enabled !== false;
+}
+
+// ── Esports State ──
+const esportsState = {
+  selectedMode: null,    // ESPORTS_MODES entry
+  selectedDiff: 'cadet', // cadet | officer | commander
+  selectedPlay: 'solo',  // solo | multiplayer | coop
+  matches: [],           // all matches
+  activeMatch: null,     // current match ID
+  matchTimer: null,      // interval ref
+  view: 'hub',           // hub | lobby | match | judging | results
+};
+
+// Load persisted matches
+try {
+  const saved = localStorage.getItem('pflx_esports_matches');
+  if (saved) esportsState.matches = JSON.parse(saved);
+} catch(e) {}
+
+function saveEsportsState() {
+  try { localStorage.setItem('pflx_esports_matches', JSON.stringify(esportsState.matches)); } catch(e) {}
+}
+
+// ── Match ID generator ──
+let esportsMatchId = Date.now();
+function nextMatchId() { return 'em_' + (esportsMatchId++); }
+
+// ── Generate match prompt ──
+function getRandomPrompt(mode) {
+  return mode.prompts[Math.floor(Math.random() * mode.prompts.length)];
+}
+
+// ── Create a new match ──
+function esportsCreateMatch(title) {
+  const mode = esportsState.selectedMode;
+  const diffId = esportsState.selectedDiff;
+  const playMode = esportsState.selectedPlay;
+  const tier = mode.tiers.find(t => t.diff === diffId);
+  const prompt = getRandomPrompt(mode);
+
+  // Use host config overrides
+  const cfgTimeMins = getEsportsTimer(mode.id, diffId);
+  const cfgXcMult = getEsportsXcMult(mode.id, diffId);
+  const cfgBaseXC = getEsportsBaseXc(mode.id);
+  const cfgMaxMulti = esportsHostConfig[mode.id]?.maxContestantsMulti || 8;
+  const cfgMaxCoop = esportsHostConfig[mode.id]?.maxContestantsCoop || 10;
+
+  const match = {
+    id: nextMatchId(),
+    modeId: mode.id,
+    modeName: mode.name,
+    modeIcon: mode.icon,
+    modeColor: mode.color,
+    pathway: mode.pathway,
+    difficulty: diffId,
+    playMode: playMode,
+    title: title || mode.name + ' Challenge',
+    prompt: prompt,
+    tools: tier.tools,
+    timeMins: cfgTimeMins,
+    timeLeft: cfgTimeMins * 60,
+    xcMult: cfgXcMult,
+    baseXC: cfgBaseXC,
+    status: 'open',
+    contestants: [{ id: state.player.id, name: state.player.name, brand: state.player.brand, avatar: state.player.avatarText, image: state.player.image, submission: null, votes: 0 }],
+    maxContestants: playMode === 'solo' ? 1 : (playMode === 'coop' ? cfgMaxCoop : cfgMaxMulti),
+    hostId: state.player.id,
+    createdAt: Date.now(),
+    winner: null,
+    badges: {
+      participation: getEsportsBadge(mode.id, 'participation'),
+      winner: getEsportsBadge(mode.id, 'winner'),
+      coop: getEsportsBadge(mode.id, 'coop'),
+    },
+  };
+
+  esportsState.matches.unshift(match);
+  esportsState.activeMatch = match.id;
+  saveEsportsState();
+
+  if (playMode === 'solo') {
+    esportsStartMatch(match.id);
+  } else {
+    esportsState.view = 'match';
+  }
+  SFX.modeSelect();
+  render();
+}
+
+// ── Join match ──
+function esportsJoinMatch(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match || match.status !== 'open') return;
+  if (match.contestants.find(c => c.id === state.player.id)) return;
+  if (match.contestants.length >= match.maxContestants) return;
+
+  match.contestants.push({ id: state.player.id, name: state.player.name, brand: state.player.brand, avatar: state.player.avatarText, image: state.player.image, submission: null, votes: 0 });
+  esportsState.activeMatch = matchId;
+  esportsState.view = 'match';
+  saveEsportsState();
+  SFX.click();
+  render();
+}
+
+// ── Start match (begin timer) ──
+function esportsStartMatch(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match) return;
+  match.status = 'in_progress';
+  match.timeLeft = match.timeMins * 60;
+  esportsState.activeMatch = matchId;
+  esportsState.view = 'match';
+  saveEsportsState();
+
+  // Clear any existing timer
+  if (esportsState.matchTimer) clearInterval(esportsState.matchTimer);
+
+  esportsState.matchTimer = setInterval(() => {
+    const m = esportsState.matches.find(x => x.id === matchId);
+    if (!m || m.status !== 'in_progress') { clearInterval(esportsState.matchTimer); return; }
+    m.timeLeft--;
+    if (m.timeLeft <= 0) {
+      m.timeLeft = 0;
+      clearInterval(esportsState.matchTimer);
+      esportsEndSubmissions(matchId);
+    }
+    // Update timer display without full re-render
+    const timerEl = document.getElementById('esports-timer-val');
+    const fillEl = document.getElementById('esports-timer-fill');
+    if (timerEl) {
+      const mins = Math.floor(m.timeLeft / 60);
+      const secs = m.timeLeft % 60;
+      timerEl.textContent = mins + ':' + String(secs).padStart(2, '0');
+    }
+    if (fillEl) {
+      const pct = (m.timeLeft / (m.timeMins * 60)) * 100;
+      fillEl.style.width = pct + '%';
+      fillEl.style.background = pct > 50 ? 'var(--pflx-green)' : (pct > 20 ? 'var(--pflx-gold)' : 'var(--pflx-red)');
+    }
+    saveEsportsState();
+  }, 1000);
+
+  SFX.battleStart();
+  render();
+}
+
+// ── Submit entry ──
+function esportsSubmit(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match) return;
+  const linkInput = document.getElementById('esports-sub-link');
+  const notesInput = document.getElementById('esports-sub-notes');
+  const link = linkInput ? linkInput.value.trim() : '';
+  const notes = notesInput ? notesInput.value.trim() : '';
+
+  if (!link && !notes) { SFX.loginError(); return; }
+
+  const contestant = match.contestants.find(c => c.id === state.player.id);
+  if (contestant) {
+    contestant.submission = { link, notes, submittedAt: Date.now() };
+    saveEsportsState();
+    SFX.correct();
+    render();
+  }
+}
+
+// ── End submissions, go to judging ──
+function esportsEndSubmissions(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match) return;
+  if (esportsState.matchTimer) clearInterval(esportsState.matchTimer);
+
+  if (match.playMode === 'solo') {
+    // Solo mode — auto-complete, give participation XC
+    match.status = 'completed';
+    match.winner = state.player.id;
+    esportsState.view = 'results';
+  } else {
+    match.status = 'judging';
+    esportsState.view = 'judging';
+  }
+  saveEsportsState();
+  SFX.timeout();
+  render();
+}
+
+// ── Vote for a submission ──
+function esportsVote(matchId, playerId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match || match.status !== 'judging') return;
+  // Can't vote for yourself
+  if (playerId === state.player.id) return;
+
+  const contestant = match.contestants.find(c => c.id === playerId);
+  if (contestant) {
+    contestant.votes++;
+    saveEsportsState();
+    SFX.click();
+    render();
+  }
+}
+
+// ── Finalize match — pick winner ──
+function esportsFinalizeMatch(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match) return;
+
+  // Winner = most votes; tie = first submitter
+  const withSubs = match.contestants.filter(c => c.submission);
+  if (withSubs.length === 0) {
+    match.status = 'completed';
+    esportsState.view = 'results';
+    saveEsportsState();
+    render();
+    return;
+  }
+
+  withSubs.sort((a,b) => b.votes - a.votes || a.submission.submittedAt - b.submission.submittedAt);
+  match.winner = withSubs[0].id;
+  match.status = 'completed';
+  esportsState.view = 'results';
+  saveEsportsState();
+  SFX.victory();
+  render();
+}
+
+// ── Navigate helpers ──
+function esportsGoHub() {
+  esportsState.view = 'hub';
+  esportsState.selectedMode = null;
+  esportsState.activeMatch = null;
+  if (esportsState.matchTimer) clearInterval(esportsState.matchTimer);
+  SFX.navigate();
+  render();
+}
+
+function esportsSelectMode(modeId) {
+  esportsState.selectedMode = ESPORTS_MODES.find(m => m.id === modeId);
+  esportsState.view = 'lobby';
+  esportsState.selectedDiff = 'cadet';
+  esportsState.selectedPlay = 'solo';
+  SFX.modeSelect();
+  render();
+}
+
+function esportsSetDiff(d) { esportsState.selectedDiff = d; SFX.click(); render(); }
+function esportsSetPlay(p) { esportsState.selectedPlay = p; SFX.click(); render(); }
+
+// ── Render: Esports Hub (8 mode cards) ──
+function renderEsportsHub() {
+  const visibleModes = ESPORTS_MODES.filter(m => isModeEnabled(m.id));
+  const cards = visibleModes.map(m => {
+    return `<div class="esports-mode-card" onclick="esportsSelectMode('${m.id}')" style="border-left:3px solid ${m.color}">
+      <div class="emc-icon">${m.icon}</div>
+      <div class="emc-name">${m.name}</div>
+      <div class="emc-pathway">${m.pathway}</div>
+      <div class="emc-desc">${m.desc}</div>
+      <div class="emc-meta">
+        <span class="emc-tag solo">Solo</span>
+        <span class="emc-tag multi">PvP</span>
+        <span class="emc-tag coop">Co-op</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="esports-hub">
+    <button class="sq-back" onclick="goHome()" style="margin-bottom:16px">← Back to Arena</button>
+    <div class="esports-hero">
+      <h2 class="text-glow-cyan">🏟️ Design Challenges</h2>
+      <p>8 disciplines. 3 difficulty tiers. Solo, Multiplayer, and Co-op. Compete. Create. Conquer.</p>
+    </div>
+    <div class="esports-grid">${cards}</div>
+  </div>`;
+}
+
+// ── Render: Mode Lobby (difficulty, play mode, create/join) ──
+function renderEsportsLobby() {
+  const mode = esportsState.selectedMode;
+  if (!mode) return renderEsportsHub();
+
+  // Difficulty cards
+  const diffCards = DIFF_TIERS.map(d => {
+    const tier = mode.tiers.find(t => t.diff === d.id);
+    const isActive = esportsState.selectedDiff === d.id;
+    const cfgTime = getEsportsTimer(mode.id, d.id);
+    const cfgMult = getEsportsXcMult(mode.id, d.id);
+    return `<div class="diff-card ${isActive ? 'active' : ''}" onclick="esportsSetDiff('${d.id}')" style="${isActive ? 'border-color:' + d.color + ';box-shadow:0 0 20px ' + d.color + '30' : ''}">
+      <div class="dc-icon">${d.icon}</div>
+      <div class="dc-name" style="${isActive ? 'color:' + d.color : ''}">${d.name}</div>
+      <div class="dc-xc">${cfgMult}x XC</div>
+      <div class="dc-tools">${tier.tools.join(', ')}</div>
+      <div class="dc-time">⏱️ ${cfgTime} min</div>
+    </div>`;
+  }).join('');
+
+  // Play mode cards
+  const playCards = PLAY_MODES.map(p => {
+    const isActive = esportsState.selectedPlay === p.id;
+    return `<div class="play-card ${isActive ? 'active' : ''}" onclick="esportsSetPlay('${p.id}')">
+      <div class="pc-icon">${p.icon}</div>
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-desc">${p.desc}</div>
+    </div>`;
+  }).join('');
+
+  // Open matches for this mode
+  const openMatches = esportsState.matches.filter(m => m.modeId === mode.id && m.status === 'open' && !m.contestants.find(c => c.id === state.player.id));
+  const openCards = openMatches.map(m => {
+    const avatars = m.contestants.map(c => {
+      const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
+      return `<div class="omc-avatar">${av}</div>`;
+    }).join('');
+    return `<div class="open-match-card">
+      <div class="omc-info">
+        <div class="omc-title">${m.title}</div>
+        <div class="omc-meta">${m.playMode} • ${m.timeMins} min • ${m.contestants.length}/${m.maxContestants} players</div>
+        <div class="omc-players">${avatars}</div>
+      </div>
+      <span class="omc-diff ${m.difficulty}">${m.difficulty}</span>
+      <button class="btn-arena" style="font-size:0.65rem;padding:8px 16px;margin-left:12px" onclick="esportsJoinMatch('${m.id}')">Join</button>
+    </div>`;
+  }).join('');
+
+  return `<div class="esports-lobby">
+    <button class="sq-back" onclick="esportsGoHub()" style="margin-bottom:16px">← All Modes</button>
+    <div class="esports-lobby-header">
+      <div class="elh-icon" style="filter:drop-shadow(0 0 10px ${mode.color})">${mode.icon}</div>
+      <div class="elh-info">
+        <h2 style="color:${mode.color}">${mode.name}</h2>
+        <p>${mode.desc}</p>
+      </div>
+    </div>
+
+    <div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Difficulty Tier</div>
+    <div class="diff-selector">${diffCards}</div>
+
+    <div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Play Mode</div>
+    <div class="play-selector">${playCards}</div>
+
+    <div class="match-create-box">
+      <h3>Launch Challenge</h3>
+      <div class="mcb-row">
+        <span class="mcb-label">Match Title</span>
+        <input type="text" class="mcb-input" id="esports-match-title" placeholder="${mode.name} Challenge" />
+      </div>
+      <div style="text-align:right;margin-top:16px">
+        <button class="btn-arena btn-arena-gold" style="font-size:0.75rem;padding:12px 24px" onclick="esportsCreateMatch(document.getElementById('esports-match-title').value)">🚀 Launch Challenge</button>
+      </div>
+    </div>
+
+    ${openMatches.length > 0 ? `
+      <div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-gold);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#ffd740;animation:pulseCyan 1.5s infinite"></span> Open Matches</div>
+      <div class="open-matches">${openCards}</div>
+    ` : ''}
+  </div>`;
+}
+
+// ── Render: In-Match View ──
+function renderEsportsMatch() {
+  const match = esportsState.matches.find(m => m.id === esportsState.activeMatch);
+  if (!match) return renderEsportsHub();
+
+  const mode = ESPORTS_MODES.find(m => m.id === match.modeId);
+  const mins = Math.floor(match.timeLeft / 60);
+  const secs = match.timeLeft % 60;
+  const pct = (match.timeLeft / (match.timeMins * 60)) * 100;
+  const timerColor = pct > 50 ? 'var(--pflx-green)' : (pct > 20 ? 'var(--pflx-gold)' : 'var(--pflx-red)');
+
+  const isInProgress = match.status === 'in_progress';
+  const myEntry = match.contestants.find(c => c.id === state.player.id);
+  const hasSubmitted = myEntry && myEntry.submission;
+  const isHost = match.hostId === state.player.id;
+
+  // Contestants grid
+  const contestantCards = match.contestants.map(c => {
+    const sub = c.submission ? ' submitted' : '';
+    const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
+    return `<div class="ec-player${sub}">
+      <div class="ec-av">${av}</div>
+      <div class="ec-name">${c.brand || c.name}${c.submission ? ' ✓' : ''}</div>
+    </div>`;
+  }).join('');
+
+  // Tools tags
+  const toolTags = match.tools.map(t => `<div class="esports-tool-tag">${t}</div>`).join('');
+
+  // Submission form (only show if in_progress and not submitted)
+  let submitSection = '';
+  if (isInProgress && myEntry && !hasSubmitted) {
+    submitSection = `<div class="esports-submit">
+      <h4>📤 Submit Your Entry</h4>
+      <input type="text" class="es-link-input" id="esports-sub-link" placeholder="${mode.submissionLabel}" />
+      <textarea class="es-textarea" id="esports-sub-notes" placeholder="Notes about your submission (optional)" style="margin-top:8px"></textarea>
+      <div style="text-align:right;margin-top:12px">
+        <button class="btn-arena btn-arena-gold" style="font-size:0.7rem;padding:10px 20px" onclick="esportsSubmit('${match.id}')">Submit Entry</button>
+      </div>
+    </div>`;
+  } else if (hasSubmitted) {
+    submitSection = `<div class="esports-submit" style="border-color:rgba(0,230,118,0.2)">
+      <h4 style="color:#00e676">✅ Entry Submitted</h4>
+      <p style="font-size:12px;color:#aaa;margin-top:4px">${myEntry.submission.link}</p>
+      ${myEntry.submission.notes ? `<p style="font-size:11px;color:#666;margin-top:4px">${myEntry.submission.notes}</p>` : ''}
+    </div>`;
+  }
+
+  // Start / End buttons
+  let actionButtons = '';
+  if (match.status === 'open' && isHost && match.playMode !== 'solo') {
+    actionButtons = `<div style="text-align:center;margin-bottom:20px">
+      <button class="btn-arena btn-arena-gold" style="font-size:0.8rem;padding:14px 32px" onclick="esportsStartMatch('${match.id}')">⚡ Start Match</button>
+    </div>`;
+  }
+  if (isInProgress && isHost) {
+    actionButtons += `<div style="text-align:center;margin-top:16px">
+      <button class="btn-arena btn-arena-red" style="font-size:0.65rem;padding:8px 20px" onclick="esportsEndSubmissions('${match.id}')">⏹️ End Early — Go to Judging</button>
+    </div>`;
+  }
+
+  return `<div class="esports-match">
+    <button class="sq-back" onclick="esportsGoHub()" style="margin-bottom:16px">← Exit Match</button>
+
+    <div class="esports-match-header">
+      <div class="emh-mode">
+        <div class="emh-mode-icon" style="filter:drop-shadow(0 0 8px ${match.modeColor})">${match.modeIcon}</div>
+        <div>
+          <div class="emh-mode-name" style="color:${match.modeColor}">${match.modeName}</div>
+          <div style="font-size:9px;color:#888;text-transform:uppercase;font-family:Orbitron,monospace">${match.difficulty} • ${match.playMode}</div>
+        </div>
+      </div>
+      <div class="emh-timer">
+        <div class="timer-value" id="esports-timer-val" style="color:${timerColor}">${mins}:${String(secs).padStart(2,'0')}</div>
+        <div class="timer-label">Remaining</div>
+      </div>
+      <div class="emh-status ${isInProgress ? 'working' : ''}" style="${match.status === 'open' ? 'background:rgba(41,121,255,0.1);border:1px solid rgba(41,121,255,0.3);color:#2979ff' : ''}">${match.status === 'open' ? '⏳ Waiting' : (isInProgress ? '🔥 Live' : '⚖️ Judging')}</div>
+    </div>
+
+    ${isInProgress ? `<div class="esports-timer-bar"><div class="esports-timer-fill" id="esports-timer-fill" style="width:${pct}%;background:${timerColor}"></div></div>` : ''}
+
+    <div class="esports-prompt">
+      <div class="ep-label">🎯 Design Prompt</div>
+      <div class="ep-text">${match.prompt}</div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-family:Orbitron,monospace;font-size:0.6rem;color:#888;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Allowed Tools</div>
+      <div class="esports-tools">${toolTags}</div>
+    </div>
+
+    ${actionButtons}
+
+    <div class="esports-contestants">
+      <h4>Contestants (${match.contestants.length}/${match.maxContestants})</h4>
+      <div class="ec-grid">${contestantCards}</div>
+    </div>
+
+    ${submitSection}
+  </div>`;
+}
+
+// ── Render: Judging View ──
+function renderEsportsJudging() {
+  const match = esportsState.matches.find(m => m.id === esportsState.activeMatch);
+  if (!match) return renderEsportsHub();
+
+  const isHost = match.hostId === state.player.id;
+  const submissions = match.contestants.filter(c => c.submission).map(c => {
+    const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
+    return `<div class="ej-entry">
+      <div class="ej-entry-header">
+        <div class="ej-player">
+          <div class="ej-av">${av}</div>
+          <div class="ej-name">${c.brand || c.name}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-family:Orbitron,monospace;font-size:0.7rem;color:var(--pflx-gold);font-weight:700">${c.votes} votes</span>
+          ${c.id !== state.player.id ? `<button class="ej-vote-btn" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : ''}
+        </div>
+      </div>
+      ${c.submission.link ? `<a href="${c.submission.link}" target="_blank" class="ej-link">🔗 View Submission</a>` : ''}
+      ${c.submission.notes ? `<div class="ej-notes">${c.submission.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  const noSubs = match.contestants.filter(c => !c.submission);
+  const noSubList = noSubs.length > 0 ? `<div style="font-size:11px;color:#666;margin-top:8px">No submission: ${noSubs.map(c => c.brand || c.name).join(', ')}</div>` : '';
+
+  return `<div class="esports-judging">
+    <button class="sq-back" onclick="esportsGoHub()" style="margin-bottom:16px">← Exit</button>
+    <div style="text-align:center;margin-bottom:24px">
+      <h2 style="font-family:Orbitron,monospace;font-size:1.3rem;font-weight:700;color:var(--pflx-gold);text-transform:uppercase" class="text-glow-gold">⚖️ Judging Phase</h2>
+      <p style="font-size:12px;color:#888;margin-top:4px">${match.modeName} • ${match.difficulty} • Review submissions and vote for the best</p>
+    </div>
+
+    <div class="esports-prompt" style="margin-bottom:20px">
+      <div class="ep-label">Prompt Was</div>
+      <div class="ep-text" style="font-size:14px">${match.prompt}</div>
+    </div>
+
+    <div class="ej-submissions">${submissions}</div>
+    ${noSubList}
+
+    ${isHost ? `<div style="text-align:center;margin-top:24px">
+      <button class="btn-arena btn-arena-gold" style="font-size:0.8rem;padding:14px 32px" onclick="esportsFinalizeMatch('${match.id}')">🏆 Finalize Winner</button>
+    </div>` : '<div style="text-align:center;font-size:11px;color:#888;margin-top:16px">Waiting for host to finalize results...</div>'}
+  </div>`;
+}
+
+// ── Render: Results Screen ──
+function renderEsportsResults() {
+  const match = esportsState.matches.find(m => m.id === esportsState.activeMatch);
+  if (!match) return renderEsportsHub();
+
+  const winner = match.contestants.find(c => c.id === match.winner);
+  const isSolo = match.playMode === 'solo';
+  const xcWin = Math.round(match.baseXC * match.xcMult);
+  const xcParticipate = Math.round(match.baseXC * match.xcMult * 0.2);
+
+  // Sorted standings
+  const standings = [...match.contestants].sort((a,b) => {
+    if (a.id === match.winner) return -1;
+    if (b.id === match.winner) return 1;
+    return b.votes - a.votes;
+  });
+
+  const standingRows = standings.map((c, i) => {
+    const isWinner = c.id === match.winner;
+    const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
+    return `<div class="er-standing-row ${isWinner ? 'winner' : ''}">
+      <div class="er-rank-num">${i === 0 ? '🏆' : '#' + (i+1)}</div>
+      <div class="ej-av" style="width:30px;height:30px;font-size:11px">${av}</div>
+      <div style="flex:1;font-family:Orbitron,monospace;font-size:0.7rem;font-weight:${isWinner ? 700 : 500};color:${isWinner ? '#ffd740' : '#ccc'}">${c.brand || c.name}</div>
+      <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:var(--pflx-gold);font-weight:700">${isWinner ? '+' + xcWin : '+' + xcParticipate} XC</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="esports-results">
+    <div class="er-trophy">${isSolo ? '⭐' : '🏆'}</div>
+    <div class="er-title">${isSolo ? 'Challenge Complete' : 'Match Complete'}</div>
+    <div class="er-mode">${match.modeIcon} ${match.modeName} • ${match.difficulty} • ${match.playMode}</div>
+
+    ${winner ? `<div class="er-winner">
+      <div class="erw-label">${isSolo ? 'Completed By' : '👑 Champion'}</div>
+      <div class="erw-name">${winner.brand || winner.name}</div>
+    </div>` : '<div style="font-size:14px;color:#888;margin-bottom:20px">No winner determined</div>'}
+
+    <div class="er-rewards">
+      <div class="er-reward"><div class="err-val">+${xcWin} XC</div><div class="err-label">${isSolo ? 'Completion Reward' : 'Winner Reward'}</div></div>
+      <div class="er-reward"><div class="err-val">+${xcParticipate} XC</div><div class="err-label">Participation</div></div>
+      <div class="er-reward"><div class="err-val">${(PFLX_BADGES.find(b=>b.id===(match.badges?.participation||'positive_participant'))||{icon:'🏅'}).icon}</div><div class="err-label">${(PFLX_BADGES.find(b=>b.id===(match.badges?.participation||'positive_participant'))||{name:'Positive Participant'}).name}</div></div>
+      ${!isSolo && winner ? `<div class="er-reward"><div class="err-val">${(PFLX_BADGES.find(b=>b.id===(match.badges?.winner||'arena_champion'))||{icon:'🏆'}).icon}</div><div class="err-label">${(PFLX_BADGES.find(b=>b.id===(match.badges?.winner||'arena_champion'))||{name:'Arena Champion'}).name}</div></div>` : `<div class="er-reward"><div class="err-val">${match.xcMult}x</div><div class="err-label">XC Multiplier</div></div>`}
+    </div>
+
+    ${!isSolo ? `<div class="er-standings"><h4>Final Standings</h4>${standingRows}</div>` : ''}
+
+    <button class="btn-arena btn-arena-gold" style="font-size:0.8rem;padding:14px 32px" onclick="esportsGoHub()">🏟️ Back to Challenges</button>
+  </div>`;
+}
+
+// ── Master Esports Router ──
+function renderEsportsScreen() {
+  if (esportsState.view === 'lobby') return renderEsportsLobby();
+  if (esportsState.view === 'match') return renderEsportsMatch();
+  if (esportsState.view === 'judging') return renderEsportsJudging();
+  if (esportsState.view === 'results') return renderEsportsResults();
+  return renderEsportsHub();
+}
 
 // Init
 render();
