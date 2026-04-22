@@ -3701,6 +3701,30 @@ function renderSettings() {
 
 // Event binding
 function bindEvents() {
+  // ── Category card click delegation (fixes inline onclick issues) ──
+  const catGrid = document.querySelector('.cat-grid');
+  if (catGrid) {
+    catGrid.onclick = function(e) {
+      const card = e.target.closest('.cat-card');
+      if (card && card.dataset.cat) {
+        e.stopPropagation();
+        goScreen(card.dataset.cat);
+      }
+    };
+  }
+
+  // ── Esports mode card click delegation ──
+  const esGrid = document.querySelector('.esports-grid');
+  if (esGrid) {
+    esGrid.onclick = function(e) {
+      const card = e.target.closest('.esports-mode-card');
+      if (card) {
+        const modeId = card.getAttribute('onclick')?.match(/esportsSelectMode\('([^']+)'\)/)?.[1];
+        if (modeId) { e.stopPropagation(); esportsSelectMode(modeId); }
+      }
+    };
+  }
+
   // ── Login Step 1: Brand select dropdown ──
   const brandSelect = document.getElementById("brandSelect");
   if (brandSelect) {
