@@ -2247,7 +2247,7 @@ function renderLogin() {
 
 function renderHome() {
   const catCards = CATEGORIES.map(c => {
-    return `<div class="cat-card" data-cat="${c.id}" onclick="goScreen('${c.id}')" style="cursor:pointer">
+    return `<a href="javascript:void(0)" class="cat-card" data-cat="${c.id}" onclick="goScreen('${c.id}');return false;" style="cursor:pointer;text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:space-between">
       <span class="cat-tag ${c.tag}">${c.tagLabel}</span>
       <div>
         <div class="cat-icon">${c.icon}</div>
@@ -2255,7 +2255,7 @@ function renderHome() {
         <div class="cat-desc">${c.desc}</div>
       </div>
       <div class="cat-arrow">Enter →</div>
-    </div>`;
+    </a>`;
   }).join("");
 
   return `<div class="home-wrap">
