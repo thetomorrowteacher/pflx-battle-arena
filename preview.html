@@ -7953,8 +7953,17 @@ function renderModeSettingsOverlay() {
 }
 
 // ── Lobby background music ──
+function requestPlatformMusicPause() {
+  try { window.parent.postMessage(JSON.stringify({ type: 'pflx_music_control', action: 'pause' }), '*'); } catch(e) {}
+}
+function requestPlatformMusicResume() {
+  try { window.parent.postMessage(JSON.stringify({ type: 'pflx_music_control', action: 'resume' }), '*'); } catch(e) {}
+}
+
 function startLobbyMusic(modeId) {
   stopLobbyMusic();
+  // Pause Platform/console music so lobby music can play clean
+  requestPlatformMusicPause();
   const cfg = esportsHostConfig[modeId];
   if (!cfg?.bgMusic) return;
   try {
@@ -7971,6 +7980,8 @@ function stopLobbyMusic() {
     modeSettingsBgMusicAudio.currentTime = 0;
     modeSettingsBgMusicAudio = null;
   }
+  // Resume Platform music when leaving the lobby
+  requestPlatformMusicResume();
 }
 
 function esportsSetDiff(d) { esportsState.selectedDiff = d; SFX.click(); render(); }
