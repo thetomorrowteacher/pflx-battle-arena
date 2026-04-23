@@ -7171,23 +7171,17 @@ function loadEsportsConfig() {
 
 function saveEsportsConfig() {
   try {
-    const json = JSON.stringify(esportsHostConfig);
+    // Strip media from config — it's stored in separate localStorage keys
+    const lite = JSON.parse(JSON.stringify(esportsHostConfig));
+    Object.values(lite).forEach(cfg => { delete cfg.coverImage; delete cfg.bgMusic; delete cfg.bgMusicName; });
+    const json = JSON.stringify(lite);
     localStorage.setItem('pflx_esports_host_config', json);
     console.log('✅ Esports config saved (' + Math.round(json.length/1024) + ' KB)');
     return true;
   } catch(e) {
     console.error('❌ Failed to save esports config:', e.message);
-    // If quota exceeded, try saving without base64 media
-    try {
-      const lite = JSON.parse(JSON.stringify(esportsHostConfig));
-      Object.values(lite).forEach(cfg => { cfg.coverImage = ''; cfg.bgMusic = ''; cfg.bgMusicName = ''; });
-      localStorage.setItem('pflx_esports_host_config', JSON.stringify(lite));
-      alert('Settings saved, but cover images and music were too large to store locally. They will need to be re-uploaded next session.');
-      return true;
-    } catch(e2) {
-      alert('Failed to save settings: ' + e.message);
-      return false;
-    }
+    alert('Failed to save settings: ' + e.message);
+    return false;
   }
 }
 
@@ -7743,29 +7737,81 @@ function saveModeSettings(modeId) {
   render();
 }
 
+// ── Media storage: separate localStorage keys to avoid bloating config ──
+function saveMedia(key, data) {
+  try { localStorage.setItem(key, data); return true; }
+  catch(e) { console.warn('Media too large for localStorage:', key, Math.round(data.length/1024)+'KB'); return false; }
+}
+function loadMedia(key) {
+  try { return localStorage.getItem(key) || ''; } catch(e) { return ''; }
+}
+function clearMedia(key) {
+  try { localStorage.removeItem(key); } catch(e) {}
+}
+
+// Load persisted media into config on startup
+function loadAllMedia() {
+  ESPORTS_MODES.forEach(mode => {
+    const cfg = esportsHostConfig[mode.id];
+    if (cfg) {
+      const cover = loadMedia('pflx_es_cover_' + mode.id);
+      if (cover) cfg.coverImage = cover;
+      const music = loadMedia('pflx_es_music_' + mode.id);
+      if (music) cfg.bgMusic = music;
+      const musicName = loadMedia('pflx_es_musicname_' + mode.id);
+      if (musicName) cfg.bgMusicName = musicName;
+    }
+  });
+}
+loadAllMedia();
+
 function mspUploadCover(modeId, input) {
   const file = input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    esportsHostConfig[modeId].coverImage = e.target.result;
-    renderModeSettingsOverlay(); // re-render to show preview
+  // Compress image via canvas — max 800px wide, JPEG quality 0.6
+  const img = new Image();
+  img.onload = function() {
+    const maxW = 800;
+    const scale = img.width > maxW ? maxW / img.width : 1;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const compressed = canvas.toDataURL('image/jpeg', 0.6);
+    console.log('Cover compressed: ' + Math.round(compressed.length/1024) + 'KB (from ' + Math.round(file.size/1024) + 'KB)');
+    esportsHostConfig[modeId].coverImage = compressed;
+    saveMedia('pflx_es_cover_' + modeId, compressed);
+    renderModeSettingsOverlay();
   };
-  reader.readAsDataURL(file);
+  img.src = URL.createObjectURL(file);
 }
 
 function mspClearCover(modeId) {
   esportsHostConfig[modeId].coverImage = '';
+  clearMedia('pflx_es_cover_' + modeId);
   renderModeSettingsOverlay();
 }
 
 function mspUploadMusic(modeId, input) {
   const file = input.files[0];
   if (!file) return;
+  // Limit music to 2MB
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Music file must be under 2MB. Try a shorter clip or lower quality MP3.');
+    return;
+  }
   const reader = new FileReader();
   reader.onload = function(e) {
     esportsHostConfig[modeId].bgMusic = e.target.result;
     esportsHostConfig[modeId].bgMusicName = file.name;
+    if (!saveMedia('pflx_es_music_' + modeId, e.target.result)) {
+      alert('Music file is too large to store locally. Try a smaller file (under 1MB).');
+      esportsHostConfig[modeId].bgMusic = '';
+      esportsHostConfig[modeId].bgMusicName = '';
+      return;
+    }
+    saveMedia('pflx_es_musicname_' + modeId, file.name);
     renderModeSettingsOverlay();
   };
   reader.readAsDataURL(file);
@@ -7774,6 +7820,8 @@ function mspUploadMusic(modeId, input) {
 function mspClearMusic(modeId) {
   esportsHostConfig[modeId].bgMusic = '';
   esportsHostConfig[modeId].bgMusicName = '';
+  clearMedia('pflx_es_music_' + modeId);
+  clearMedia('pflx_es_musicname_' + modeId);
   renderModeSettingsOverlay();
 }
 
