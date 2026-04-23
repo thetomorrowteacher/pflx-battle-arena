@@ -1246,6 +1246,37 @@ let XCOIN_ROSTER = [];
 let PLAYERS = [];
 const XCOIN_SEED_URL = 'https://pflx-xcoin-app.vercel.app/seed-data.json';
 
+// ── Supabase Direct Access (shared with X-Coin app) ──
+const SUPABASE_URL = 'https://hyxiagexyptzvetqjmnj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eGlhZ2V4eXB0enZldHFqbW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODM4MTYsImV4cCI6MjA4OTY1OTgxNn0.hqHVlRu775dZfJrKxSFMNEPhANu5EFm7gJpaJ3RnbnY';
+
+async function supabaseLoad(key) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/app_data?key=eq.' + key + '&select=data', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return (rows && rows.length > 0) ? rows[0].data : null;
+  } catch(e) { console.warn('Supabase load failed:', key, e.message); return null; }
+}
+
+async function supabaseSave(key, value) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/app_data', {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key: key, data: value })
+    });
+    return res.ok;
+  } catch(e) { console.warn('Supabase save failed:', key, e.message); return false; }
+}
+
 // Fallback roster in case fetch fails
 const FALLBACK_ROSTER = [
   { id: "admin-0", name: "PrototypeFLX", brandName: "PrototypeFLX", role: "admin", avatar: "PF", cohort: "N/A", pathway: "Host", email: "host@prototypeflx.com", pin: "0000", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
@@ -7147,44 +7178,92 @@ function getDefaultEsportsConfig() {
 
 let esportsHostConfig = getDefaultEsportsConfig();
 
-// Load persisted host config
-function loadEsportsConfig() {
-  try {
-    const saved = localStorage.getItem('pflx_esports_host_config');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Merge with defaults to handle new modes
-      const defaults = getDefaultEsportsConfig();
-      Object.keys(defaults).forEach(modeId => {
-        if (!parsed[modeId]) parsed[modeId] = defaults[modeId];
-        else {
-          // Fill in any missing keys from defaults
-          Object.keys(defaults[modeId]).forEach(key => {
-            if (parsed[modeId][key] === undefined) parsed[modeId][key] = defaults[modeId][key];
-          });
-        }
+// ── Merge saved config with defaults (fills missing keys) ──
+function mergeWithDefaults(parsed) {
+  const defaults = getDefaultEsportsConfig();
+  Object.keys(defaults).forEach(modeId => {
+    if (!parsed[modeId]) parsed[modeId] = defaults[modeId];
+    else {
+      Object.keys(defaults[modeId]).forEach(key => {
+        if (parsed[modeId][key] === undefined) parsed[modeId][key] = defaults[modeId][key];
       });
-      esportsHostConfig = parsed;
     }
-  } catch(e) { esportsHostConfig = getDefaultEsportsConfig(); }
+  });
+  return parsed;
 }
 
-function saveEsportsConfig() {
+// ── Load config: Supabase (source of truth) → localStorage (fast cache) ──
+async function loadEsportsConfig() {
+  // 1. Try localStorage first for instant load
   try {
-    // Strip media from config — it's stored in separate localStorage keys
-    const lite = JSON.parse(JSON.stringify(esportsHostConfig));
-    Object.values(lite).forEach(cfg => { delete cfg.coverImage; delete cfg.bgMusic; delete cfg.bgMusicName; });
-    const json = JSON.stringify(lite);
-    localStorage.setItem('pflx_esports_host_config', json);
-    console.log('✅ Esports config saved (' + Math.round(json.length/1024) + ' KB)');
-    return true;
+    const cached = localStorage.getItem('pflx_esports_host_config');
+    if (cached) esportsHostConfig = mergeWithDefaults(JSON.parse(cached));
+  } catch(e) {}
+
+  // 2. Then fetch from Supabase (overrides localStorage)
+  try {
+    const cloudConfig = await supabaseLoad('arena_esports_config');
+    if (cloudConfig && typeof cloudConfig === 'object') {
+      esportsHostConfig = mergeWithDefaults(cloudConfig);
+      // Update localStorage cache
+      try { localStorage.setItem('pflx_esports_host_config', JSON.stringify(esportsHostConfig)); } catch(e) {}
+      console.log('✅ Esports config loaded from Supabase');
+    }
+    // Load media from Supabase
+    const cloudMedia = await supabaseLoad('arena_esports_media');
+    if (cloudMedia && typeof cloudMedia === 'object') {
+      Object.keys(cloudMedia).forEach(modeId => {
+        if (esportsHostConfig[modeId]) {
+          if (cloudMedia[modeId].coverImage) esportsHostConfig[modeId].coverImage = cloudMedia[modeId].coverImage;
+          if (cloudMedia[modeId].bgMusic) esportsHostConfig[modeId].bgMusic = cloudMedia[modeId].bgMusic;
+          if (cloudMedia[modeId].bgMusicName) esportsHostConfig[modeId].bgMusicName = cloudMedia[modeId].bgMusicName;
+        }
+      });
+      console.log('✅ Esports media loaded from Supabase');
+    }
   } catch(e) {
-    console.error('❌ Failed to save esports config:', e.message);
-    alert('Failed to save settings: ' + e.message);
+    console.warn('⚠️ Supabase config load failed, using cache:', e.message);
+  }
+  render();
+}
+
+// ── Save config: Supabase (source of truth) + localStorage (cache) ──
+async function saveEsportsConfig() {
+  // Separate config (settings) from media (cover images, music)
+  const configOnly = {};
+  const mediaOnly = {};
+  Object.keys(esportsHostConfig).forEach(modeId => {
+    const cfg = { ...esportsHostConfig[modeId] };
+    const media = {};
+    if (cfg.coverImage) { media.coverImage = cfg.coverImage; }
+    if (cfg.bgMusic) { media.bgMusic = cfg.bgMusic; media.bgMusicName = cfg.bgMusicName || ''; }
+    delete cfg.coverImage; delete cfg.bgMusic; delete cfg.bgMusicName;
+    configOnly[modeId] = cfg;
+    if (Object.keys(media).length > 0) mediaOnly[modeId] = media;
+  });
+
+  // Save config to Supabase
+  const configOk = await supabaseSave('arena_esports_config', configOnly);
+  // Save media to Supabase (separate key to keep config small)
+  let mediaOk = true;
+  if (Object.keys(mediaOnly).length > 0) {
+    mediaOk = await supabaseSave('arena_esports_media', mediaOnly);
+  }
+
+  // Also cache in localStorage for fast reload
+  try { localStorage.setItem('pflx_esports_host_config', JSON.stringify(configOnly)); } catch(e) {}
+
+  if (configOk && mediaOk) {
+    console.log('✅ Esports config + media saved to Supabase');
+    return true;
+  } else {
+    console.error('❌ Supabase save failed — config:', configOk, 'media:', mediaOk);
+    alert('Some settings failed to save to the cloud. Check your connection and try again.');
     return false;
   }
 }
 
+// Load on startup
 loadEsportsConfig();
 
 // Active settings tab
@@ -7198,7 +7277,7 @@ function esportsConfigSetTab(modeId) {
   render();
 }
 
-function esportsConfigSave() {
+async function esportsConfigSave() {
   ESPORTS_MODES.forEach(mode => {
     const cfg = esportsHostConfig[mode.id];
     // Read timers
@@ -7248,15 +7327,15 @@ function esportsConfigSave() {
     const enabledEl = document.getElementById('esc_enabled_' + mode.id);
     if (enabledEl) cfg.enabled = enabledEl.checked;
   });
-  saveEsportsConfig();
+  await saveEsportsConfig();
   esportsSettingsSaved = true;
   SFX.correct();
   render();
 }
 
-function esportsConfigReset() {
+async function esportsConfigReset() {
   esportsHostConfig = getDefaultEsportsConfig();
-  saveEsportsConfig();
+  await saveEsportsConfig();
   esportsSettingsSaved = false;
   SFX.wrong();
   render();
@@ -7685,7 +7764,7 @@ function closeModeSettings() {
   if (overlay) overlay.remove();
 }
 
-function saveModeSettings(modeId) {
+async function saveModeSettings(modeId) {
   const cfg = esportsHostConfig[modeId];
   const mode = ESPORTS_MODES.find(m => m.id === modeId);
   if (!cfg || !mode) return;
@@ -7731,7 +7810,7 @@ function saveModeSettings(modeId) {
   if (enabledEl) cfg.enabled = enabledEl.checked;
   // Cover image + music are handled via file upload handlers (already set on cfg)
 
-  saveEsportsConfig();
+  await saveEsportsConfig();
   SFX.correct();
   closeModeSettings();
   render();
@@ -7781,7 +7860,6 @@ function mspUploadCover(modeId, input) {
     const compressed = canvas.toDataURL('image/jpeg', 0.6);
     console.log('Cover compressed: ' + Math.round(compressed.length/1024) + 'KB (from ' + Math.round(file.size/1024) + 'KB)');
     esportsHostConfig[modeId].coverImage = compressed;
-    saveMedia('pflx_es_cover_' + modeId, compressed);
     renderModeSettingsOverlay();
   };
   img.src = URL.createObjectURL(file);
@@ -7789,7 +7867,6 @@ function mspUploadCover(modeId, input) {
 
 function mspClearCover(modeId) {
   esportsHostConfig[modeId].coverImage = '';
-  clearMedia('pflx_es_cover_' + modeId);
   renderModeSettingsOverlay();
 }
 
@@ -7805,13 +7882,6 @@ function mspUploadMusic(modeId, input) {
   reader.onload = function(e) {
     esportsHostConfig[modeId].bgMusic = e.target.result;
     esportsHostConfig[modeId].bgMusicName = file.name;
-    if (!saveMedia('pflx_es_music_' + modeId, e.target.result)) {
-      alert('Music file is too large to store locally. Try a smaller file (under 1MB).');
-      esportsHostConfig[modeId].bgMusic = '';
-      esportsHostConfig[modeId].bgMusicName = '';
-      return;
-    }
-    saveMedia('pflx_es_musicname_' + modeId, file.name);
     renderModeSettingsOverlay();
   };
   reader.readAsDataURL(file);
@@ -7820,8 +7890,6 @@ function mspUploadMusic(modeId, input) {
 function mspClearMusic(modeId) {
   esportsHostConfig[modeId].bgMusic = '';
   esportsHostConfig[modeId].bgMusicName = '';
-  clearMedia('pflx_es_music_' + modeId);
-  clearMedia('pflx_es_musicname_' + modeId);
   renderModeSettingsOverlay();
 }
 
