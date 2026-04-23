@@ -1032,7 +1032,7 @@ nav .avatar-sub{font-size:9px;color:#666}
 .emc-tag.coop{background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.25);color:#7c4dff}
 
 /* Esports Mode Lobby */
-.esports-lobby{max-width:900px;margin:0 auto;padding:32px 24px;position:relative;z-index:10;overflow:hidden;border-radius:12px}
+.esports-lobby{max-width:900px;margin:0 auto;padding:32px 24px;position:relative;z-index:10;overflow:visible;border-radius:12px}
 .esports-lobby-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
 .esports-lobby-header .elh-icon{font-size:2.5rem}
 .esports-lobby-header .elh-info h2{font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em}
@@ -1040,7 +1040,7 @@ nav .avatar-sub{font-size:9px;color:#666}
 
 /* Difficulty tier selector */
 .diff-selector{display:flex;gap:12px;margin-bottom:24px}
-.diff-card{flex:1;padding:16px;border-radius:12px;background:rgba(10,14,23,0.6);border:2px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.3s;text-align:center}
+.diff-card{flex:1;padding:16px;border-radius:12px;background:rgba(10,14,23,0.92);border:2px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.3s;text-align:center;position:relative;z-index:2}
 .diff-card:hover{border-color:rgba(0,229,255,0.3)}
 .diff-card.active{border-color:var(--pflx-cyan);box-shadow:0 0 20px rgba(0,229,255,0.15)}
 .diff-card .dc-icon{font-size:1.5rem;margin-bottom:6px}
@@ -1051,7 +1051,7 @@ nav .avatar-sub{font-size:9px;color:#666}
 
 /* Play mode selector */
 .play-selector{display:flex;gap:12px;margin-bottom:24px}
-.play-card{flex:1;padding:14px;border-radius:12px;background:rgba(10,14,23,0.6);border:2px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.3s;text-align:center}
+.play-card{flex:1;padding:14px;border-radius:12px;background:rgba(10,14,23,0.92);border:2px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.3s;text-align:center;position:relative;z-index:2}
 .play-card:hover{border-color:rgba(0,229,255,0.3)}
 .play-card.active{border-color:var(--pflx-green);box-shadow:0 0 20px rgba(0,230,118,0.15)}
 .play-card .pc-icon{font-size:1.3rem;margin-bottom:4px}
@@ -1059,7 +1059,7 @@ nav .avatar-sub{font-size:9px;color:#666}
 .play-card .pc-desc{font-size:10px;color:#888;margin-top:4px}
 
 /* Match creation area */
-.match-create-box{background:rgba(10,14,23,0.7);border:1px solid rgba(0,229,255,0.1);border-radius:16px;padding:24px;margin-bottom:24px}
+.match-create-box{background:rgba(10,14,23,0.95);border:1px solid rgba(0,229,255,0.1);border-radius:16px;padding:24px;margin-bottom:24px;position:relative;z-index:2}
 .match-create-box h3{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px}
 .mcb-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .mcb-label{font-size:12px;color:#aaa}
@@ -8007,21 +8007,28 @@ function renderEsportsLobby() {
   }).join('');
 
   const lobbyCover = esportsHostConfig[mode.id]?.coverImage || '';
-  return `<div class="esports-lobby" style="${lobbyCover ? 'background-image:linear-gradient(to bottom,rgba(10,14,23,0.3) 0%,rgba(10,14,23,0.85) 40%,rgba(10,14,23,0.98) 70%);' : ''}">
-    ${lobbyCover ? `<div style="position:absolute;top:0;left:0;right:0;height:350px;z-index:-1;overflow:hidden;border-radius:12px 12px 0 0"><img src="${lobbyCover}" style="width:100%;height:100%;object-fit:cover;display:block" /></div>` : ''}
+  return `<div class="esports-lobby">
+    ${lobbyCover ? `<div style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none"><img src="${lobbyCover}" style="width:100%;height:100%;object-fit:cover;opacity:0.08;filter:blur(4px)" /></div>` : ''}
     <button class="sq-back" onclick="esportsGoHub()" style="margin-bottom:16px;position:relative;z-index:2">← All Modes</button>
-    <div class="esports-lobby-header" style="position:relative;z-index:2">
-      <div class="elh-icon" style="filter:drop-shadow(0 0 10px ${mode.color})">${mode.icon}</div>
-      <div class="elh-info">
-        <h2 style="color:${mode.color}">${mode.name}</h2>
-        <p>${mode.desc}</p>
+
+    <!-- Mode Header Banner -->
+    <div class="lobby-hero" style="position:relative;z-index:2;border-radius:14px;overflow:hidden;margin-bottom:24px;${lobbyCover ? 'min-height:140px' : ''}">
+      ${lobbyCover ? `<img src="${lobbyCover}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" />` : ''}
+      <div style="position:relative;z-index:1;padding:${lobbyCover ? '28px 24px' : '20px 0'};${lobbyCover ? 'background:linear-gradient(to right,rgba(10,14,23,0.85),rgba(10,14,23,0.5))' : ''}">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="font-size:2.5rem;filter:drop-shadow(0 0 10px ${mode.color})">${mode.icon}</div>
+          <div>
+            <h2 style="font-family:Orbitron,monospace;font-size:1.3rem;font-weight:800;color:${mode.color};text-transform:uppercase;letter-spacing:0.08em;text-shadow:0 2px 8px rgba(0,0,0,0.6)">${mode.name}</h2>
+            <p style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px;text-shadow:0 1px 4px rgba(0,0,0,0.6)">${mode.desc}</p>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Difficulty Tier</div>
+    <div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;position:relative;z-index:2">Difficulty Tier</div>
     <div class="diff-selector">${diffCards}</div>
 
-    <div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">Play Mode</div>
+    <div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;position:relative;z-index:2">Play Mode</div>
     <div class="play-selector">${playCards}</div>
 
     <div class="match-create-box">
