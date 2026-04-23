@@ -127,6 +127,12 @@ body{background:var(--pflx-darker);color:#e0e0e0;font-family:'Inter',system-ui,s
 
 /* Rank badge */
 .rank-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:20px;font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase}
+.view-toggle-btn{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;border:1px solid rgba(255,215,64,0.3);background:rgba(255,215,64,0.08);color:var(--pflx-gold);font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:600;cursor:pointer;transition:all 0.2s;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap}
+.view-toggle-btn:hover{background:rgba(255,215,64,0.15);border-color:rgba(255,215,64,0.5)}
+.view-toggle-btn.player-mode{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.08);color:var(--pflx-cyan)}
+.view-toggle-btn.player-mode:hover{background:rgba(0,229,255,0.15);border-color:rgba(0,229,255,0.5)}
+.vt-icon{font-size:0.7rem}
+.vt-label{font-size:0.5rem}
 
 /* VS divider */
 .vs-divider{font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--pflx-red),var(--pflx-gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(255,23,68,0.5))}
@@ -1246,7 +1252,17 @@ const FALLBACK_ROSTER = [
   { id: "admin-1", name: "Mr. Johnson", brandName: "TheTomorrowTeacher", role: "admin", avatar: "MJ", cohort: "N/A", pathway: "Host", email: "ennisjohnsonjr@thetomorrowteacher.org", pin: "1111", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
 ];
 
-function isHostUser(u) { return u.role === "admin" || u.isHost === true; }
+// Host/Player view toggle — when playerViewMode is true, isHostUser always returns false
+let playerViewMode = false;
+function isActualHost(u) { return u.role === "admin" || u.isHost === true; }
+function isHostUser(u) { return !playerViewMode && isActualHost(u); }
+function togglePlayerView() {
+  playerViewMode = !playerViewMode;
+  // If switching to player view while on settings, redirect to home
+  if (playerViewMode && state.screen === 'settings') state.screen = 'home';
+  SFX.click();
+  render();
+}
 
 function buildPlayers(roster) {
   XCOIN_ROSTER = roster;
@@ -2104,6 +2120,10 @@ function renderNav() {
       <a href="#" onclick="goScreen('esports')" class="${state.screen==='esports'?'active':''}">Challenges</a>
     </div>
     <div class="player-info">
+      ${isActualHost(p) ? `<button class="view-toggle-btn ${playerViewMode ? 'player-mode' : 'host-mode'}" onclick="togglePlayerView()" title="${playerViewMode ? 'Switch to Host View' : 'Switch to Player View'}">
+        <span class="vt-icon">${playerViewMode ? '👤' : '👑'}</span>
+        <span class="vt-label">${playerViewMode ? 'Player View' : 'Host View'}</span>
+      </button>` : ''}
       <div class="xc-bal">${p.xc.toLocaleString()} XC</div>
       <div class="rank-badge" style="background:${ri.color}15;border:1px solid ${ri.color}40;color:${ri.color}">${ri.icon} ${ri.tier}</div>
       <div class="avatar-wrap" style="cursor:pointer" onclick="togglePanel()">
@@ -2186,7 +2206,7 @@ function renderSidePanel() {
           <a href="#" onclick="goLobby();togglePanel()" class="${state.screen==='lobby'?'active':''}"><span class="nav-icon">🏛️</span> Battle Lobby</a>
           <a href="#" onclick="goLeaderboard();togglePanel()" class="${state.screen==='leaderboard'?'active':''}"><span class="nav-icon">🏆</span> Leaderboard</a>
           <a href="#" onclick="goScreen('esports');togglePanel()" class="${state.screen==='esports'?'active':''}"><span class="nav-icon">🏟️</span> Design Challenges</a>
-          <a href="#" onclick="goSettings();togglePanel()" class="${state.screen==='settings'?'active':''}"><span class="nav-icon">⚙️</span> Settings${isHost ? ' <span style=\"font-size:8px;color:var(--pflx-gold);margin-left:4px\">HOST</span>' : ''}</a>
+          ${isHost ? `<a href="#" onclick="goSettings();togglePanel()" class="${state.screen==='settings'?'active':''}"><span class="nav-icon">⚙️</span> Settings <span style="font-size:8px;color:var(--pflx-gold);margin-left:4px">HOST</span></a>` : ''}
         </div>
       </div>
     </div>
