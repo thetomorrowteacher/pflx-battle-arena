@@ -1026,7 +1026,7 @@ nav .avatar-sub{font-size:9px;color:#666}
 .emc-tag.coop{background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.25);color:#7c4dff}
 
 /* Esports Mode Lobby */
-.esports-lobby{max-width:900px;margin:0 auto;padding:32px 24px;position:relative;z-index:10}
+.esports-lobby{max-width:900px;margin:0 auto;padding:32px 24px;position:relative;z-index:10;overflow:hidden;border-radius:12px}
 .esports-lobby-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
 .esports-lobby-header .elh-icon{font-size:2.5rem}
 .esports-lobby-header .elh-info h2{font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em}
@@ -3624,7 +3624,7 @@ function renderSettings() {
             <h4>⏱️ Timer Settings (Minutes)</h4>
             <div class="es-tier-grid">
               <div class="es-tier-col" style="border-color:rgba(0,230,118,0.15)">
-                <h5 style="color:#00e676">🚀 Cadet</h5>
+                <h5 style="color:#00e676">🚀 Starter</h5>
                 <div class="es-field">
                   <label>Time Limit</label>
                   <input type="number" id="esc_timer_${mode.id}_cadet" value="${cfg.timers.cadet}" min="5" max="120" step="5" />
@@ -3632,7 +3632,7 @@ function renderSettings() {
                 <div style="font-size:9px;color:#666;text-align:center">${mode.tiers[0].tools.join(', ')}</div>
               </div>
               <div class="es-tier-col" style="border-color:rgba(255,215,64,0.15)">
-                <h5 style="color:#ffd740">⚡ Officer</h5>
+                <h5 style="color:#ffd740">⚡ Experienced</h5>
                 <div class="es-field">
                   <label>Time Limit</label>
                   <input type="number" id="esc_timer_${mode.id}_officer" value="${cfg.timers.officer}" min="5" max="120" step="5" />
@@ -3640,7 +3640,7 @@ function renderSettings() {
                 <div style="font-size:9px;color:#666;text-align:center">${mode.tiers[1].tools.join(', ')}</div>
               </div>
               <div class="es-tier-col" style="border-color:rgba(255,23,68,0.15)">
-                <h5 style="color:#ff1744">🔥 Commander</h5>
+                <h5 style="color:#ff1744">🔥 Professional</h5>
                 <div class="es-field">
                   <label>Time Limit</label>
                   <input type="number" id="esc_timer_${mode.id}_commander" value="${cfg.timers.commander}" min="5" max="120" step="5" />
@@ -3659,7 +3659,7 @@ function renderSettings() {
             </div>
             <div class="es-tier-grid">
               <div class="es-tier-col" style="border-color:rgba(0,230,118,0.15)">
-                <h5 style="color:#00e676">Cadet Multiplier</h5>
+                <h5 style="color:#00e676">Starter Multiplier</h5>
                 <div class="es-field">
                   <label>XC Multiplier</label>
                   <select id="esc_xc_${mode.id}_cadet">
@@ -3669,7 +3669,7 @@ function renderSettings() {
                 <div style="font-size:10px;color:var(--pflx-gold);text-align:center;font-family:Orbitron,monospace;font-weight:700">= ${Math.round(cfg.xcBase * cfg.xcMultipliers.cadet)} XC</div>
               </div>
               <div class="es-tier-col" style="border-color:rgba(255,215,64,0.15)">
-                <h5 style="color:#ffd740">Officer Multiplier</h5>
+                <h5 style="color:#ffd740">Experienced Multiplier</h5>
                 <div class="es-field">
                   <label>XC Multiplier</label>
                   <select id="esc_xc_${mode.id}_officer">
@@ -3679,7 +3679,7 @@ function renderSettings() {
                 <div style="font-size:10px;color:var(--pflx-gold);text-align:center;font-family:Orbitron,monospace;font-weight:700">= ${Math.round(cfg.xcBase * cfg.xcMultipliers.officer)} XC</div>
               </div>
               <div class="es-tier-col" style="border-color:rgba(255,23,68,0.15)">
-                <h5 style="color:#ff1744">Commander Multiplier</h5>
+                <h5 style="color:#ff1744">Professional Multiplier</h5>
                 <div class="es-field">
                   <label>XC Multiplier</label>
                   <select id="esc_xc_${mode.id}_commander">
@@ -7027,9 +7027,9 @@ const ESPORTS_MODES = [
 ];
 
 const DIFF_TIERS = [
-  { id: 'cadet', name: 'Cadet', icon: '🚀', shipIcon: '🛸', color: '#00e676', desc: 'Free/beginner tools, longest timer, 1x XC rewards' },
-  { id: 'officer', name: 'Officer', icon: '⚡', shipIcon: '🚀', color: '#ffd740', desc: 'Intermediate tools, standard timer, 1.5x XC rewards' },
-  { id: 'commander', name: 'Commander', icon: '🔥', shipIcon: '💎', color: '#ff1744', desc: 'Pro tools, shortest timer, 2x XC rewards' },
+  { id: 'cadet', name: 'Starter', icon: '🚀', shipIcon: '🛸', color: '#00e676', desc: 'Free/beginner tools, longest timer, 1x XC rewards' },
+  { id: 'officer', name: 'Experienced', icon: '⚡', shipIcon: '🚀', color: '#ffd740', desc: 'Intermediate tools, standard timer, 1.5x XC rewards' },
+  { id: 'commander', name: 'Professional', icon: '🔥', shipIcon: '💎', color: '#ff1744', desc: 'Pro tools, shortest timer, 2x XC rewards' },
 ];
 
 const PLAY_MODES = [
@@ -7789,9 +7789,9 @@ function renderModeSettingsOverlay() {
       <div class="msp-section">
         <h4>⏱️ Timer Settings (Minutes)</h4>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-          <div class="msp-field"><label style="color:#00e676">🚀 Cadet</label><input type="number" id="msp_timer_cadet" value="${cfg.timers.cadet}" min="5" max="120" step="5" /></div>
-          <div class="msp-field"><label style="color:#ffd740">⚡ Officer</label><input type="number" id="msp_timer_officer" value="${cfg.timers.officer}" min="5" max="120" step="5" /></div>
-          <div class="msp-field"><label style="color:#ff1744">🔥 Commander</label><input type="number" id="msp_timer_commander" value="${cfg.timers.commander}" min="5" max="120" step="5" /></div>
+          <div class="msp-field"><label style="color:#00e676">🚀 Starter</label><input type="number" id="msp_timer_cadet" value="${cfg.timers.cadet}" min="5" max="120" step="5" /></div>
+          <div class="msp-field"><label style="color:#ffd740">⚡ Experienced</label><input type="number" id="msp_timer_officer" value="${cfg.timers.officer}" min="5" max="120" step="5" /></div>
+          <div class="msp-field"><label style="color:#ff1744">🔥 Professional</label><input type="number" id="msp_timer_commander" value="${cfg.timers.commander}" min="5" max="120" step="5" /></div>
         </div>
       </div>
 
@@ -7961,10 +7961,10 @@ function renderEsportsLobby() {
   }).join('');
 
   const lobbyCover = esportsHostConfig[mode.id]?.coverImage || '';
-  return `<div class="esports-lobby">
-    <button class="sq-back" onclick="esportsGoHub()" style="margin-bottom:16px">← All Modes</button>
-    ${lobbyCover ? `<div style="border-radius:12px;overflow:hidden;margin-bottom:16px;max-height:160px"><img src="${lobbyCover}" style="width:100%;height:160px;object-fit:cover;display:block;opacity:0.7" /></div>` : ''}
-    <div class="esports-lobby-header">
+  return `<div class="esports-lobby" style="${lobbyCover ? 'background-image:linear-gradient(to bottom,rgba(10,14,23,0.3) 0%,rgba(10,14,23,0.85) 40%,rgba(10,14,23,0.98) 70%);' : ''}">
+    ${lobbyCover ? `<div style="position:absolute;top:0;left:0;right:0;height:350px;z-index:-1;overflow:hidden;border-radius:12px 12px 0 0"><img src="${lobbyCover}" style="width:100%;height:100%;object-fit:cover;display:block" /></div>` : ''}
+    <button class="sq-back" onclick="esportsGoHub()" style="margin-bottom:16px;position:relative;z-index:2">← All Modes</button>
+    <div class="esports-lobby-header" style="position:relative;z-index:2">
       <div class="elh-icon" style="filter:drop-shadow(0 0 10px ${mode.color})">${mode.icon}</div>
       <div class="elh-info">
         <h2 style="color:${mode.color}">${mode.name}</h2>
