@@ -148,6 +148,24 @@ body{background:var(--pflx-darker);color:#e0e0e0;font-family:'Inter',system-ui,s
 .content{position:relative;z-index:10}
 /* Ensure all screen wraps render above the spaceship background layers */
 .home-wrap,.lb-wrap,.wager-wrap,.result-wrap,.battle-wrap,.settings-wrap,.login-wrap,.esports-hub,.esports-lobby,.esports-match,.esports-judging,.esports-results{position:relative;z-index:10}
+.er-rewards-segmented{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin:20px 0}
+.er-segment{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 20px;min-width:200px;text-align:center}
+.er-segment.winner-seg{border-color:rgba(255,215,64,0.25);background:rgba(255,215,64,0.05)}
+.er-seg-title{font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px}
+.er-segment.winner-seg .er-seg-title{color:var(--pflx-gold)}
+.er-badge-list{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.er-badge-chip{font-family:'Orbitron',monospace;font-size:0.5rem;padding:4px 10px;border-radius:20px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);color:var(--pflx-cyan);white-space:nowrap}
+.er-standing-row.no-sub{opacity:0.5}
+.es-material-kit{background:rgba(124,77,255,0.08);border:1px solid rgba(124,77,255,0.2);border-radius:12px;padding:16px;margin:12px 0 16px}
+.esk-title{font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;color:var(--pflx-purple);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px}
+.esk-items{display:flex;flex-direction:column;gap:6px}
+.esk-item{font-size:0.7rem;color:#ccc;line-height:1.5}
+.esk-label{font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:600;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.04em}
+.esk-value{color:#e0e0e0}
+.es-badge-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.es-badge-toggle{cursor:pointer;font-family:'Orbitron',monospace;font-size:0.5rem;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.02);color:#888;transition:all 0.2s;user-select:none}
+.es-badge-toggle.active,.es-badge-toggle:has(input:checked){background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.4);color:var(--pflx-cyan)}
+.es-badge-toggle:hover{border-color:rgba(0,229,255,0.3)}
 
 /* Nav */
 nav{background:rgba(10,14,23,0.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,229,255,0.1);position:sticky;top:0;z-index:50}
@@ -3639,26 +3657,61 @@ function renderSettings() {
             </div>
           </div>
 
-          <!-- Badge Configuration -->
+          <!-- Segmented Rewards -->
           <div class="es-config-panel">
-            <h4>🏅 Badge Rewards</h4>
-            <div class="es-badge-row">
-              <label>Participation</label>
-              <select id="esc_badge_part_${mode.id}">
-                ${allBadges.map(b => `<option value="${b.id}" ${cfg.participationBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
-              </select>
+            <h4>🏅 Participant Rewards <span style="font-size:0.5rem;color:#888;font-weight:400">(All contestants who submit)</span></h4>
+            <div class="es-field" style="max-width:280px;margin-bottom:12px">
+              <label>Participation XC</label>
+              <input type="number" id="esc_partxc_${mode.id}" value="${cfg.participationXC || 100}" min="0" max="5000" step="25" />
             </div>
             <div class="es-badge-row">
-              <label>Winner</label>
-              <select id="esc_badge_win_${mode.id}">
-                ${allBadges.map(b => `<option value="${b.id}" ${cfg.winnerBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
-              </select>
+              <label>Participant Badges <span style="font-size:0.5rem;color:#666">(select multiple)</span></label>
+              <div class="es-badge-grid" id="esc_partbadges_${mode.id}">
+                ${allBadges.map(b => `<label class="es-badge-toggle ${(cfg.participationBadges || [cfg.participationBadge || 'positive_participant']).includes(b.id) ? 'active' : ''}">
+                  <input type="checkbox" value="${b.id}" ${(cfg.participationBadges || [cfg.participationBadge]).includes(b.id) ? 'checked' : ''} style="display:none" />
+                  <span>${b.icon} ${b.name}</span>
+                </label>`).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="es-config-panel">
+            <h4>🏆 Winner Rewards <span style="font-size:0.5rem;color:#888;font-weight:400">(Champion / top scorer)</span></h4>
+            <div class="es-field" style="max-width:280px;margin-bottom:12px">
+              <label>Winner XC</label>
+              <input type="number" id="esc_winxc_${mode.id}" value="${cfg.winnerXC || 500}" min="0" max="10000" step="50" />
             </div>
             <div class="es-badge-row">
-              <label>Co-op Team</label>
+              <label>Winner Badges <span style="font-size:0.5rem;color:#666">(select multiple)</span></label>
+              <div class="es-badge-grid" id="esc_winbadges_${mode.id}">
+                ${allBadges.map(b => `<label class="es-badge-toggle ${(cfg.winnerBadges || [cfg.winnerBadge || 'arena_champion']).includes(b.id) ? 'active' : ''}">
+                  <input type="checkbox" value="${b.id}" ${(cfg.winnerBadges || [cfg.winnerBadge]).includes(b.id) ? 'checked' : ''} style="display:none" />
+                  <span>${b.icon} ${b.name}</span>
+                </label>`).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="es-config-panel">
+            <h4>🤝 Co-op Badge</h4>
+            <div class="es-badge-row">
+              <label>Co-op Team Badge</label>
               <select id="esc_badge_coop_${mode.id}">
                 ${allBadges.map(b => `<option value="${b.id}" ${cfg.coopBadge===b.id?'selected':''}>${b.icon} ${b.name}</option>`).join('')}
               </select>
+            </div>
+          </div>
+
+          <!-- Mode Branding -->
+          <div class="es-config-panel">
+            <h4>🎨 Mode Branding</h4>
+            <div class="es-field" style="margin-bottom:12px">
+              <label>Cover Image URL</label>
+              <input type="text" id="esc_coverimg_${mode.id}" value="${cfg.coverImage || ''}" placeholder="https://example.com/cover.jpg" style="font-size:11px" />
+            </div>
+            <div class="es-field">
+              <label>Background Music URL</label>
+              <input type="text" id="esc_bgmusic_${mode.id}" value="${cfg.bgMusic || ''}" placeholder="https://example.com/music.mp3" style="font-size:11px" />
             </div>
           </div>
 
@@ -3724,6 +3777,15 @@ function bindEvents() {
       }
     };
   }
+
+  // ── Badge toggle chips in settings ──
+  document.querySelectorAll('.es-badge-toggle').forEach(toggle => {
+    toggle.onclick = function(e) {
+      e.preventDefault();
+      const cb = this.querySelector('input[type="checkbox"]');
+      if (cb) { cb.checked = !cb.checked; this.classList.toggle('active', cb.checked); }
+    };
+  });
 
   // ── Login Step 1: Brand select dropdown ──
   const brandSelect = document.getElementById("brandSelect");
@@ -6974,12 +7036,19 @@ function getDefaultEsportsConfig() {
       enabled: true,
       timers: {},
       xcBase: 500,
+      participationXC: 100,
+      winnerXC: 500,
       xcMultipliers: {},
-      participationBadge: 'positive_participant',
-      winnerBadge: 'arena_champion',
+      participationBadges: ['positive_participant'],
+      winnerBadges: ['arena_champion'],
       coopBadge: 'team_player',
       maxContestantsMulti: 8,
       maxContestantsCoop: 10,
+      bgMusic: '',
+      coverImage: '',
+      // Keep legacy single-badge keys for backward compat
+      participationBadge: 'positive_participant',
+      winnerBadge: 'arena_champion',
     };
     mode.tiers.forEach(tier => {
       config[mode.id].timers[tier.diff] = tier.timeMins;
@@ -7046,13 +7115,31 @@ function esportsConfigSave() {
     // Read base XC
     const baseEl = document.getElementById('esc_basexc_' + mode.id);
     if (baseEl) cfg.xcBase = parseInt(baseEl.value) || cfg.xcBase;
-    // Read badges
-    const partBadge = document.getElementById('esc_badge_part_' + mode.id);
-    if (partBadge) cfg.participationBadge = partBadge.value;
-    const winBadge = document.getElementById('esc_badge_win_' + mode.id);
-    if (winBadge) cfg.winnerBadge = winBadge.value;
+    // Read segmented XC
+    const partXcEl = document.getElementById('esc_partxc_' + mode.id);
+    if (partXcEl) cfg.participationXC = parseInt(partXcEl.value) || 100;
+    const winXcEl = document.getElementById('esc_winxc_' + mode.id);
+    if (winXcEl) cfg.winnerXC = parseInt(winXcEl.value) || 500;
+    // Read multi-badges
+    const partBadgesEl = document.getElementById('esc_partbadges_' + mode.id);
+    if (partBadgesEl) {
+      cfg.participationBadges = Array.from(partBadgesEl.querySelectorAll('input:checked')).map(el => el.value);
+      if (cfg.participationBadges.length === 0) cfg.participationBadges = ['positive_participant'];
+      cfg.participationBadge = cfg.participationBadges[0]; // legacy compat
+    }
+    const winBadgesEl = document.getElementById('esc_winbadges_' + mode.id);
+    if (winBadgesEl) {
+      cfg.winnerBadges = Array.from(winBadgesEl.querySelectorAll('input:checked')).map(el => el.value);
+      if (cfg.winnerBadges.length === 0) cfg.winnerBadges = ['arena_champion'];
+      cfg.winnerBadge = cfg.winnerBadges[0]; // legacy compat
+    }
     const coopBadge = document.getElementById('esc_badge_coop_' + mode.id);
     if (coopBadge) cfg.coopBadge = coopBadge.value;
+    // Read branding
+    const coverEl = document.getElementById('esc_coverimg_' + mode.id);
+    if (coverEl) cfg.coverImage = coverEl.value.trim();
+    const musicEl = document.getElementById('esc_bgmusic_' + mode.id);
+    if (musicEl) cfg.bgMusic = musicEl.value.trim();
     // Read max contestants
     const maxMulti = document.getElementById('esc_maxmulti_' + mode.id);
     if (maxMulti) cfg.maxContestantsMulti = parseInt(maxMulti.value) || 8;
@@ -7132,6 +7219,133 @@ function getRandomPrompt(mode) {
   return mode.prompts[Math.floor(Math.random() * mode.prompts.length)];
 }
 
+// ── Randomized Material Kits per Mode ──
+const MATERIAL_KITS = {
+  beat_lab: {
+    label: 'Battle Kit',
+    generate: () => {
+      const bpms = [80, 90, 100, 110, 120, 130, 140, 150];
+      const keys = ['C minor', 'D minor', 'E minor', 'F minor', 'G minor', 'A minor', 'B♭ minor', 'C major', 'G major', 'F major'];
+      const genres = ['Trap', 'Lo-fi', 'Boom Bap', 'EDM', 'House', 'Drill', 'R&B', 'Afrobeats'];
+      const sampleTypes = ['Kick', 'Snare', 'Hi-Hat', 'Clap', '808 Bass', 'Synth Lead', 'Pad', 'Vocal Chop', 'FX Riser', 'Percussion'];
+      const pick = (arr, n) => { const s = [...arr]; for (let i = s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,n); };
+      return {
+        items: [
+          { label: 'BPM', value: bpms[Math.floor(Math.random()*bpms.length)] + ' BPM' },
+          { label: 'Key', value: keys[Math.floor(Math.random()*keys.length)] },
+          { label: 'Genre', value: pick(genres, 1)[0] },
+          { label: 'Required Samples', value: pick(sampleTypes, 4).join(', ') },
+          { label: 'Constraint', value: pick(['Must include a vocal element','No more than 8 tracks','Must have a breakdown section','Loop must be exactly 8 bars','Must use at least one reversed sample'], 1)[0] },
+        ]
+      };
+    }
+  },
+  pixel_forge: {
+    label: 'Design Brief',
+    generate: () => {
+      const palettes = ['Sunset Warm (#FF6B35, #F7C59F, #EFEFD0, #004E89, #1A659E)', 'Ocean Cool (#05668D, #028090, #00A896, #02C39A, #F0F3BD)', 'Neon Night (#FF006E, #8338EC, #3A86FF, #FB5607, #FFBE0B)', 'Earth Tone (#5F0F40, #9A031E, #CB793A, #FCDC4D, #0F7173)', 'Pastel Dream (#FFD6FF, #E7C6FF, #C8B6FF, #B8C0FF, #BBD0FF)'];
+      const styles = ['Flat/Minimal', 'Isometric', 'Hand-drawn/Sketch', 'Retro/Pixel Art', 'Glassmorphism', 'Brutalist'];
+      const elements = ['Must include typography', 'Include an icon/symbol', 'Use negative space', 'Include a pattern/texture', 'Incorporate a mascot character', 'Use geometric shapes only'];
+      const pick = (arr, n) => { const s = [...arr]; for (let i = s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,n); };
+      return { items: [
+        { label: 'Color Palette', value: pick(palettes, 1)[0] },
+        { label: 'Style', value: pick(styles, 1)[0] },
+        { label: 'Required Elements', value: pick(elements, 2).join('; ') },
+      ]};
+    }
+  },
+  cut_room: {
+    label: 'Production Brief',
+    generate: () => {
+      const themes = ['Day in the Life', 'Product Showcase', 'Tutorial/How-To', 'Montage/Highlight Reel', 'Story Arc (3 acts)', 'Behind the Scenes'];
+      const transitions = ['Jump Cut', 'Crossfade', 'Whip Pan', 'Match Cut', 'J-Cut/L-Cut', 'Zoom Transition'];
+      const constraints = ['30 seconds max', '60 seconds max', 'No dialogue — music only', 'Must include text overlays', 'Use only stock footage', 'Must include slow-motion'];
+      const pick = (arr, n) => { const s = [...arr]; for (let i = s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,n); };
+      return { items: [
+        { label: 'Theme', value: pick(themes, 1)[0] },
+        { label: 'Required Transition', value: pick(transitions, 2).join(', ') },
+        { label: 'Constraint', value: pick(constraints, 1)[0] },
+      ]};
+    }
+  },
+  dimension_lab: {
+    label: '3D Brief',
+    generate: () => {
+      const shapes = ['Sphere + Cube combo', 'Cylinder + Torus', 'Low-poly organic form', 'Architectural element', 'Vehicle/Transport', 'Character bust'];
+      const materials = ['Metallic/Chrome', 'Glass/Transparent', 'Wood/Natural', 'Neon/Emissive', 'Matte/Clay', 'Holographic/Iridescent'];
+      const constraints = ['Under 5000 polygons', 'Single material only', 'Must be animated (turntable)', 'Include environment lighting', 'Must be printable (no overhangs)', 'Symmetrical design only'];
+      const pick = (arr, n) => { const s = [...arr]; for (let i = s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,n); };
+      return { items: [
+        { label: 'Base Form', value: pick(shapes, 1)[0] },
+        { label: 'Material', value: pick(materials, 2).join(', ') },
+        { label: 'Constraint', value: pick(constraints, 1)[0] },
+      ]};
+    }
+  },
+  game_jam: {
+    label: 'Jam Constraints',
+    generate: () => {
+      const themes = ['Cycles', 'Less is More', 'Connected', 'Out of Control', 'Reversal', 'Hidden', 'Sacrifice', 'Parallel Worlds'];
+      const mechanics = ['One Button', 'Physics-based', 'Puzzle', 'Endless Runner', 'Turn-based', 'Tower Defense', 'Rhythm', 'Deck Building'];
+      const features = ['Must include a score system', 'Must have 3 levels', 'Include a tutorial', 'Sound effects required', 'Include a boss encounter', 'Must have a lose condition'];
+      const pick = (arr, n) => { const s = [...arr]; for (let i = s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,n); };
+      return { items: [
+        { label: 'Theme', value: pick(themes, 1)[0] },
+        { label: 'Core Mechanic', value: pick(mechanics, 1)[0] },
+        { label: 'Required Feature', value: pick(features, 1)[0] },
+      ]};
+    }
+  },
+  code_arena: {
+    label: 'Code Challenge',
+    generate: () => {
+      const languages = ['JavaScript', 'Python', 'Any language', 'HTML/CSS only', 'TypeScript', 'Your choice (document it)'];
+      const patterns = ['Sorting algorithm', 'API integration', 'Data visualization', 'CLI tool', 'Web scraper', 'REST endpoint', 'State machine', 'Parser'];
+      const constraints = ['No external libraries', 'Must include error handling', 'Must include unit tests', 'Under 100 lines', 'Must handle edge cases', 'Include documentation'];
+      const pick = (arr, n) => { const s = [...arr]; for (let i = s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,n); };
+      return { items: [
+        { label: 'Language', value: pick(languages, 1)[0] },
+        { label: 'Pattern', value: pick(patterns, 1)[0] },
+        { label: 'Constraint', value: pick(constraints, 1)[0] },
+      ]};
+    }
+  },
+  pitch_arena: {
+    label: 'Pitch Brief',
+    generate: () => {
+      const markets = ['Gen Z consumers', 'Small business owners', 'Healthcare workers', 'Remote teams', 'K-12 educators', 'Fitness enthusiasts', 'Senior citizens', 'Content creators'];
+      const budgets = ['$0 (bootstrapped)', '$5,000 seed', '$50,000 angel round', '$500,000 Series A', 'Unlimited R&D budget'];
+      const slides = ['Problem + Solution', 'Market Size (TAM/SAM/SOM)', 'Revenue Model', 'Competitive Landscape', 'Go-to-Market Strategy', '5-Year Projection', 'Team Slide', 'The Ask'];
+      const pick = (arr, n) => { const s = [...arr]; for (let i = s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,n); };
+      return { items: [
+        { label: 'Target Market', value: pick(markets, 1)[0] },
+        { label: 'Budget Scenario', value: pick(budgets, 1)[0] },
+        { label: 'Required Slides', value: pick(slides, 3).join(', ') },
+      ]};
+    }
+  },
+  form_lab: {
+    label: 'Design Constraints',
+    generate: () => {
+      const materials = ['Recycled plastic', 'Bamboo/Wood', 'Sheet metal', 'Silicone/Rubber', '3D-printed PLA', 'Cardboard/Paper'];
+      const scenarios = ['Designed for children (ages 5-10)', 'Outdoor/weather-resistant', 'Portable/travel-friendly', 'Accessible (disability-friendly)', 'Stackable/space-saving', 'Luxury/premium feel'];
+      const forms = ['Handheld device', 'Container/Vessel', 'Wearable', 'Furniture piece', 'Tool/Utensil', 'Packaging'];
+      const pick = (arr, n) => { const s = [...arr]; for (let i = s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s.slice(0,n); };
+      return { items: [
+        { label: 'Primary Material', value: pick(materials, 1)[0] },
+        { label: 'User Scenario', value: pick(scenarios, 1)[0] },
+        { label: 'Form Factor', value: pick(forms, 1)[0] },
+      ]};
+    }
+  },
+};
+
+function generateMaterialKit(modeId) {
+  const kit = MATERIAL_KITS[modeId];
+  if (!kit) return null;
+  return { label: kit.label, ...kit.generate() };
+}
+
 // ── Create a new match ──
 function esportsCreateMatch(title) {
   const mode = esportsState.selectedMode;
@@ -7158,6 +7372,7 @@ function esportsCreateMatch(title) {
     playMode: playMode,
     title: title || mode.name + ' Challenge',
     prompt: prompt,
+    materialKit: generateMaterialKit(mode.id),
     tools: tier.tools,
     timeMins: cfgTimeMins,
     timeLeft: cfgTimeMins * 60,
@@ -7173,7 +7388,13 @@ function esportsCreateMatch(title) {
       participation: getEsportsBadge(mode.id, 'participation'),
       winner: getEsportsBadge(mode.id, 'winner'),
       coop: getEsportsBadge(mode.id, 'coop'),
+      participationBadges: esportsHostConfig[mode.id]?.participationBadges || ['positive_participant'],
+      winnerBadges: esportsHostConfig[mode.id]?.winnerBadges || ['arena_champion'],
     },
+    participationXC: esportsHostConfig[mode.id]?.participationXC || 100,
+    winnerXC: esportsHostConfig[mode.id]?.winnerXC || cfgBaseXC,
+    bgMusic: esportsHostConfig[mode.id]?.bgMusic || '',
+    coverImage: esportsHostConfig[mode.id]?.coverImage || '',
   };
 
   esportsState.matches.unshift(match);
@@ -7273,9 +7494,10 @@ function esportsEndSubmissions(matchId) {
   if (esportsState.matchTimer) clearInterval(esportsState.matchTimer);
 
   if (match.playMode === 'solo') {
-    // Solo mode — auto-complete, give participation XC
+    // Solo mode — auto-complete; only award winner if they submitted
     match.status = 'completed';
-    match.winner = state.player.id;
+    const contestant = match.contestants.find(c => c.id === state.player.id);
+    match.winner = (contestant && contestant.submission) ? state.player.id : null;
     esportsState.view = 'results';
   } else {
     match.status = 'judging';
@@ -7543,6 +7765,13 @@ function renderEsportsMatch() {
       <div class="ep-text">${match.prompt}</div>
     </div>
 
+    ${match.materialKit ? `<div class="es-material-kit">
+      <div class="esk-title">📦 ${match.materialKit.label}</div>
+      <div class="esk-items">
+        ${match.materialKit.items.map(item => `<div class="esk-item"><span class="esk-label">${item.label}:</span> <span class="esk-value">${item.value}</span></div>`).join('')}
+      </div>
+    </div>` : ''}
+
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-family:Orbitron,monospace;font-size:0.6rem;color:#888;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Allowed Tools</div>
       <div class="esports-tools">${toolTags}</div>
@@ -7614,8 +7843,25 @@ function renderEsportsResults() {
 
   const winner = match.contestants.find(c => c.id === match.winner);
   const isSolo = match.playMode === 'solo';
-  const xcWin = Math.round(match.baseXC * match.xcMult);
-  const xcParticipate = Math.round(match.baseXC * match.xcMult * 0.2);
+  const playerContestant = match.contestants.find(c => c.id === state.player.id);
+  const didSubmit = playerContestant && playerContestant.submission;
+
+  // Segmented XC
+  const xcWin = Math.round((match.winnerXC || match.baseXC) * match.xcMult);
+  const xcParticipate = didSubmit ? Math.round((match.participationXC || Math.round(match.baseXC * 0.2)) * match.xcMult) : 0;
+
+  // Badges — support arrays
+  const partBadgeIds = match.badges?.participationBadges || [match.badges?.participation || 'positive_participant'];
+  const winBadgeIds = match.badges?.winnerBadges || [match.badges?.winner || 'arena_champion'];
+
+  const partBadgeHTML = partBadgeIds.map(bid => {
+    const b = PFLX_BADGES.find(x => x.id === bid) || { icon: '🏅', name: bid };
+    return `<span class="er-badge-chip">${b.icon} ${b.name}</span>`;
+  }).join('');
+  const winBadgeHTML = winBadgeIds.map(bid => {
+    const b = PFLX_BADGES.find(x => x.id === bid) || { icon: '🏆', name: bid };
+    return `<span class="er-badge-chip">${b.icon} ${b.name}</span>`;
+  }).join('');
 
   // Sorted standings
   const standings = [...match.contestants].sort((a,b) => {
@@ -7626,31 +7872,49 @@ function renderEsportsResults() {
 
   const standingRows = standings.map((c, i) => {
     const isWinner = c.id === match.winner;
+    const hasSub = !!c.submission;
     const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
-    return `<div class="er-standing-row ${isWinner ? 'winner' : ''}">
-      <div class="er-rank-num">${i === 0 ? '🏆' : '#' + (i+1)}</div>
+    const xcAward = !hasSub ? 0 : (isWinner ? xcWin : xcParticipate);
+    return `<div class="er-standing-row ${isWinner ? 'winner' : ''} ${!hasSub ? 'no-sub' : ''}">
+      <div class="er-rank-num">${isWinner ? '🏆' : (hasSub ? '#' + (i+1) : '—')}</div>
       <div class="ej-av" style="width:30px;height:30px;font-size:11px">${av}</div>
-      <div style="flex:1;font-family:Orbitron,monospace;font-size:0.7rem;font-weight:${isWinner ? 700 : 500};color:${isWinner ? '#ffd740' : '#ccc'}">${c.brand || c.name}</div>
-      <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:var(--pflx-gold);font-weight:700">${isWinner ? '+' + xcWin : '+' + xcParticipate} XC</div>
+      <div style="flex:1;font-family:Orbitron,monospace;font-size:0.7rem;font-weight:${isWinner ? 700 : 500};color:${isWinner ? '#ffd740' : (hasSub ? '#ccc' : '#666')}">${c.brand || c.name}${!hasSub ? ' <span style="color:#ff1744;font-size:0.55rem">(No Submission)</span>' : ''}</div>
+      <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:${xcAward > 0 ? 'var(--pflx-gold)' : '#555'};font-weight:700">${xcAward > 0 ? '+' + xcAward + ' XC' : '0 XC'}</div>
     </div>`;
   }).join('');
 
+  const noSubmission = !didSubmit;
+  const isWinner = match.winner === state.player?.id;
+
   return `<div class="esports-results">
-    <div class="er-trophy">${isSolo ? '⭐' : '🏆'}</div>
-    <div class="er-title">${isSolo ? 'Challenge Complete' : 'Match Complete'}</div>
+    ${match.coverImage ? `<img src="${match.coverImage}" style="width:100%;max-height:140px;object-fit:cover;border-radius:12px;margin-bottom:16px;opacity:0.6" />` : ''}
+    <div class="er-trophy">${noSubmission ? '⚠️' : (isSolo ? '⭐' : '🏆')}</div>
+    <div class="er-title">${noSubmission ? 'Challenge Incomplete' : (isSolo ? 'Challenge Complete' : 'Match Complete')}</div>
     <div class="er-mode">${match.modeIcon} ${match.modeName} • ${match.difficulty} • ${match.playMode}</div>
 
-    ${winner ? `<div class="er-winner">
+    ${noSubmission ? `<div style="background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.3);border-radius:12px;padding:16px;margin:16px 0;text-align:center">
+      <div style="font-family:Orbitron,monospace;font-size:0.8rem;color:#ff1744;font-weight:700">No Entry Submitted</div>
+      <div style="font-size:0.65rem;color:#888;margin-top:6px">You must submit work to earn rewards. Better luck next time!</div>
+    </div>` : (winner ? `<div class="er-winner">
       <div class="erw-label">${isSolo ? 'Completed By' : '👑 Champion'}</div>
       <div class="erw-name">${winner.brand || winner.name}</div>
-    </div>` : '<div style="font-size:14px;color:#888;margin-bottom:20px">No winner determined</div>'}
+    </div>` : '<div style="font-size:14px;color:#888;margin-bottom:20px">No winner determined</div>')}
 
-    <div class="er-rewards">
-      <div class="er-reward"><div class="err-val">+${xcWin} XC</div><div class="err-label">${isSolo ? 'Completion Reward' : 'Winner Reward'}</div></div>
-      <div class="er-reward"><div class="err-val">+${xcParticipate} XC</div><div class="err-label">Participation</div></div>
-      <div class="er-reward"><div class="err-val">${(PFLX_BADGES.find(b=>b.id===(match.badges?.participation||'positive_participant'))||{icon:'🏅'}).icon}</div><div class="err-label">${(PFLX_BADGES.find(b=>b.id===(match.badges?.participation||'positive_participant'))||{name:'Positive Participant'}).name}</div></div>
-      ${!isSolo && winner ? `<div class="er-reward"><div class="err-val">${(PFLX_BADGES.find(b=>b.id===(match.badges?.winner||'arena_champion'))||{icon:'🏆'}).icon}</div><div class="err-label">${(PFLX_BADGES.find(b=>b.id===(match.badges?.winner||'arena_champion'))||{name:'Arena Champion'}).name}</div></div>` : `<div class="er-reward"><div class="err-val">${match.xcMult}x</div><div class="err-label">XC Multiplier</div></div>`}
-    </div>
+    ${!noSubmission ? `<div class="er-rewards-segmented">
+      <div class="er-segment">
+        <div class="er-seg-title">🏅 All Participants</div>
+        <div class="er-reward"><div class="err-val">+${xcParticipate} XC</div><div class="err-label">Participation Reward</div></div>
+        <div class="er-badge-list">${partBadgeHTML}</div>
+      </div>
+      ${isWinner ? `<div class="er-segment winner-seg">
+        <div class="er-seg-title">🏆 Winner Bonus</div>
+        <div class="er-reward"><div class="err-val">+${xcWin} XC</div><div class="err-label">${isSolo ? 'Completion Reward' : 'Winner Reward'}</div></div>
+        <div class="er-badge-list">${winBadgeHTML}</div>
+      </div>` : ''}
+      <div class="er-reward" style="margin-top:12px"><div class="err-val">${match.xcMult}x</div><div class="err-label">XC Multiplier</div></div>
+    </div>` : `<div class="er-rewards">
+      <div class="er-reward"><div class="err-val" style="color:#ff1744">0 XC</div><div class="err-label">No Reward</div></div>
+    </div>`}
 
     ${!isSolo ? `<div class="er-standings"><h4>Final Standings</h4>${standingRows}</div>` : ''}
 
