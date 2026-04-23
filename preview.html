@@ -1258,11 +1258,23 @@ function isActualHost(u) { return u.role === "admin" || u.isHost === true; }
 function isHostUser(u) { return !playerViewMode && isActualHost(u); }
 function togglePlayerView() {
   playerViewMode = !playerViewMode;
-  // If switching to player view while on settings, redirect to home
   if (playerViewMode && state.screen === 'settings') state.screen = 'home';
   SFX.click();
   render();
 }
+
+// Listen for host/player toggle from PFLX Platform overlay
+window.addEventListener('message', function(e) {
+  try {
+    const msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    if (msg.type === 'pflx_role_changed') {
+      const wasPlayerView = playerViewMode;
+      playerViewMode = (msg.role === 'player');
+      if (playerViewMode && state.screen === 'settings') state.screen = 'home';
+      if (wasPlayerView !== playerViewMode) render();
+    }
+  } catch(err) {}
+});
 
 function buildPlayers(roster) {
   XCOIN_ROSTER = roster;
@@ -2120,10 +2132,6 @@ function renderNav() {
       <a href="#" onclick="goScreen('esports')" class="${state.screen==='esports'?'active':''}">Challenges</a>
     </div>
     <div class="player-info">
-      ${isActualHost(p) ? `<button class="view-toggle-btn ${playerViewMode ? 'player-mode' : 'host-mode'}" onclick="togglePlayerView()" title="${playerViewMode ? 'Switch to Host View' : 'Switch to Player View'}">
-        <span class="vt-icon">${playerViewMode ? '👤' : '👑'}</span>
-        <span class="vt-label">${playerViewMode ? 'Player View' : 'Host View'}</span>
-      </button>` : ''}
       <div class="xc-bal">${p.xc.toLocaleString()} XC</div>
       <div class="rank-badge" style="background:${ri.color}15;border:1px solid ${ri.color}40;color:${ri.color}">${ri.icon} ${ri.tier}</div>
       <div class="avatar-wrap" style="cursor:pointer" onclick="togglePanel()">
