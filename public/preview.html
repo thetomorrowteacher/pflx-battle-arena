@@ -7170,7 +7170,25 @@ function loadEsportsConfig() {
 }
 
 function saveEsportsConfig() {
-  try { localStorage.setItem('pflx_esports_host_config', JSON.stringify(esportsHostConfig)); } catch(e) {}
+  try {
+    const json = JSON.stringify(esportsHostConfig);
+    localStorage.setItem('pflx_esports_host_config', json);
+    console.log('✅ Esports config saved (' + Math.round(json.length/1024) + ' KB)');
+    return true;
+  } catch(e) {
+    console.error('❌ Failed to save esports config:', e.message);
+    // If quota exceeded, try saving without base64 media
+    try {
+      const lite = JSON.parse(JSON.stringify(esportsHostConfig));
+      Object.values(lite).forEach(cfg => { cfg.coverImage = ''; cfg.bgMusic = ''; cfg.bgMusicName = ''; });
+      localStorage.setItem('pflx_esports_host_config', JSON.stringify(lite));
+      alert('Settings saved, but cover images and music were too large to store locally. They will need to be re-uploaded next session.');
+      return true;
+    } catch(e2) {
+      alert('Failed to save settings: ' + e.message);
+      return false;
+    }
+  }
 }
 
 loadEsportsConfig();
