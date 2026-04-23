@@ -7851,7 +7851,7 @@ function renderEsportsHub() {
     const cfg = esportsHostConfig[m.id];
     const coverImg = cfg?.coverImage || '';
     return `<div class="esports-mode-card" onclick="esportsSelectMode('${m.id}')" style="border-left:3px solid ${m.color}${coverImg ? ';background-image:linear-gradient(to bottom,rgba(10,14,23,0.4),rgba(10,14,23,0.95)),url('+coverImg+');background-size:cover;background-position:center' : ''}">
-      ${isHostUser(state.player) ? `<button class="emc-edit-btn" onclick="event.stopPropagation();openModeSettings('${m.id}')" title="Edit Mode Settings">⋮</button>` : ''}
+      ${isHostUser(state.player) ? `<button class="emc-edit-btn" onclick="event.stopPropagation();openModeSettings('${m.id}')" title="Edit Mode Settings">⚙️</button>` : ''}
       <div class="emc-icon">${m.icon}</div>
       <div class="emc-name">${m.name}</div>
       <div class="emc-pathway">${m.pathway}</div>
