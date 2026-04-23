@@ -2370,7 +2370,7 @@ function renderHome() {
   }).join("");
 
   return `<div class="home-wrap">
-    <div class="home-hero"><img src="Battle%20Arena.png" alt="Battle Arena" style="height:120px;margin:0 auto 16px;display:block;filter:drop-shadow(0 0 15px rgba(0,229,255,0.3))" /><h2 class="text-glow-cyan">Choose Your Battle</h2><p>Select a game mode and enter the arena. Victory rewards XC — defeat costs it.</p></div>
+    <div class="home-hero"><img src="Battle%20Arena.png" alt="Battle Arena" style="height:200px;margin:0 auto 20px;display:block;filter:drop-shadow(0 0 25px rgba(0,229,255,0.4))" /><h2 class="text-glow-cyan">Choose Your Battle</h2><p>Select a game mode and enter the arena. Victory rewards XC — defeat costs it.</p></div>
     <div class="cat-grid">${catCards}</div>
     ${isHostUser(state.player) ? `<button class="admin-add-btn" onclick="goScreen('mode_admin')" title="Add Game Mode">+</button>` : ''}
   </div>`;
