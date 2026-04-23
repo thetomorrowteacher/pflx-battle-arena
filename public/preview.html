@@ -1371,7 +1371,7 @@ loadRoster();
 
 // ── Top-level game categories ──
 const CATEGORIES = [
-  { id:"esports", name:"Designer Showdown", desc:"Compete in timed design competitions across 8 disciplines. Solo practice, ranked multiplayer, or co-op team battles. Earn XC and digital badges.", icon:"🏟️", tag:"beta", tagLabel:"New" },
+  { id:"esports", name:"Creator Showdown", desc:"Compete in timed design competitions across 8 disciplines. Solo practice, ranked multiplayer, or co-op team battles. Earn XC and digital badges.", icon:"🏟️", tag:"beta", tagLabel:"New" },
   { id:"live_play", name:"Live Play", desc:"Real-time head-to-head arena battles. Compete live against other players with XC on the line. Matchmaking, spectators, and ranked leaderboards.", icon:"🔴", tag:"coming-soon", tagLabel:"Coming Soon" },
   { id:"side_quests", name:"Side Quests", desc:"Solo and async challenges you can tackle anytime. Sharpen your skills, earn XC, and climb the ranks at your own pace.", icon:"🗡️", tag:"beta", tagLabel:"Beta" },
 ];
@@ -2244,7 +2244,7 @@ function renderSidePanel() {
           <a href="#" onclick="goHome();togglePanel()" class="${state.screen==='home'||state.screen==='side_quests'?'active':''}"><span class="nav-icon">⚔️</span> Arena</a>
           <a href="#" onclick="goLobby();togglePanel()" class="${state.screen==='lobby'?'active':''}"><span class="nav-icon">🏛️</span> Battle Lobby</a>
           <a href="#" onclick="goLeaderboard();togglePanel()" class="${state.screen==='leaderboard'?'active':''}"><span class="nav-icon">🏆</span> Leaderboard</a>
-          <a href="#" onclick="goScreen('esports');togglePanel()" class="${state.screen==='esports'?'active':''}"><span class="nav-icon">🏟️</span> Designer Showdown</a>
+          <a href="#" onclick="goScreen('esports');togglePanel()" class="${state.screen==='esports'?'active':''}"><span class="nav-icon">🏟️</span> Creator Showdown</a>
           ${isHost ? `<a href="#" onclick="goSettings();togglePanel()" class="${state.screen==='settings'?'active':''}"><span class="nav-icon">⚙️</span> Settings <span style="font-size:8px;color:var(--pflx-gold);margin-left:4px">HOST</span></a>` : ''}
         </div>
       </div>
@@ -3646,7 +3646,7 @@ function renderSettings() {
     
     <!-- ESPORTS DESIGN CHALLENGE SETTINGS -->
     <div class="settings-section">
-      <div class="settings-section-title">🏟️ Designer Showdown Settings <span class="host-only-badge">Host Only</span></div>
+      <div class="settings-section-title">🏟️ Creator Showdown Settings <span class="host-only-badge">Host Only</span></div>
 
       <!-- Mode tabs -->
       <div class="es-config-tabs">
@@ -8078,7 +8078,7 @@ function renderEsportsHub() {
   return `<div class="esports-hub">
     <button class="sq-back" onclick="goHome()" style="margin-bottom:16px">← Back to Arena</button>
     <div class="esports-hero">
-      <h2 class="text-glow-cyan">🏟️ Designer Showdown</h2>
+      <h2 class="text-glow-cyan">🏟️ Creator Showdown</h2>
       <p>8 disciplines. 3 difficulty tiers. Solo, Multiplayer, and Co-op. Compete. Create. Conquer.</p>
     </div>
     <div class="esports-grid">${cards}</div>
