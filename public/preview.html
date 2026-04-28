@@ -1234,6 +1234,56 @@ nav .avatar-sub{font-size:9px;color:#666}
 .scheduled-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;background:rgba(255,215,64,0.1);border:1px solid rgba(255,215,64,0.2);font-family:'Orbitron',monospace;font-size:0.5rem;color:var(--pflx-gold);font-weight:600}
 
 /* ═══════════════════════════════════════════════════════════════════
+   COMPLIANCE REVIEW PHASE
+   ═══════════════════════════════════════════════════════════════════ */
+.compliance-phase{max-width:760px;margin:0 auto;padding:24px;position:relative;z-index:10}
+.cr-header{text-align:center;margin-bottom:24px}
+.cr-header h2{font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:var(--pflx-purple);text-transform:uppercase;letter-spacing:0.08em}
+.cr-header p{font-size:12px;color:#888;margin-top:6px}
+.cr-entry{background:rgba(10,14,23,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:20px;margin-bottom:16px;transition:all 0.3s}
+.cr-entry.flagged{border-color:rgba(255,23,68,0.3);background:rgba(255,23,68,0.04)}
+.cr-entry.approved{border-color:rgba(0,230,118,0.3);background:rgba(0,230,118,0.04)}
+.cr-entry-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cr-player{display:flex;align-items:center;gap:10px}
+.cr-av{width:36px;height:36px;border-radius:50%;background:rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden}
+.cr-name{font-family:'Orbitron',monospace;font-size:0.75rem;font-weight:600;color:#ddd}
+.cr-status-badge{padding:4px 12px;border-radius:6px;font-family:'Orbitron',monospace;font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}
+.cr-status-badge.pending-review{background:rgba(255,215,64,0.1);border:1px solid rgba(255,215,64,0.2);color:var(--pflx-gold)}
+.cr-status-badge.peer-flagged{background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.3);color:#ff1744}
+.cr-status-badge.peer-approved{background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);color:#00e676}
+.cr-status-badge.host-approved{background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.4);color:#00e676}
+.cr-status-badge.disqualified{background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);color:#ff1744}
+
+.cr-kit-checks{margin:12px 0}
+.cr-kit-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(124,77,255,0.04);border:1px solid rgba(124,77,255,0.1);margin-bottom:6px}
+.cr-kit-label{flex:1;font-size:0.65rem;color:#ccc;line-height:1.4}
+.cr-kit-actions{display:flex;gap:6px}
+.cr-kit-btn{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);transition:all 0.2s}
+.cr-kit-btn.pass{background:rgba(0,230,118,0.08);color:#00e676}
+.cr-kit-btn.pass:hover,.cr-kit-btn.pass.active{background:rgba(0,230,118,0.2);border-color:rgba(0,230,118,0.4)}
+.cr-kit-btn.fail{background:rgba(255,23,68,0.08);color:#ff1744}
+.cr-kit-btn.fail:hover,.cr-kit-btn.fail.active{background:rgba(255,23,68,0.2);border-color:rgba(255,23,68,0.4)}
+
+.cr-peer-summary{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.cr-peer-chip{padding:3px 10px;border-radius:5px;font-size:0.5rem;font-family:'Orbitron',monospace;font-weight:600}
+.cr-peer-chip.pass-chip{background:rgba(0,230,118,0.1);color:#00e676;border:1px solid rgba(0,230,118,0.2)}
+.cr-peer-chip.fail-chip{background:rgba(255,23,68,0.1);color:#ff1744;border:1px solid rgba(255,23,68,0.2)}
+
+.cr-host-controls{display:flex;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06)}
+.cr-host-btn{padding:8px 18px;border-radius:8px;font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:700;cursor:pointer;transition:all 0.2s;border:1px solid transparent}
+.cr-host-btn.approve{background:rgba(0,230,118,0.12);color:#00e676;border-color:rgba(0,230,118,0.3)}
+.cr-host-btn.approve:hover{background:rgba(0,230,118,0.2);transform:scale(1.03)}
+.cr-host-btn.flag{background:rgba(255,215,64,0.1);color:var(--pflx-gold);border-color:rgba(255,215,64,0.2)}
+.cr-host-btn.flag:hover{background:rgba(255,215,64,0.2);transform:scale(1.03)}
+.cr-host-btn.disqualify{background:rgba(255,23,68,0.1);color:#ff1744;border-color:rgba(255,23,68,0.2)}
+.cr-host-btn.disqualify:hover{background:rgba(255,23,68,0.2);transform:scale(1.03)}
+
+.cr-advance-bar{text-align:center;margin-top:24px;padding:16px;background:rgba(124,77,255,0.06);border:1px solid rgba(124,77,255,0.15);border-radius:12px}
+
+.ej-flag-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:5px;background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.2);font-family:'Orbitron',monospace;font-size:0.4rem;color:#ff1744;font-weight:600;margin-left:8px}
+.ej-dq-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:5px;background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);font-family:'Orbitron',monospace;font-size:0.4rem;color:#ff1744;font-weight:700;margin-left:8px;text-decoration:line-through}
+
+/* ═══════════════════════════════════════════════════════════════════
    JUDGING — VIEW-BEFORE-VOTE GATE
    ═══════════════════════════════════════════════════════════════════ */
 .ej-view-progress{text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(255,215,64,0.05);border:1px solid rgba(255,215,64,0.15);border-radius:12px}
@@ -8017,8 +8067,14 @@ function esportsEndSubmissions(matchId) {
     match.winner = (contestant && contestant.submission) ? state.player.id : null;
     esportsState.view = 'results';
   } else {
-    match.status = 'judging';
-    esportsState.view = 'judging';
+    // Route through compliance review if there's a battle kit
+    if (match.materialKit && match.materialKit.items.length > 0) {
+      match.status = 'compliance_review';
+      esportsState.view = 'compliance_review';
+    } else {
+      match.status = 'judging';
+      esportsState.view = 'judging';
+    }
   }
   saveEsportsState();
   SFX.timeout();
@@ -8035,6 +8091,7 @@ function esportsVote(matchId, playerId) {
   if (!hasViewedAll(matchId, match)) { SFX.loginError(); return; }
 
   const contestant = match.contestants.find(c => c.id === playerId);
+  if (!contestant || contestant.complianceStatus === 'disqualified') return;
   if (contestant) {
     contestant.votes++;
     saveEsportsState();
@@ -8048,8 +8105,8 @@ function esportsFinalizeMatch(matchId) {
   const match = esportsState.matches.find(m => m.id === matchId);
   if (!match) return;
 
-  // Winner = most votes; tie = first submitter
-  const withSubs = match.contestants.filter(c => c.submission);
+  // Winner = most votes; tie = first submitter; exclude disqualified
+  const withSubs = match.contestants.filter(c => c.submission && c.complianceStatus !== 'disqualified');
   if (withSubs.length === 0) {
     match.status = 'completed';
     esportsState.view = 'results';
@@ -8600,7 +8657,7 @@ function renderEsportsMatch() {
   }
   if (isInProgress && isHost) {
     actionButtons += `<div style="text-align:center;margin-top:16px">
-      <button class="btn-arena btn-arena-red" style="font-size:0.65rem;padding:8px 20px" onclick="esportsEndSubmissions('${match.id}')">⏹️ End Early — Go to Judging</button>
+      <button class="btn-arena btn-arena-red" style="font-size:0.65rem;padding:8px 20px" onclick="esportsEndSubmissions('${match.id}')">⏹️ End Early — Begin Review</button>
     </div>`;
   }
 
@@ -8653,6 +8710,218 @@ function renderEsportsMatch() {
 }
 
 // ── Render: Judging View ──
+// ══════════════════════════════════════════════════════════════════
+//  COMPLIANCE REVIEW PHASE
+//  Flow: submissions end → compliance_review → host approves → judging
+// ══════════════════════════════════════════════════════════════════
+
+// Peer compliance reviews: matchId -> { contestantId -> { reviewerId -> { kitIndex -> 'pass'|'fail' } } }
+const complianceReviews = {};
+// Host decisions: matchId -> { contestantId -> 'approved'|'flagged'|'disqualified' }
+const hostComplianceDecisions = {};
+
+function initComplianceData(matchId) {
+  if (!complianceReviews[matchId]) complianceReviews[matchId] = {};
+  if (!hostComplianceDecisions[matchId]) hostComplianceDecisions[matchId] = {};
+}
+
+function peerReviewKit(matchId, contestantId, kitIndex, verdict) {
+  initComplianceData(matchId);
+  const reviewerId = state.player.id;
+  if (!complianceReviews[matchId][contestantId]) complianceReviews[matchId][contestantId] = {};
+  if (!complianceReviews[matchId][contestantId][reviewerId]) complianceReviews[matchId][contestantId][reviewerId] = {};
+  complianceReviews[matchId][contestantId][reviewerId][kitIndex] = verdict;
+
+  // Update the specific button states inline for snappy feedback
+  const passBtn = document.querySelector(`[data-cr-pass="${contestantId}_${kitIndex}"]`);
+  const failBtn = document.querySelector(`[data-cr-fail="${contestantId}_${kitIndex}"]`);
+  if (passBtn) passBtn.classList.toggle('active', verdict === 'pass');
+  if (failBtn) failBtn.classList.toggle('active', verdict === 'fail');
+
+  // Update summary chips
+  updatePeerSummary(matchId, contestantId);
+  SFX.click();
+}
+
+function updatePeerSummary(matchId, contestantId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match || !match.materialKit) return;
+  const reviews = complianceReviews[matchId]?.[contestantId] || {};
+  const totalItems = match.materialKit.items.length;
+
+  // Tally across all reviewers for each kit item
+  const itemTallies = [];
+  for (let i = 0; i < totalItems; i++) {
+    let passes = 0, fails = 0;
+    Object.values(reviews).forEach(r => {
+      if (r[i] === 'pass') passes++;
+      if (r[i] === 'fail') fails++;
+    });
+    itemTallies.push({ passes, fails });
+  }
+
+  const summaryEl = document.getElementById('cr-summary-' + contestantId);
+  if (summaryEl) {
+    summaryEl.innerHTML = itemTallies.map((t, i) => {
+      if (t.passes === 0 && t.fails === 0) return '';
+      return `<span class="cr-peer-chip ${t.passes >= t.fails ? 'pass-chip' : 'fail-chip'}">#${i+1}: ${t.passes}✓ ${t.fails}✗</span>`;
+    }).join('');
+  }
+}
+
+function getComplianceSummary(matchId, contestantId, match) {
+  if (!match.materialKit) return { passRate: 1, totalReviewers: 0, itemResults: [] };
+  const reviews = complianceReviews[matchId]?.[contestantId] || {};
+  const totalItems = match.materialKit.items.length;
+  const reviewerIds = Object.keys(reviews);
+
+  const itemResults = [];
+  for (let i = 0; i < totalItems; i++) {
+    let passes = 0, fails = 0;
+    reviewerIds.forEach(rid => {
+      if (reviews[rid]?.[i] === 'pass') passes++;
+      if (reviews[rid]?.[i] === 'fail') fails++;
+    });
+    itemResults.push({ passes, fails, total: passes + fails });
+  }
+
+  const totalVotes = itemResults.reduce((s, r) => s + r.passes + r.fails, 0);
+  const totalPasses = itemResults.reduce((s, r) => s + r.passes, 0);
+  const passRate = totalVotes > 0 ? totalPasses / totalVotes : 1;
+
+  return { passRate, totalReviewers: reviewerIds.length, itemResults };
+}
+
+function hostDecision(matchId, contestantId, decision) {
+  initComplianceData(matchId);
+  hostComplianceDecisions[matchId][contestantId] = decision;
+
+  // Store decision on the match contestant for persistence
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (match) {
+    const c = match.contestants.find(x => x.id === contestantId);
+    if (c) c.complianceStatus = decision;
+    saveEsportsState();
+  }
+
+  SFX.click();
+  render();
+}
+
+function advanceToJudging(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match) return;
+  match.status = 'judging';
+  esportsState.view = 'judging';
+  saveEsportsState();
+  SFX.correct();
+  render();
+}
+
+function renderComplianceReview() {
+  const match = esportsState.matches.find(m => m.id === esportsState.activeMatch);
+  if (!match) return renderEsportsHub();
+
+  const isHost = match.hostId === state.player.id;
+  const myId = state.player.id;
+  initComplianceData(match.id);
+  const withSubs = match.contestants.filter(c => c.submission);
+  const others = withSubs.filter(c => c.id !== myId);
+  const kitItems = match.materialKit ? match.materialKit.items : [];
+
+  // Build entry cards
+  const entryCards = withSubs.map(c => {
+    const isSelf = c.id === myId;
+    const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
+    const myReview = complianceReviews[match.id]?.[c.id]?.[myId] || {};
+    const summary = getComplianceSummary(match.id, c.id, match);
+    const hostDec = hostComplianceDecisions[match.id]?.[c.id] || c.complianceStatus || '';
+
+    // Status badge
+    let statusBadge = '<span class="cr-status-badge pending-review">Pending Review</span>';
+    if (hostDec === 'approved') statusBadge = '<span class="cr-status-badge host-approved">✓ Approved</span>';
+    else if (hostDec === 'disqualified') statusBadge = '<span class="cr-status-badge disqualified">✗ Disqualified</span>';
+    else if (hostDec === 'flagged') statusBadge = '<span class="cr-status-badge peer-flagged">⚠ Flagged</span>';
+    else if (summary.totalReviewers > 0 && summary.passRate >= 0.5) statusBadge = '<span class="cr-status-badge peer-approved">Peers: Compliant</span>';
+    else if (summary.totalReviewers > 0) statusBadge = '<span class="cr-status-badge peer-flagged">Peers: Non-Compliant</span>';
+
+    // Kit item review rows (only for other people's submissions)
+    const kitRows = !isSelf && kitItems.length > 0 ? kitItems.map((item, i) => {
+      const myVerdict = myReview[i] || '';
+      return `<div class="cr-kit-item">
+        <div class="cr-kit-label"><strong>${item.label}:</strong> ${item.value}</div>
+        <div class="cr-kit-actions">
+          <button class="cr-kit-btn pass ${myVerdict === 'pass' ? 'active' : ''}" data-cr-pass="${c.id}_${i}" onclick="peerReviewKit('${match.id}','${c.id}',${i},'pass')" title="Meets requirement">✓</button>
+          <button class="cr-kit-btn fail ${myVerdict === 'fail' ? 'active' : ''}" data-cr-fail="${c.id}_${i}" onclick="peerReviewKit('${match.id}','${c.id}',${i},'fail')" title="Does not meet">✗</button>
+        </div>
+      </div>`;
+    }).join('') : '';
+
+    // Submission preview
+    const subPreview = `
+      ${c.submission.link ? `<a href="${c.submission.link}" target="_blank" style="font-size:0.65rem;color:var(--pflx-cyan);text-decoration:underline">🔗 ${c.submission.link}</a>` : ''}
+      ${c.submission.file ? `<div style="margin:6px 0">${c.submission.file.isImage ? `<img src="${c.submission.file.dataUrl}" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid rgba(255,255,255,0.08)" />` : `<span style="font-size:0.6rem;color:var(--pflx-cyan)">📄 ${c.submission.file.name}</span>`}</div>` : ''}
+      ${c.submission.notes ? `<div style="font-size:0.65rem;color:#999;margin-top:4px">${c.submission.notes}</div>` : ''}`;
+
+    // Host controls
+    const hostControls = isHost && !isSelf ? `<div class="cr-host-controls">
+      <button class="cr-host-btn approve ${hostDec === 'approved' ? 'active' : ''}" onclick="hostDecision('${match.id}','${c.id}','approved')">✓ Approve</button>
+      <button class="cr-host-btn flag ${hostDec === 'flagged' ? 'active' : ''}" onclick="hostDecision('${match.id}','${c.id}','flagged')">⚠ Flag</button>
+      <button class="cr-host-btn disqualify ${hostDec === 'disqualified' ? 'active' : ''}" onclick="hostDecision('${match.id}','${c.id}','disqualified')">✗ Disqualify</button>
+    </div>` : '';
+
+    return `<div class="cr-entry ${hostDec === 'approved' ? 'approved' : ''} ${hostDec === 'flagged' || hostDec === 'disqualified' ? 'flagged' : ''}" style="${isSelf ? 'opacity:0.7;border-left:3px solid var(--pflx-cyan)' : ''}">
+      <div class="cr-entry-header">
+        <div class="cr-player">
+          <div class="cr-av">${av}</div>
+          <div class="cr-name">${c.brand || c.name}${isSelf ? ' <span style="font-size:0.5rem;color:var(--pflx-cyan)">(You)</span>' : ''}</div>
+        </div>
+        ${statusBadge}
+      </div>
+      ${subPreview}
+      ${!isSelf && kitItems.length > 0 ? `<div class="cr-kit-checks">
+        <div style="font-family:Orbitron,monospace;font-size:0.55rem;font-weight:700;color:var(--pflx-purple);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Battle Kit Compliance Check</div>
+        ${kitRows}
+        <div class="cr-peer-summary" id="cr-summary-${c.id}">${summary.itemResults.map((t, i) => {
+          if (t.passes === 0 && t.fails === 0) return '';
+          return `<span class="cr-peer-chip ${t.passes >= t.fails ? 'pass-chip' : 'fail-chip'}">#${i+1}: ${t.passes}✓ ${t.fails}✗</span>`;
+        }).join('')}</div>
+      </div>` : ''}
+      ${isSelf ? '<div style="font-size:0.55rem;color:#666;margin-top:8px;font-style:italic">You cannot review your own submission</div>' : ''}
+      ${hostControls}
+    </div>`;
+  }).join('');
+
+  // Advance button — host only
+  const allDecided = isHost && others.every(c => {
+    const d = hostComplianceDecisions[match.id]?.[c.id] || c.complianceStatus || '';
+    return d === 'approved' || d === 'disqualified';
+  });
+
+  return `<div class="compliance-phase">
+    <button class="sq-back" onclick="esportsGoHub()" style="margin-bottom:16px">← Exit</button>
+    <div class="cr-header">
+      <h2>🔍 Compliance Review</h2>
+      <p>${match.modeName} • ${match.difficulty} — Review each submission against the battle kit requirements</p>
+      ${!isHost ? '<div style="font-size:0.55rem;color:var(--pflx-purple);margin-top:6px">Rate whether each entry meets the constraints. The host will make the final call.</div>' : '<div style="font-size:0.55rem;color:var(--pflx-gold);margin-top:6px">Review peer feedback, then approve or flag each entry. Advance to voting when ready.</div>'}
+    </div>
+
+    <div class="esports-prompt" style="margin-bottom:16px">
+      <div class="ep-label">Battle Kit</div>
+      <div class="ep-text" style="font-size:13px">${match.prompt}</div>
+      ${match.materialKit ? `<div style="margin-top:8px">${match.materialKit.items.map(item => `<div style="font-size:0.65rem;color:#bbb;margin-top:2px"><span style="color:var(--pflx-purple);font-weight:600">${item.label}:</span> ${item.value}</div>`).join('')}</div>` : ''}
+    </div>
+
+    ${entryCards}
+
+    ${isHost ? `<div class="cr-advance-bar">
+      ${allDecided ? `<div style="font-size:0.6rem;color:var(--pflx-green);margin-bottom:10px;font-family:Orbitron,monospace">✓ All entries reviewed</div>
+        <button class="btn-arena btn-arena-gold" style="font-size:0.8rem;padding:14px 32px" onclick="advanceToJudging('${match.id}')">⚖️ Advance to Voting</button>`
+        : `<div style="font-size:0.6rem;color:#888;font-family:Orbitron,monospace">Approve or disqualify all entries to proceed (${others.filter(c => {const d = hostComplianceDecisions[match.id]?.[c.id] || c.complianceStatus || ''; return d==='approved'||d==='disqualified';}).length}/${others.length} decided)</div>`}
+    </div>` : '<div style="text-align:center;font-size:11px;color:#888;margin-top:16px">Waiting for host to complete compliance review...</div>'}
+  </div>`;
+}
+
 // ── View-before-vote tracking ──
 const judgingViewed = {}; // matchId -> Set of contestant IDs the current player has viewed
 
@@ -8703,16 +8972,20 @@ function renderEsportsJudging() {
     const isSelf = c.id === state.player.id;
     const isViewed = isSelf || viewedSet.has(c.id);
     const voteDisabled = !isSelf && !allViewed;
-    return `<div class="ej-entry ${isSelf ? '' : (isViewed ? 'viewed-entry' : 'not-viewed')}" data-entry-id="${c.id}" style="${isSelf ? 'border-left:3px solid var(--pflx-cyan);opacity:0.85' : ''}">
+    const compStatus = c.complianceStatus || '';
+    const isDQ = compStatus === 'disqualified';
+    const isFlagged = compStatus === 'flagged';
+    const compBadge = isDQ ? '<span class="ej-dq-badge">DISQUALIFIED</span>' : (isFlagged ? '<span class="ej-flag-badge">⚠ FLAGGED</span>' : '');
+    return `<div class="ej-entry ${isSelf ? '' : (isViewed ? 'viewed-entry' : 'not-viewed')}" data-entry-id="${c.id}" style="${isSelf ? 'border-left:3px solid var(--pflx-cyan);opacity:0.85' : ''}${isDQ ? ';opacity:0.4;pointer-events:none' : ''}">
       <div class="ej-entry-header">
         <div class="ej-player">
           <div class="ej-av">${av}</div>
-          <div class="ej-name">${c.brand || c.name}${isSelf ? ' <span style="font-size:0.5rem;color:var(--pflx-cyan)">(You)</span>' : ''}</div>
+          <div class="ej-name">${c.brand || c.name}${isSelf ? ' <span style="font-size:0.5rem;color:var(--pflx-cyan)">(You)</span>' : ''}${compBadge}</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-          ${!isSelf ? `<button class="ej-view-btn ${isViewed ? 'viewed' : ''}" data-view-id="${c.id}" onclick="event.stopPropagation();markSubmissionViewed('${match.id}','${c.id}')">${isViewed ? '✓ Viewed' : '👁️ Review'}</button>` : ''}
+          ${!isSelf && !isDQ ? `<button class="ej-view-btn ${isViewed ? 'viewed' : ''}" data-view-id="${c.id}" onclick="event.stopPropagation();markSubmissionViewed('${match.id}','${c.id}')">${isViewed ? '✓ Viewed' : '👁️ Review'}</button>` : ''}
           <span style="font-family:Orbitron,monospace;font-size:0.7rem;color:var(--pflx-gold);font-weight:700">${c.votes} votes</span>
-          ${!isSelf ? `<button class="ej-vote-btn ${voteDisabled ? 'ej-vote-locked' : ''}" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : `<span style="font-size:0.5rem;color:#666;font-family:Orbitron,monospace">Can't self-vote</span>`}
+          ${!isSelf && !isDQ ? `<button class="ej-vote-btn ${voteDisabled ? 'ej-vote-locked' : ''}" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : (isSelf ? `<span style="font-size:0.5rem;color:#666;font-family:Orbitron,monospace">Can't self-vote</span>` : '')}
         </div>
       </div>
       ${c.submission.link ? `<a href="${c.submission.link}" target="_blank" class="ej-link">🔗 View Submission</a>` : ''}
@@ -8865,6 +9138,7 @@ function renderEsportsResults() {
 function renderEsportsScreen() {
   if (esportsState.view === 'lobby') return renderEsportsLobby();
   if (esportsState.view === 'match') return renderEsportsMatch();
+  if (esportsState.view === 'compliance_review') return renderComplianceReview();
   if (esportsState.view === 'judging') return renderEsportsJudging();
   if (esportsState.view === 'results') return renderEsportsResults();
   return renderEsportsHub();
