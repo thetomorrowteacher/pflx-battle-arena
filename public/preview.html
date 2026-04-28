@@ -1234,6 +1234,20 @@ nav .avatar-sub{font-size:9px;color:#666}
 .scheduled-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;background:rgba(255,215,64,0.1);border:1px solid rgba(255,215,64,0.2);font-family:'Orbitron',monospace;font-size:0.5rem;color:var(--pflx-gold);font-weight:600}
 
 /* ═══════════════════════════════════════════════════════════════════
+   JUDGING — VIEW-BEFORE-VOTE GATE
+   ═══════════════════════════════════════════════════════════════════ */
+.ej-view-progress{text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(255,215,64,0.05);border:1px solid rgba(255,215,64,0.15);border-radius:12px}
+.ej-view-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.06);margin-top:10px;overflow:hidden}
+.ej-view-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--pflx-gold),var(--pflx-green));transition:width 0.4s ease}
+.ej-view-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;background:rgba(41,121,255,0.12);border:1px solid rgba(41,121,255,0.3);color:#2979ff;font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:600;cursor:pointer;transition:all 0.2s}
+.ej-view-btn:hover{background:rgba(41,121,255,0.2);transform:scale(1.03)}
+.ej-view-btn.viewed{background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:#00e676;cursor:default}
+.ej-vote-locked{opacity:0.3;pointer-events:none;position:relative}
+.ej-vote-locked::after{content:'View all submissions first';position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:0.4rem;color:#888;font-family:'Orbitron',monospace}
+.ej-entry.not-viewed{border-left:3px solid rgba(41,121,255,0.4)}
+.ej-entry.viewed-entry{border-left:3px solid rgba(0,230,118,0.3)}
+
+/* ═══════════════════════════════════════════════════════════════════
    ESPORTS HOST SETTINGS
    ═══════════════════════════════════════════════════════════════════ */
 .es-config-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
@@ -8017,6 +8031,8 @@ function esportsVote(matchId, playerId) {
   if (!match || match.status !== 'judging') return;
   // Can't vote for yourself
   if (playerId === state.player.id) return;
+  // Must view all submissions first
+  if (!hasViewedAll(matchId, match)) { SFX.loginError(); return; }
 
   const contestant = match.contestants.find(c => c.id === playerId);
   if (contestant) {
@@ -8637,23 +8653,66 @@ function renderEsportsMatch() {
 }
 
 // ── Render: Judging View ──
+// ── View-before-vote tracking ──
+const judgingViewed = {}; // matchId -> Set of contestant IDs the current player has viewed
+
+function markSubmissionViewed(matchId, contestantId) {
+  if (!judgingViewed[matchId]) judgingViewed[matchId] = new Set();
+  judgingViewed[matchId].add(contestantId);
+  // Update DOM inline for snappy feedback
+  const btn = document.querySelector(`[data-view-id="${contestantId}"]`);
+  if (btn) { btn.classList.add('viewed'); btn.innerHTML = '✓ Viewed'; }
+  const entry = document.querySelector(`[data-entry-id="${contestantId}"]`);
+  if (entry) { entry.classList.remove('not-viewed'); entry.classList.add('viewed-entry'); }
+  // Check if all non-self submissions are viewed → unlock vote buttons
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match) return;
+  const others = match.contestants.filter(c => c.submission && c.id !== state.player.id);
+  const allViewed = others.every(c => judgingViewed[matchId].has(c.id));
+  if (allViewed) {
+    document.querySelectorAll('.ej-vote-locked').forEach(el => el.classList.remove('ej-vote-locked'));
+  }
+  // Update progress bar
+  const viewed = others.filter(c => judgingViewed[matchId].has(c.id)).length;
+  const fillEl = document.getElementById('ej-view-fill');
+  const countEl = document.getElementById('ej-view-count');
+  if (fillEl) fillEl.style.width = (viewed / others.length * 100) + '%';
+  if (countEl) countEl.textContent = viewed + '/' + others.length + (allViewed ? ' — Ready to vote!' : ' reviewed');
+  SFX.click();
+}
+
+function hasViewedAll(matchId, match) {
+  if (!judgingViewed[matchId]) return false;
+  const others = match.contestants.filter(c => c.submission && c.id !== state.player.id);
+  return others.every(c => judgingViewed[matchId].has(c.id));
+}
+
 function renderEsportsJudging() {
   const match = esportsState.matches.find(m => m.id === esportsState.activeMatch);
   if (!match) return renderEsportsHub();
 
   const isHost = match.hostId === state.player.id;
+  const othersWithSubs = match.contestants.filter(c => c.submission && c.id !== state.player.id);
+  const viewedSet = judgingViewed[match.id] || new Set();
+  const viewedCount = othersWithSubs.filter(c => viewedSet.has(c.id)).length;
+  const allViewed = othersWithSubs.length === 0 || viewedCount >= othersWithSubs.length;
+  const viewPct = othersWithSubs.length > 0 ? (viewedCount / othersWithSubs.length * 100) : 100;
+
   const submissions = match.contestants.filter(c => c.submission).map(c => {
     const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
     const isSelf = c.id === state.player.id;
-    return `<div class="ej-entry" style="${isSelf ? 'border-left:3px solid var(--pflx-cyan);opacity:0.85' : ''}">
+    const isViewed = isSelf || viewedSet.has(c.id);
+    const voteDisabled = !isSelf && !allViewed;
+    return `<div class="ej-entry ${isSelf ? '' : (isViewed ? 'viewed-entry' : 'not-viewed')}" data-entry-id="${c.id}" style="${isSelf ? 'border-left:3px solid var(--pflx-cyan);opacity:0.85' : ''}">
       <div class="ej-entry-header">
         <div class="ej-player">
           <div class="ej-av">${av}</div>
           <div class="ej-name">${c.brand || c.name}${isSelf ? ' <span style="font-size:0.5rem;color:var(--pflx-cyan)">(You)</span>' : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
+          ${!isSelf ? `<button class="ej-view-btn ${isViewed ? 'viewed' : ''}" data-view-id="${c.id}" onclick="event.stopPropagation();markSubmissionViewed('${match.id}','${c.id}')">${isViewed ? '✓ Viewed' : '👁️ Review'}</button>` : ''}
           <span style="font-family:Orbitron,monospace;font-size:0.7rem;color:var(--pflx-gold);font-weight:700">${c.votes} votes</span>
-          ${!isSelf ? `<button class="ej-vote-btn" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : `<span style="font-size:0.5rem;color:#666;font-family:Orbitron,monospace">Can't self-vote</span>`}
+          ${!isSelf ? `<button class="ej-vote-btn ${voteDisabled ? 'ej-vote-locked' : ''}" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : `<span style="font-size:0.5rem;color:#666;font-family:Orbitron,monospace">Can't self-vote</span>`}
         </div>
       </div>
       ${c.submission.link ? `<a href="${c.submission.link}" target="_blank" class="ej-link">🔗 View Submission</a>` : ''}
@@ -8678,6 +8737,12 @@ function renderEsportsJudging() {
       <div class="ep-label">Prompt Was</div>
       <div class="ep-text" style="font-size:14px">${match.prompt}</div>
     </div>
+
+    ${othersWithSubs.length > 0 ? `<div class="ej-view-progress">
+      <div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:700;color:${allViewed ? 'var(--pflx-green)' : 'var(--pflx-gold)'};text-transform:uppercase;letter-spacing:0.08em">${allViewed ? '✓ All Submissions Reviewed — Vote Now!' : '👁️ Review All Submissions to Unlock Voting'}</div>
+      <div style="font-size:0.55rem;color:#888;margin-top:4px" id="ej-view-count">${viewedCount}/${othersWithSubs.length}${allViewed ? ' — Ready to vote!' : ' reviewed'}</div>
+      <div class="ej-view-bar"><div class="ej-view-fill" id="ej-view-fill" style="width:${viewPct}%"></div></div>
+    </div>` : ''}
 
     <div class="ej-submissions">${submissions}</div>
     ${noSubList}
