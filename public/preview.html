@@ -1171,6 +1171,67 @@ nav .avatar-sub{font-size:9px;color:#666}
 .er-rank-num{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:900;color:#666;width:24px;text-align:center}
 .er-standing-row.winner .er-rank-num{color:var(--pflx-gold)}
 
+/* ═══════════════════════════════════════════════════════════════════
+   GUIDELINE VERIFICATION CHECKLIST
+   ═══════════════════════════════════════════════════════════════════ */
+.guideline-checklist{background:rgba(124,77,255,0.06);border:1px solid rgba(124,77,255,0.2);border-radius:12px;padding:16px;margin:12px 0 16px}
+.guideline-checklist h4{font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-purple);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+.gl-check-item{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(10,14,23,0.4);border:1px solid rgba(255,255,255,0.04);margin-bottom:6px;cursor:pointer;transition:all 0.2s}
+.gl-check-item:hover{border-color:rgba(124,77,255,0.3);background:rgba(124,77,255,0.08)}
+.gl-check-item.checked{border-color:rgba(0,230,118,0.3);background:rgba(0,230,118,0.06)}
+.gl-check-box{width:18px;height:18px;border-radius:5px;border:2px solid rgba(124,77,255,0.4);display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;flex-shrink:0;transition:all 0.2s;margin-top:1px}
+.gl-check-item.checked .gl-check-box{background:var(--pflx-green);border-color:var(--pflx-green);color:#fff}
+.gl-check-label{font-size:0.7rem;color:#ccc;line-height:1.4}
+.gl-check-item.checked .gl-check-label{color:rgba(0,230,118,0.9)}
+.gl-all-checked{font-size:0.6rem;color:var(--pflx-green);text-align:center;margin-top:8px;font-family:'Orbitron',monospace;font-weight:600;opacity:0;transition:opacity 0.3s}
+.gl-all-checked.visible{opacity:1}
+.gl-submit-blocked{opacity:0.4;pointer-events:none}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FILE UPLOAD FOR SUBMISSIONS
+   ═══════════════════════════════════════════════════════════════════ */
+.es-file-upload-zone{border:2px dashed rgba(0,229,255,0.2);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all 0.3s;position:relative;margin-top:10px}
+.es-file-upload-zone:hover{border-color:rgba(0,229,255,0.5);background:rgba(0,229,255,0.03)}
+.es-file-upload-zone.has-file{border-color:rgba(0,230,118,0.4);background:rgba(0,230,118,0.04)}
+.es-file-upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.es-file-preview{display:flex;align-items:center;gap:12px;justify-content:center}
+.es-file-preview img{max-width:120px;max-height:80px;border-radius:8px;border:1px solid rgba(255,255,255,0.1)}
+.es-file-name{font-size:0.65rem;color:var(--pflx-green);font-family:'Orbitron',monospace}
+.es-file-remove{background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.3);color:#ff1744;font-size:0.55rem;padding:4px 10px;border-radius:6px;cursor:pointer;margin-top:6px}
+.es-submission-img{max-width:100%;max-height:200px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);margin-top:8px}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN/CAMERA RECORDING CONTROLS
+   ═══════════════════════════════════════════════════════════════════ */
+.rec-controls{display:flex;gap:10px;justify-content:center;margin:16px 0;flex-wrap:wrap}
+.rec-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.1);transition:all 0.2s}
+.rec-btn-screen{background:rgba(41,121,255,0.12);border-color:rgba(41,121,255,0.3);color:#2979ff}
+.rec-btn-screen:hover{background:rgba(41,121,255,0.2)}
+.rec-btn-cam{background:rgba(224,64,251,0.12);border-color:rgba(224,64,251,0.3);color:#e040fb}
+.rec-btn-cam:hover{background:rgba(224,64,251,0.2)}
+.rec-btn.recording{animation:recPulse 1.5s infinite;border-color:rgba(255,23,68,0.6)}
+.rec-btn.recording .rec-dot{width:8px;height:8px;border-radius:50%;background:#ff1744;animation:recDot 1s infinite}
+@keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,23,68,0)}50%{box-shadow:0 0 0 6px rgba(255,23,68,0.15)}}
+@keyframes recDot{0%,100%{opacity:1}50%{opacity:0.3}}
+.rec-preview{position:relative;margin:12px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1)}
+.rec-preview video{width:100%;max-height:180px;background:#000;border-radius:12px}
+.rec-pip{position:absolute;bottom:12px;right:12px;width:120px;height:90px;border-radius:8px;border:2px solid rgba(224,64,251,0.5);overflow:hidden}
+.rec-pip video{width:100%;height:100%;object-fit:cover}
+.rec-saved{font-size:0.6rem;color:var(--pflx-green);text-align:center;margin-top:6px;font-family:'Orbitron',monospace}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHALLENGE SCHEDULING
+   ═══════════════════════════════════════════════════════════════════ */
+.schedule-panel{background:rgba(255,215,64,0.05);border:1px solid rgba(255,215,64,0.15);border-radius:12px;padding:16px;margin:12px 0}
+.schedule-panel h4{font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+.schedule-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.schedule-row input[type="datetime-local"]{background:rgba(10,14,23,0.8);border:1px solid rgba(255,215,64,0.2);border-radius:8px;padding:8px 12px;color:#fff;font-family:Inter,sans-serif;font-size:0.75rem}
+.schedule-row input[type="datetime-local"]::-webkit-calendar-picker-indicator{filter:invert(1)}
+.live-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);font-family:'Orbitron',monospace;font-size:0.5rem;color:#ff1744;font-weight:700;text-transform:uppercase;letter-spacing:0.1em}
+.live-badge .live-dot{width:6px;height:6px;border-radius:50%;background:#ff1744;animation:recDot 1s infinite}
+.go-live-btn{display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,rgba(255,23,68,0.2),rgba(224,64,251,0.2));border:1px solid rgba(255,23,68,0.4);color:#ff1744;font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;cursor:pointer;transition:all 0.3s}
+.go-live-btn:hover{background:linear-gradient(135deg,rgba(255,23,68,0.3),rgba(224,64,251,0.3));transform:scale(1.03)}
+.scheduled-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;background:rgba(255,215,64,0.1);border:1px solid rgba(255,215,64,0.2);font-family:'Orbitron',monospace;font-size:0.5rem;color:var(--pflx-gold);font-weight:600}
 
 /* ═══════════════════════════════════════════════════════════════════
    ESPORTS HOST SETTINGS
@@ -7524,6 +7585,252 @@ function generateMaterialKit(modeId) {
   return { label: kit.label, ...kit.generate() };
 }
 
+// ── Guideline checklist from material kit ──
+function getGuidelineItems(match) {
+  if (!match.materialKit) return [];
+  return match.materialKit.items.map((item, i) => ({
+    id: 'gl_' + i,
+    label: item.label + ': ' + item.value,
+    checked: false
+  }));
+}
+
+// Track checklist state per match (in-memory, tied to session)
+const guidelineChecks = {}; // matchId -> { gl_0: true, gl_1: false, ... }
+
+function toggleGuidelineCheck(matchId, checkId) {
+  if (!guidelineChecks[matchId]) guidelineChecks[matchId] = {};
+  guidelineChecks[matchId][checkId] = !guidelineChecks[matchId][checkId];
+  // Update DOM directly without full re-render
+  const item = document.querySelector(`[data-gl="${checkId}"]`);
+  if (item) {
+    item.classList.toggle('checked', guidelineChecks[matchId][checkId]);
+  }
+  // Check if all are checked — update submit button
+  updateGuidelineSubmitGate(matchId);
+  SFX.click();
+}
+
+function updateGuidelineSubmitGate(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match || !match.materialKit) return;
+  const checks = guidelineChecks[matchId] || {};
+  const total = match.materialKit.items.length;
+  const checked = Object.values(checks).filter(Boolean).length;
+  const allDone = checked >= total;
+  const submitBtn = document.getElementById('esports-submit-btn');
+  const allMsg = document.getElementById('gl-all-msg');
+  if (submitBtn) {
+    submitBtn.classList.toggle('gl-submit-blocked', !allDone);
+    submitBtn.title = allDone ? '' : 'Confirm all guidelines before submitting';
+  }
+  if (allMsg) {
+    allMsg.classList.toggle('visible', allDone);
+  }
+}
+
+function renderGuidelineChecklist(match) {
+  if (!match.materialKit) return '';
+  const checks = guidelineChecks[match.id] || {};
+  const items = match.materialKit.items.map((item, i) => {
+    const id = 'gl_' + i;
+    const isChecked = checks[id] || false;
+    return `<div class="gl-check-item ${isChecked ? 'checked' : ''}" data-gl="${id}" onclick="toggleGuidelineCheck('${match.id}','${id}')">
+      <div class="gl-check-box">${isChecked ? '✓' : ''}</div>
+      <div class="gl-check-label">${item.label}: ${item.value}</div>
+    </div>`;
+  }).join('');
+  const total = match.materialKit.items.length;
+  const checked = Object.values(checks).filter(Boolean).length;
+  return `<div class="guideline-checklist">
+    <h4>✅ Guideline Verification (${checked}/${total})</h4>
+    <div style="font-size:0.6rem;color:#888;margin-bottom:10px">Confirm each constraint is met before submitting</div>
+    ${items}
+    <div class="gl-all-checked ${checked >= total ? 'visible' : ''}" id="gl-all-msg">All guidelines verified — ready to submit!</div>
+  </div>`;
+}
+
+// ── File upload for submissions ──
+let submissionFileData = {}; // matchId -> { name, type, dataUrl, preview }
+
+function handleSubmissionFileUpload(matchId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    alert('File must be under 10MB.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const isImage = file.type.startsWith('image/');
+    submissionFileData[matchId] = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      dataUrl: e.target.result,
+      isImage: isImage
+    };
+    // Update UI
+    const zone = document.getElementById('es-file-zone');
+    if (zone) {
+      zone.classList.add('has-file');
+      zone.innerHTML = `<div class="es-file-preview">
+        ${isImage ? `<img src="${e.target.result}" />` : `<div style="font-size:1.5rem">📄</div>`}
+        <div>
+          <div class="es-file-name">${file.name}</div>
+          <div style="font-size:0.55rem;color:#888">${(file.size / 1024).toFixed(0)} KB</div>
+          <button class="es-file-remove" onclick="event.stopPropagation();clearSubmissionFile('${matchId}')">Remove</button>
+        </div>
+      </div>
+      <input type="file" accept="image/*,video/*,.pdf,.zip,.psd,.ai,.sketch,.fig,.blend,.mp3,.wav" onchange="handleSubmissionFileUpload('${matchId}',this)" />`;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearSubmissionFile(matchId) {
+  delete submissionFileData[matchId];
+  const zone = document.getElementById('es-file-zone');
+  if (zone) {
+    zone.classList.remove('has-file');
+    zone.innerHTML = `<div style="font-size:1.5rem">📎</div>
+      <div style="font-size:0.65rem;color:#888;font-family:Orbitron,monospace">Upload File</div>
+      <div style="font-size:0.5rem;color:#555">Images, video, PDF, PSD, ZIP — up to 10MB</div>
+      <input type="file" accept="image/*,video/*,.pdf,.zip,.psd,.ai,.sketch,.fig,.blend,.mp3,.wav" onchange="handleSubmissionFileUpload('${matchId}',this)" />`;
+  }
+}
+
+// ── Screen share + camera recording ──
+let recorderState = { screen: null, cam: null, screenStream: null, camStream: null, screenChunks: [], camChunks: [], screenBlob: null, camBlob: null, screenUrl: '', camUrl: '' };
+
+async function startScreenRecording(matchId) {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    recorderState.screenStream = stream;
+    recorderState.screenChunks = [];
+    const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    mr.ondataavailable = e => { if (e.data.size > 0) recorderState.screenChunks.push(e.data); };
+    mr.onstop = () => {
+      recorderState.screenBlob = new Blob(recorderState.screenChunks, { type: 'video/webm' });
+      recorderState.screenUrl = URL.createObjectURL(recorderState.screenBlob);
+      recorderState.screen = null;
+      render();
+    };
+    mr.start(1000);
+    recorderState.screen = mr;
+    // Show preview
+    const previewEl = document.getElementById('rec-screen-preview');
+    if (previewEl) { previewEl.srcObject = stream; previewEl.play().catch(()=>{}); }
+    // Auto-stop when user stops sharing
+    stream.getVideoTracks()[0].onended = () => stopScreenRecording();
+    render();
+  } catch(e) { console.warn('Screen recording denied:', e); }
+}
+
+function stopScreenRecording() {
+  if (recorderState.screen) { recorderState.screen.stop(); }
+  if (recorderState.screenStream) { recorderState.screenStream.getTracks().forEach(t => t.stop()); recorderState.screenStream = null; }
+}
+
+async function startCamRecording(matchId) {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    recorderState.camStream = stream;
+    recorderState.camChunks = [];
+    const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    mr.ondataavailable = e => { if (e.data.size > 0) recorderState.camChunks.push(e.data); };
+    mr.onstop = () => {
+      recorderState.camBlob = new Blob(recorderState.camChunks, { type: 'video/webm' });
+      recorderState.camUrl = URL.createObjectURL(recorderState.camBlob);
+      recorderState.cam = null;
+      render();
+    };
+    mr.start(1000);
+    recorderState.cam = mr;
+    const previewEl = document.getElementById('rec-cam-preview');
+    if (previewEl) { previewEl.srcObject = stream; previewEl.play().catch(()=>{}); }
+    render();
+  } catch(e) { console.warn('Camera access denied:', e); }
+}
+
+function stopCamRecording() {
+  if (recorderState.cam) { recorderState.cam.stop(); }
+  if (recorderState.camStream) { recorderState.camStream.getTracks().forEach(t => t.stop()); recorderState.camStream = null; }
+}
+
+function renderRecordingControls(matchId) {
+  const isRecScreen = !!recorderState.screen;
+  const isRecCam = !!recorderState.cam;
+  const hasScreenRec = !!recorderState.screenUrl;
+  const hasCamRec = !!recorderState.camUrl;
+
+  return `<div style="margin:16px 0">
+    <div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;text-align:center">🎬 Recording</div>
+    <div class="rec-controls">
+      <button class="rec-btn rec-btn-screen ${isRecScreen ? 'recording' : ''}" onclick="${isRecScreen ? `stopScreenRecording()` : `startScreenRecording('${matchId}')`}">
+        ${isRecScreen ? '<span class="rec-dot"></span> Stop Screen' : '🖥️ Record Screen'}
+      </button>
+      <button class="rec-btn rec-btn-cam ${isRecCam ? 'recording' : ''}" onclick="${isRecCam ? `stopCamRecording()` : `startCamRecording('${matchId}')`}">
+        ${isRecCam ? '<span class="rec-dot"></span> Stop Camera' : '📷 Record Camera'}
+      </button>
+    </div>
+    ${(isRecScreen || isRecCam) ? `<div class="rec-preview">
+      ${isRecScreen ? '<video id="rec-screen-preview" muted style="width:100%"></video>' : ''}
+      ${isRecCam ? `<div class="${isRecScreen ? 'rec-pip' : 'rec-preview'}"><video id="rec-cam-preview" muted style="width:100%;${isRecScreen ? '' : 'max-height:180px'}"></video></div>` : ''}
+    </div>` : ''}
+    ${hasScreenRec ? `<div class="rec-saved">✓ Screen recording saved <a href="${recorderState.screenUrl}" download="screen-recording.webm" style="color:var(--pflx-cyan);text-decoration:underline;font-size:0.55rem">Download</a></div>` : ''}
+    ${hasCamRec ? `<div class="rec-saved">✓ Camera recording saved <a href="${recorderState.camUrl}" download="camera-recording.webm" style="color:var(--pflx-cyan);text-decoration:underline;font-size:0.55rem">Download</a></div>` : ''}
+  </div>`;
+}
+
+// ── Challenge Scheduling ──
+function renderSchedulePanel(modeId) {
+  return `<div class="schedule-panel">
+    <h4>📅 Schedule Challenge</h4>
+    <div class="schedule-row">
+      <input type="datetime-local" id="schedule-datetime" />
+      <button class="btn-arena" style="font-size:0.6rem;padding:8px 14px" onclick="scheduleChallenge('${modeId}')">Schedule</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+      <button class="go-live-btn" onclick="goLiveChallenge('${modeId}')">
+        <span class="live-dot" style="width:8px;height:8px;border-radius:50%;background:#ff1744;animation:recDot 1s infinite"></span>
+        Go Live — Stream to Theater
+      </button>
+    </div>
+  </div>`;
+}
+
+function scheduleChallenge(modeId) {
+  const dt = document.getElementById('schedule-datetime');
+  if (!dt || !dt.value) { alert('Pick a date and time.'); return; }
+  const scheduleTime = new Date(dt.value).getTime();
+  if (scheduleTime < Date.now()) { alert('Choose a future time.'); return; }
+  // Store on the mode config
+  esportsHostConfig[modeId] = esportsHostConfig[modeId] || {};
+  esportsHostConfig[modeId].scheduledAt = scheduleTime;
+  saveEsportsConfig();
+  SFX.correct();
+  render();
+}
+
+function goLiveChallenge(modeId) {
+  // Send message to Platform to open virtual theater with this mode's stream
+  try {
+    window.parent.postMessage(JSON.stringify({
+      type: 'pflx_live_stream',
+      action: 'start',
+      source: 'creator_showdown',
+      modeId: modeId,
+      modeName: (ESPORTS_MODES.find(m => m.id === modeId) || {}).name || modeId,
+      streamUrl: window.location.href
+    }), '*');
+  } catch(e) {}
+  SFX.battleStart();
+  // Visual feedback
+  const btn = event.target.closest('.go-live-btn');
+  if (btn) { btn.innerHTML = '<span class="live-dot" style="width:8px;height:8px;border-radius:50%;background:#ff1744;animation:recDot 1s infinite"></span> LIVE — Streaming to Theater'; btn.style.borderColor = '#ff1744'; }
+}
+
 // ── Create a new match ──
 function esportsCreateMatch(title) {
   const mode = esportsState.selectedMode;
@@ -7650,16 +7957,33 @@ function esportsStartMatch(matchId) {
 function esportsSubmit(matchId) {
   const match = esportsState.matches.find(m => m.id === matchId);
   if (!match) return;
+
+  // Check guideline verification
+  if (match.materialKit) {
+    const checks = guidelineChecks[matchId] || {};
+    const total = match.materialKit.items.length;
+    const checked = Object.values(checks).filter(Boolean).length;
+    if (checked < total) { SFX.loginError(); alert('Please verify all battle kit guidelines before submitting.'); return; }
+  }
+
   const linkInput = document.getElementById('esports-sub-link');
   const notesInput = document.getElementById('esports-sub-notes');
   const link = linkInput ? linkInput.value.trim() : '';
   const notes = notesInput ? notesInput.value.trim() : '';
+  const fileData = submissionFileData[matchId] || null;
 
-  if (!link && !notes) { SFX.loginError(); return; }
+  if (!link && !notes && !fileData) { SFX.loginError(); return; }
 
   const contestant = match.contestants.find(c => c.id === state.player.id);
   if (contestant) {
-    contestant.submission = { link, notes, submittedAt: Date.now() };
+    contestant.submission = {
+      link, notes, submittedAt: Date.now(),
+      file: fileData ? { name: fileData.name, type: fileData.type, dataUrl: fileData.dataUrl, isImage: fileData.isImage } : null,
+      screenRecording: recorderState.screenUrl || null,
+      camRecording: recorderState.camUrl || null
+    };
+    // Clean up temp data
+    delete submissionFileData[matchId];
     saveEsportsState();
     SFX.correct();
     render();
@@ -8166,9 +8490,11 @@ function renderEsportsLobby() {
         <span class="mcb-label">Match Title</span>
         <input type="text" class="mcb-input" id="esports-match-title" placeholder="${mode.name} Challenge" />
       </div>
-      <div style="text-align:right;margin-top:16px">
-        <button class="btn-arena btn-arena-gold" style="font-size:0.75rem;padding:12px 24px" onclick="esportsCreateMatch(document.getElementById('esports-match-title').value)">🚀 Launch Challenge</button>
+      ${esportsHostConfig[mode.id]?.scheduledAt && esportsHostConfig[mode.id].scheduledAt > Date.now() ? `<div style="margin-top:12px"><div class="scheduled-tag">📅 Scheduled: ${new Date(esportsHostConfig[mode.id].scheduledAt).toLocaleString()}</div></div>` : ''}
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn-arena btn-arena-gold" style="font-size:0.75rem;padding:12px 24px" onclick="esportsCreateMatch(document.getElementById('esports-match-title').value)">🚀 Launch Now</button>
       </div>
+      ${isHostUser(state.player) ? renderSchedulePanel(mode.id) : ''}
     </div>
 
     ${openMatches.length > 0 ? `
@@ -8210,19 +8536,42 @@ function renderEsportsMatch() {
   // Submission form (only show if in_progress and not submitted)
   let submitSection = '';
   if (isInProgress && myEntry && !hasSubmitted) {
-    submitSection = `<div class="esports-submit">
-      <h4>📤 Submit Your Entry</h4>
-      <input type="text" class="es-link-input" id="esports-sub-link" placeholder="${mode.submissionLabel}" />
-      <textarea class="es-textarea" id="esports-sub-notes" placeholder="Notes about your submission (optional)" style="margin-top:8px"></textarea>
-      <div style="text-align:right;margin-top:12px">
-        <button class="btn-arena btn-arena-gold" style="font-size:0.7rem;padding:10px 20px" onclick="esportsSubmit('${match.id}')">Submit Entry</button>
+    const glChecks = guidelineChecks[match.id] || {};
+    const glTotal = match.materialKit ? match.materialKit.items.length : 0;
+    const glDone = Object.values(glChecks).filter(Boolean).length;
+    const allGlDone = glTotal === 0 || glDone >= glTotal;
+
+    submitSection = `
+      ${renderGuidelineChecklist(match)}
+      <div class="esports-submit">
+        <h4>📤 Submit Your Entry</h4>
+        <input type="text" class="es-link-input" id="esports-sub-link" placeholder="${mode.submissionLabel}" />
+        <textarea class="es-textarea" id="esports-sub-notes" placeholder="Notes about your submission (optional)" style="margin-top:8px"></textarea>
+        <div class="es-file-upload-zone ${submissionFileData[match.id] ? 'has-file' : ''}" id="es-file-zone">
+          ${submissionFileData[match.id] ? `<div class="es-file-preview">
+            ${submissionFileData[match.id].isImage ? `<img src="${submissionFileData[match.id].dataUrl}" />` : `<div style="font-size:1.5rem">📄</div>`}
+            <div>
+              <div class="es-file-name">${submissionFileData[match.id].name}</div>
+              <button class="es-file-remove" onclick="event.stopPropagation();clearSubmissionFile('${match.id}')">Remove</button>
+            </div>
+          </div>` : `<div style="font-size:1.5rem">📎</div>
+          <div style="font-size:0.65rem;color:#888;font-family:Orbitron,monospace">Upload File</div>
+          <div style="font-size:0.5rem;color:#555">Images, video, PDF, PSD, ZIP — up to 10MB</div>`}
+          <input type="file" accept="image/*,video/*,.pdf,.zip,.psd,.ai,.sketch,.fig,.blend,.mp3,.wav" onchange="handleSubmissionFileUpload('${match.id}',this)" />
+        </div>
+        <div style="text-align:right;margin-top:12px">
+          <button class="btn-arena btn-arena-gold ${!allGlDone ? 'gl-submit-blocked' : ''}" id="esports-submit-btn" style="font-size:0.7rem;padding:10px 20px" onclick="esportsSubmit('${match.id}')" title="${!allGlDone ? 'Confirm all guidelines before submitting' : ''}">Submit Entry</button>
+        </div>
       </div>
-    </div>`;
+      ${renderRecordingControls(match.id)}`;
   } else if (hasSubmitted) {
     submitSection = `<div class="esports-submit" style="border-color:rgba(0,230,118,0.2)">
       <h4 style="color:#00e676">✅ Entry Submitted</h4>
-      <p style="font-size:12px;color:#aaa;margin-top:4px">${myEntry.submission.link}</p>
+      <p style="font-size:12px;color:#aaa;margin-top:4px">${myEntry.submission.link || ''}</p>
       ${myEntry.submission.notes ? `<p style="font-size:11px;color:#666;margin-top:4px">${myEntry.submission.notes}</p>` : ''}
+      ${myEntry.submission.file ? `<div style="margin-top:8px">${myEntry.submission.file.isImage ? `<img src="${myEntry.submission.file.dataUrl}" class="es-submission-img" />` : `<div style="font-size:0.65rem;color:var(--pflx-cyan)">📄 ${myEntry.submission.file.name}</div>`}</div>` : ''}
+      ${myEntry.submission.screenRecording ? `<div class="rec-saved" style="margin-top:8px">🖥️ Screen recording attached <a href="${myEntry.submission.screenRecording}" download="screen-recording.webm" style="color:var(--pflx-cyan);text-decoration:underline">Download</a></div>` : ''}
+      ${myEntry.submission.camRecording ? `<div class="rec-saved">📷 Camera recording attached <a href="${myEntry.submission.camRecording}" download="camera-recording.webm" style="color:var(--pflx-cyan);text-decoration:underline">Download</a></div>` : ''}
     </div>`;
   }
 
@@ -8295,19 +8644,23 @@ function renderEsportsJudging() {
   const isHost = match.hostId === state.player.id;
   const submissions = match.contestants.filter(c => c.submission).map(c => {
     const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
-    return `<div class="ej-entry">
+    const isSelf = c.id === state.player.id;
+    return `<div class="ej-entry" style="${isSelf ? 'border-left:3px solid var(--pflx-cyan);opacity:0.85' : ''}">
       <div class="ej-entry-header">
         <div class="ej-player">
           <div class="ej-av">${av}</div>
-          <div class="ej-name">${c.brand || c.name}</div>
+          <div class="ej-name">${c.brand || c.name}${isSelf ? ' <span style="font-size:0.5rem;color:var(--pflx-cyan)">(You)</span>' : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <span style="font-family:Orbitron,monospace;font-size:0.7rem;color:var(--pflx-gold);font-weight:700">${c.votes} votes</span>
-          ${c.id !== state.player.id ? `<button class="ej-vote-btn" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : ''}
+          ${!isSelf ? `<button class="ej-vote-btn" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : `<span style="font-size:0.5rem;color:#666;font-family:Orbitron,monospace">Can't self-vote</span>`}
         </div>
       </div>
       ${c.submission.link ? `<a href="${c.submission.link}" target="_blank" class="ej-link">🔗 View Submission</a>` : ''}
+      ${c.submission.file ? `<div style="margin:8px 0">${c.submission.file.isImage ? `<img src="${c.submission.file.dataUrl}" class="es-submission-img" />` : `<div style="font-size:0.65rem;color:var(--pflx-cyan)">📄 ${c.submission.file.name}</div>`}</div>` : ''}
       ${c.submission.notes ? `<div class="ej-notes">${c.submission.notes}</div>` : ''}
+      ${c.submission.screenRecording ? `<div style="margin-top:8px"><video src="${c.submission.screenRecording}" controls style="width:100%;max-height:200px;border-radius:8px"></video><div style="font-size:0.5rem;color:#888;margin-top:2px">🖥️ Screen Recording</div></div>` : ''}
+      ${c.submission.camRecording ? `<div style="margin-top:8px"><video src="${c.submission.camRecording}" controls style="width:100%;max-height:150px;border-radius:8px"></video><div style="font-size:0.5rem;color:#888;margin-top:2px">📷 Camera Recording</div></div>` : ''}
     </div>`;
   }).join('');
 
