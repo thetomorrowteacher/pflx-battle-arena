@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import PflxBridge from "./components/PflxBridge";
+import PflxIframeGuard from "./components/PflxIframeGuard";
 import RoleGuard from "./components/RoleGuard";
 import CloudSaveToast from "./components/CloudSaveToast";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
         {/* Cross-app PFLX message bridge */}
         <PflxBridge />
+        <PflxIframeGuard />
         <RoleGuard />
         <CloudSaveToast />
       </body>
