@@ -9200,9 +9200,9 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
   showBlock('<div class="pf-spin"></div><div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div><div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>');
 
   function adoptAndLogin(user) {
-    if (!user || !user.brand) return false;
+    if (!user || !user.brand) { console.warn('[arena-bridge] no user/brand to adopt'); return false; }
+    console.info('[arena-bridge] adopting Platform identity:', user.brand);
     try {
-      // Cache for the rest of the app
       localStorage.setItem('pflx_user', JSON.stringify({
         id: user.id, brandName: user.brand, brand: user.brand, name: user.name || user.brand,
         role: user.role || 'Student', cohort: user.cohort || 'PlayerPool',
@@ -9211,17 +9211,61 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
         level: user.level || 1, pin: user.pin || '', __pflxFromPlatform: true
       }));
     } catch (e) {}
-    // Find matching player in PLAYERS
+
+    // Try: find matching player in Arena's local PLAYERS by brand or id
+    var match = null;
     if (typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
-      var match = PLAYERS.find(function (p) {
+      match = PLAYERS.find(function (p) {
         return (p.brand || p.brandName || '').toUpperCase() === user.brand.toUpperCase()
             || (p.id && p.id === user.id);
       });
-      if (match && typeof login === 'function') {
-        try { login(match.id); hideBlock(); return true; } catch (e) {}
-      }
     }
-    return false;
+
+    // Fallback: synthesize a player record so Arena has something to render against
+    if (!match && typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
+      var isHost = /admin|host|teacher|instructor|master/i.test(String(user.role || ''));
+      match = {
+        id: user.id || ('platform-' + Date.now()),
+        brand: user.brand,
+        brandName: user.brand,
+        name: user.name || user.brand,
+        role: isHost ? 'admin' : 'player',
+        pin: user.pin || '0000',
+        cohort: user.cohort || 'PlayerPool',
+        xcoin: user.xc || 0,
+        totalXcoin: user.totalXcoin || user.xc || 0,
+        digitalBadges: user.digitalBadges || 0,
+        image: user.image || '',
+        level: user.level || 1,
+        avatar: '',
+        isHost: isHost,
+        claimed: true,
+        arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 }
+      };
+      PLAYERS.push(match);
+      console.info('[arena-bridge] synthesized arena player for', user.brand);
+    }
+
+    if (!match) { console.warn('[arena-bridge] could not find or synthesize match'); return false; }
+
+    // Try login() function — preferred path
+    if (typeof login === 'function') {
+      try { login(match.id); hideBlock(); console.info('[arena-bridge] logged in via login()'); return true; } catch (e) { console.warn('[arena-bridge] login() threw', e); }
+    }
+    // Fallback: set state directly + re-render
+    try {
+      if (typeof state !== 'undefined') {
+        state.player = match;
+        state.screen = 'home';
+        state.loginStep = null;
+        state.selectedLoginPlayer = null;
+        state.pinValue = '';
+      }
+      if (typeof render === 'function') render();
+      hideBlock();
+      console.info('[arena-bridge] logged in via state-fallback');
+      return true;
+    } catch (e) { console.warn('[arena-bridge] state fallback failed', e); return false; }
   }
 
   // Listen for identity broadcasts from the Platform
