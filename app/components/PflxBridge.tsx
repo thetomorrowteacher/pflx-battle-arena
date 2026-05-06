@@ -67,7 +67,7 @@ export default function PflxBridge() {
         }
 
         // ── SSO identity broadcast from shell (unified contract) ──
-        if (msg.type === "pflx_identity_broadcast" && msg.user) {
+        if ((msg.type === "pflx_identity_broadcast" || msg.type === "pflx_identity_response") && msg.user) {
           try {
             localStorage.setItem(
               "pflx_identity",
@@ -77,10 +77,61 @@ export default function PflxBridge() {
                 onboardingComplete: !!msg.onboardingComplete,
               })
             );
+            // Also write the canonical pflx_user shape used by the Platform
+            localStorage.setItem("pflx_user", JSON.stringify({
+              id: msg.user.id || "",
+              brandName: msg.user.brand || msg.user.brandName || msg.user.name || "",
+              brand: msg.user.brand || msg.user.brandName || "",
+              name: msg.user.name || msg.user.brand || "Player",
+              role: msg.user.role || "Student",
+              cohort: msg.user.cohort || "PlayerPool",
+              email: msg.user.email || "",
+              image: msg.user.image || "",
+              level: typeof msg.user.level === "number" ? msg.user.level : 1,
+              xcoin: typeof msg.user.xc === "number" ? msg.user.xc : (typeof msg.user.xcoin === "number" ? msg.user.xcoin : 0),
+              totalXcoin: typeof msg.user.totalXcoin === "number" ? msg.user.totalXcoin : (typeof msg.user.xc === "number" ? msg.user.xc : 0),
+              digitalBadges: typeof msg.user.digitalBadges === "number" ? msg.user.digitalBadges : 0,
+              __pflxFromPlatform: true,
+            }));
             if (msg.role === "host" || msg.role === "player") {
               localStorage.setItem("pflx_active_role", msg.role);
               document.body.dataset.pflxRole = msg.role;
             }
+            window.dispatchEvent(new CustomEvent("pflx-identity-changed", { detail: msg.user }));
+            console.log("[Arena Bridge] ✓ Adopted Platform identity:", msg.user.brand);
+          } catch { /* ignore */ }
+        }
+
+        // ── Force-sync: drop cached identity and re-request ──
+        if (msg.type === "pflx_force_identity_sync") {
+          try {
+            localStorage.removeItem("pflx_user");
+            localStorage.removeItem("pflx_identity");
+            window.dispatchEvent(new CustomEvent("pflx-identity-cleared"));
+            if (window.parent !== window) {
+              window.parent.postMessage(JSON.stringify({ type: "pflx_identity_request" }), "*");
+            }
+          } catch { /* ignore */ }
+        }
+
+        // ── XC update from Platform (someone else moved the balance) ──
+        if (msg.type === "pflx_xc_update" && typeof msg.xc === "number") {
+          try {
+            const cached = JSON.parse(localStorage.getItem("pflx_user") || "{}");
+            cached.xcoin = msg.xc;
+            cached.totalXcoin = Math.max(cached.totalXcoin || 0, msg.xc);
+            localStorage.setItem("pflx_user", JSON.stringify(cached));
+            window.dispatchEvent(new CustomEvent("pflx-xc-update", { detail: { xc: msg.xc, reason: msg.reason || "" } }));
+          } catch { /* ignore */ }
+        }
+
+        // ── Role change from Platform ──
+        if (msg.type === "pflx_role_changed" && msg.role) {
+          try {
+            document.body.classList.toggle("pflx-as-player", msg.role === "player");
+            document.body.dataset.pflxRole = msg.role;
+            localStorage.setItem("pflx_active_role", msg.role);
+            window.dispatchEvent(new CustomEvent("pflx-role-changed", { detail: { role: msg.role } }));
           } catch { /* ignore */ }
         }
       } catch {
@@ -113,6 +164,30 @@ export default function PflxBridge() {
     }
 
     window.addEventListener("message", handleMessage);
+
+    // ── Iframe body class so CSS can hide local login UI when running
+    //    inside the Platform shell ──
+    if (window.parent !== window) {
+      document.body.classList.add("pflx-in-iframe");
+    }
+
+    // ── Helper exposed for Arena code to call when XC moves locally
+    //    (match win, tournament prize). Platform re-broadcasts to siblings. ──
+    (window as unknown as Record<string, unknown>).pflxNotifyXcChange = function (newXc: number, reason?: string) {
+      try {
+        const xc = typeof newXc === "number" ? newXc : parseInt(String(newXc), 10) || 0;
+        const cached = JSON.parse(localStorage.getItem("pflx_user") || "{}");
+        cached.xcoin = xc;
+        cached.totalXcoin = Math.max(cached.totalXcoin || 0, xc);
+        localStorage.setItem("pflx_user", JSON.stringify(cached));
+        if (window.parent !== window) {
+          window.parent.postMessage(
+            JSON.stringify({ type: "pflx_xc_changed", xc, reason: reason || "" }),
+            "*"
+          );
+        }
+      } catch { /* ignore */ }
+    };
 
     // Announce readiness + request identity from shell
     if (window.parent !== window) {
