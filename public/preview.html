@@ -9147,5 +9147,119 @@ function renderEsportsScreen() {
 // Init
 render();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PFLX BATTLE ARENA · PLATFORM SSO BRIDGE
+     Enforces: NO local login when running from PFLX Platform.
+       - Standalone access (not in iframe) → block screen.
+       - In iframe → request identity from Platform, hide login UI,
+         find the matching player in PLAYERS, auto-login.
+═══════════════════════════════════════════════════════════════════ -->
+<style>
+/* Hide local login screen entirely when running inside the Platform iframe */
+body.pflx-in-iframe .login-container,
+body.pflx-in-iframe #brandSelect,
+body.pflx-in-iframe #pinInput,
+body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !important; }
+#pflxArenaIframeGuard { position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#02060f 0%,#0a1228 60%,#0f1830 100%); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; font-family:'Orbitron','Share Tech Mono',monospace; color:#e0e6ff; }
+#pflxArenaIframeGuard .pf-spin { width:38px; height:38px; border-radius:50%; border:2px solid rgba(0,240,255,0.18); border-top-color:#00f0ff; animation:pflx-iframe-spin 0.9s linear infinite; }
+@keyframes pflx-iframe-spin { to { transform: rotate(360deg); } }
+</style>
+<script>
+(function () {
+  var PLATFORM_URL = 'https://www.prototypeflx.com/';
+
+  function showBlock(html) {
+    var g = document.getElementById('pflxArenaIframeGuard');
+    if (g) g.remove();
+    g = document.createElement('div');
+    g.id = 'pflxArenaIframeGuard';
+    g.innerHTML = html;
+    document.body.appendChild(g);
+  }
+  function hideBlock() {
+    var g = document.getElementById('pflxArenaIframeGuard');
+    if (g) g.remove();
+  }
+
+  // 1. STANDALONE access → permanently block. Apps run only inside Platform.
+  if (window.parent === window) {
+    showBlock(
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:18px;max-width:460px;padding:32px;text-align:center;">' +
+        '<div style="font-size:56px;line-height:1;">🛰️</div>' +
+        '<div style="color:#00f0ff;font-size:18px;letter-spacing:3px;text-transform:uppercase;font-weight:700;">Access via PFLX Platform</div>' +
+        '<div style="color:#8a92b0;font-size:13px;line-height:1.6;font-family:Rajdhani,sans-serif;">Battle Arena runs inside the PFLX Platform. Your profile, X-Coin, badges, and progress are all managed there. Open the Platform and launch this app from inside.</div>' +
+        '<a href="' + PLATFORM_URL + '" style="margin-top:8px;padding:12px 28px;background:linear-gradient(135deg,#00d4ff,#7c3aed);color:#fff;text-decoration:none;border-radius:10px;font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:2px;font-weight:700;box-shadow:0 4px 24px rgba(0,212,255,0.35);">OPEN PFLX PLATFORM →</a>' +
+      '</div>'
+    );
+    return;
+  }
+
+  // 2. IN IFRAME — hide login UI, request identity, auto-login when it arrives.
+  document.body.classList.add('pflx-in-iframe');
+  showBlock('<div class="pf-spin"></div><div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div><div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>');
+
+  function adoptAndLogin(user) {
+    if (!user || !user.brand) return false;
+    try {
+      // Cache for the rest of the app
+      localStorage.setItem('pflx_user', JSON.stringify({
+        id: user.id, brandName: user.brand, brand: user.brand, name: user.name || user.brand,
+        role: user.role || 'Student', cohort: user.cohort || 'PlayerPool',
+        xcoin: user.xc || 0, totalXcoin: user.totalXcoin || user.xc || 0,
+        digitalBadges: user.digitalBadges || 0, image: user.image || '',
+        level: user.level || 1, pin: user.pin || '', __pflxFromPlatform: true
+      }));
+    } catch (e) {}
+    // Find matching player in PLAYERS
+    if (typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
+      var match = PLAYERS.find(function (p) {
+        return (p.brand || p.brandName || '').toUpperCase() === user.brand.toUpperCase()
+            || (p.id && p.id === user.id);
+      });
+      if (match && typeof login === 'function') {
+        try { login(match.id); hideBlock(); return true; } catch (e) {}
+      }
+    }
+    return false;
+  }
+
+  // Listen for identity broadcasts from the Platform
+  window.addEventListener('message', function (ev) {
+    try {
+      var msg = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data;
+      if (!msg || typeof msg !== 'object') return;
+      if ((msg.type === 'pflx_identity_broadcast' || msg.type === 'pflx_identity_response') && msg.user) {
+        // Try immediately, then retry up to 30x as PLAYERS / login load asynchronously
+        if (adoptAndLogin(msg.user)) return;
+        var tries = 0;
+        var iv = setInterval(function () {
+          tries++;
+          if (adoptAndLogin(msg.user) || tries > 30) clearInterval(iv);
+        }, 200);
+      }
+      if (msg.type === 'pflx_force_identity_sync') {
+        try {
+          window.parent.postMessage(JSON.stringify({ type: 'pflx_identity_request' }), '*');
+        } catch (e) {}
+      }
+    } catch (e) {}
+  });
+
+  // Tell Platform "I'm here, send me the active session"
+  function requestIdentity() {
+    try { window.parent.postMessage(JSON.stringify({ type: 'pflx_identity_request' }), '*'); } catch (e) {}
+    try { window.parent.postMessage(JSON.stringify({ type: 'pflx_subapp_ready', app: 'battle-arena' }), '*'); } catch (e) {}
+  }
+  requestIdentity();
+  // Retry if Platform takes a moment to wire up
+  setTimeout(requestIdentity, 500);
+  setTimeout(requestIdentity, 1500);
+
+  // Safety: if no identity arrives in 8s, hide the spinner so the user can see the app.
+  // (The original local login is hidden by CSS — the user will see only the app shell.)
+  setTimeout(function () { hideBlock(); }, 8000);
+})();
+</script>
 </body>
 </html>
