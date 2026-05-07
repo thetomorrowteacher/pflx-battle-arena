@@ -2409,8 +2409,9 @@ function renderLogin() {
     const hostOpts = hosts.map(h =>
       `<option value="${h.id}">🛡 ${h.brand}</option>`
     ).join("");
+    // Privacy: brand-only — never expose real names to other players.
     const playerOpts = players.map(p =>
-      `<option value="${p.id}">${p.brand} — ${p.name}</option>`
+      `<option value="${p.id}">${p.brand || 'Player'}</option>`
     ).join("");
 
     return `${hudCorners}<div class="login-wrap"><div class="login-box">
@@ -9295,14 +9296,64 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
     try { window.parent.postMessage(JSON.stringify({ type: 'pflx_identity_request' }), '*'); } catch (e) {}
     try { window.parent.postMessage(JSON.stringify({ type: 'pflx_subapp_ready', app: 'battle-arena' }), '*'); } catch (e) {}
   }
-  requestIdentity();
-  // Retry if Platform takes a moment to wire up
-  setTimeout(requestIdentity, 500);
-  setTimeout(requestIdentity, 1500);
 
-  // Safety: if no identity arrives in 8s, hide the spinner so the user can see the app.
-  // (The original local login is hidden by CSS — the user will see only the app shell.)
-  setTimeout(function () { hideBlock(); }, 8000);
+  // Cache poll: Platform's bridge writes localStorage 'pflx_user' for cross-app
+  // SSO. If it's there, we can adopt without waiting for a postMessage.
+  function pollCachedIdentity() {
+    try {
+      var raw = localStorage.getItem('pflx_user');
+      if (!raw) return false;
+      var u = JSON.parse(raw);
+      if (!u || !(u.brand || u.brandName)) return false;
+      var brand = u.brand || u.brandName;
+      return adoptAndLogin({
+        id: u.id, brand: brand, name: u.name || brand,
+        role: u.role, cohort: u.cohort, xc: u.xcoin || u.xc, totalXcoin: u.totalXcoin,
+        digitalBadges: u.digitalBadges, image: u.image, level: u.level, pin: u.pin
+      });
+    } catch (e) { return false; }
+  }
+
+  // BANNER VERSION — proves which preview.html is live so cache-misses are diagnosable.
+  console.info('[arena-bridge] PflxBridge v3 (' + new Date().toISOString().slice(0,10) + ') — in iframe; awaiting Platform identity');
+
+  requestIdentity();
+  // Retry-with-poll: every 500ms check both message-based identity (handler above)
+  // and the cached pflx_user. Also re-request from parent on each tick until we
+  // get someone logged in.
+  var attempts = 0;
+  var poll = setInterval(function () {
+    attempts++;
+    if (typeof state !== 'undefined' && state.player) { clearInterval(poll); return; }
+    requestIdentity();
+    pollCachedIdentity();
+    if (attempts > 20) clearInterval(poll); // give up after ~10s
+  }, 500);
+
+  // Wrap render() so the login screen is BYPASSED when in iframe with a
+  // cached identity. This is the strongest backstop: even if state somehow
+  // gets reset to 'login', the next render call adopts the cached identity
+  // and switches to 'home'.
+  var origRender = (typeof render === 'function') ? render : null;
+  if (origRender) {
+    window.render = function () {
+      try {
+        if (window.parent !== window && typeof state !== 'undefined' && state.screen === 'login' && !state.player) {
+          if (pollCachedIdentity()) {
+            // adoptAndLogin already called login() / state-fallback which sets screen='home'
+            // and calls render(). Don't double-render.
+            return;
+          }
+        }
+      } catch (e) {}
+      return origRender.apply(this, arguments);
+    };
+    // Also make the inner-scope render reference point to the wrapped one
+    try { render = window.render; } catch (e) {}
+  }
+
+  // Safety: if no identity arrives in 12s, hide the spinner so the user can see the app.
+  setTimeout(function () { hideBlock(); }, 12000);
 })();
 </script>
 </body>
