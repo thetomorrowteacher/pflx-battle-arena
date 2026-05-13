@@ -9196,9 +9196,37 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
     return;
   }
 
-  // 2. IN IFRAME — hide login UI, request identity, auto-login when it arrives.
+  // 2. IN IFRAME — hide login UI, adopt identity from URL params if Console
+  //    passed them, otherwise wait for postMessage. URL-param path is
+  //    instant — no spinner.
   document.body.classList.add('pflx-in-iframe');
-  showBlock('<div class="pf-spin"></div><div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div><div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>');
+
+  // Fast-path: Console builds iframe URLs with identity params via buildAppURL.
+  // If sso=pflx is in the URL, adopt immediately on first paint.
+  function adoptFromUrlParams() {
+    try {
+      var p = new URLSearchParams(window.location.search);
+      if (p.get('sso') !== 'pflx') return false;
+      var brand = p.get('brand');
+      if (!brand) return false;
+      var user = {
+        id: p.get('id') || null,
+        brand: brand,
+        name: p.get('user') || brand,
+        role: p.get('role') || 'Student',
+        cohort: p.get('cohort') || 'PlayerPool',
+        xc: parseInt(p.get('xc'), 10) || 0,
+        pin: p.get('pin') || ''
+      };
+      return adoptAndLogin(user);
+    } catch (e) { return false; }
+  }
+  // Defer one tick so PLAYERS / login / state / render are defined when our adopt runs.
+  setTimeout(function () {
+    if (adoptFromUrlParams()) return; // URL params worked — no spinner needed
+    // No URL identity — show the syncing spinner while we wait for postMessage
+    showBlock('<div class="pf-spin"></div><div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div><div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>');
+  }, 0);
 
   function adoptAndLogin(user) {
     if (!user || !user.brand) { console.warn('[arena-bridge] no user/brand to adopt'); return false; }
