@@ -9316,6 +9316,39 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
           window.parent.postMessage(JSON.stringify({ type: 'pflx_identity_request' }), '*');
         } catch (e) {}
       }
+      // ── PflxDataBus: Console says this player's record changed ──
+      // Same handler — re-adopt with the fresh record so any updated avatar,
+      // XC, badge count, rank override etc. propagates into the Arena view.
+      if (msg.type === 'pflx_player_changed' && msg.player) {
+        var p = msg.player;
+        // Reshape canonical → arena's adoptAndLogin shape (it expects the
+        // legacy 'user' object with brand/xc/etc., so map field names).
+        var u = {
+          id: p.id,
+          name: p.name,
+          brand: p.brand || p.brandName,
+          brandName: p.brand || p.brandName,
+          role: p.role,
+          cohort: (Array.isArray(p.cohorts) ? p.cohorts.join(', ') : p.cohort),
+          email: p.email,
+          pin: p.pin,
+          xc: typeof p.xc === 'number' ? p.xc : (typeof p.xcoin === 'number' ? p.xcoin : 0),
+          totalXcoin: p.totalXcoin,
+          digitalBadges: p.digitalBadges,
+          image: p.image,
+          slogan: p.slogan,
+          level: p.level,
+          rank: p.rank,
+          studioId: p.studioId,
+          pathway: p.pathway
+        };
+        if (adoptAndLogin(u)) return;
+        var triesB = 0;
+        var ivB = setInterval(function () {
+          triesB++;
+          if (adoptAndLogin(u) || triesB > 30) clearInterval(ivB);
+        }, 200);
+      }
     } catch (e) {}
   });
 
