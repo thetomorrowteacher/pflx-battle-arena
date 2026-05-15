@@ -9394,6 +9394,32 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
       });
     }
 
+    // If we found an existing match (e.g. from the URL-param adopt that ran
+    // on first paint), MERGE the incoming user's fields in. The URL-param
+    // adopt can't carry the profile image (data URIs are too long for URLs),
+    // so the first adopt leaves image='' and the avatar shows initials. The
+    // postMessage broadcast that follows includes the full record — without
+    // this merge, the new image never reaches state.player and the avatar
+    // stays as initials forever. Same logic for xc / badges / totalXcoin /
+    // level — any field the URL pass left empty gets backfilled here.
+    if (match) {
+      if (user.image && !match.image)          match.image = user.image;
+      else if (user.image)                     match.image = user.image; // always prefer fresh from bus
+      if (typeof user.xc === 'number')         match.xcoin = user.xc;
+      if (typeof user.totalXcoin === 'number') match.totalXcoin = user.totalXcoin;
+      else if (typeof user.xc === 'number')    match.totalXcoin = Math.max(match.totalXcoin || 0, user.xc);
+      if (typeof user.digitalBadges === 'number') match.digitalBadges = user.digitalBadges;
+      if (user.badgeCounts)                    match.badgeCounts = user.badgeCounts;
+      if (typeof user.level === 'number')      match.level = user.level;
+      if (user.cohort)                         match.cohort = user.cohort;
+      if (user.slogan)                         match.slogan = user.slogan;
+      if (user.role)                           match.role = (/admin|host|teacher|instructor|master/i.test(String(user.role))) ? 'admin' : 'player';
+      if (user.pin)                            match.pin = user.pin;
+      // Keep name/brand stable — those came from the source-of-truth Console.
+      if (user.name)                           match.name = user.name;
+      console.info('[arena-bridge] merged fresh fields into existing player:', match.brand, 'image?', !!match.image);
+    }
+
     // Fallback: synthesize a player record so Arena has something to render against
     if (!match && typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
       var isHost = /admin|host|teacher|instructor|master/i.test(String(user.role || ''));
