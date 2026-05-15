@@ -5718,6 +5718,29 @@ function cipherResumeAfterVote() {
   startExplorerLoop();
 }
 
+// ─────────────────────────────────────────────────────────────────
+// PflxDataBus client helper — propose an XC/badge award to the
+// PFLX Platform parent so the Console becomes the source of truth
+// for the player's economy. Console will fire pflx_player_changed
+// after applying, and every iframe (X-Coin home, Pathways card,
+// toolbar, hero, portfolio, DarkCampus feed) updates within ~5ms.
+// In standalone mode (no parent), we just no-op and the local
+// state.player.xc mutation above carries the visual update.
+// ─────────────────────────────────────────────────────────────────
+function arenaPostAward(playerId, awardObj) {
+  if (!playerId || !awardObj) return;
+  try {
+    if (typeof window !== 'undefined' && window.parent !== window) {
+      window.parent.postMessage(JSON.stringify({
+        type: 'pflx_award_proposed',
+        playerId: playerId,
+        source: 'arena',
+        award: awardObj
+      }), '*');
+    }
+  } catch (e) { console.warn('[arena] award post failed', e); }
+}
+
 function cipherEndGame(outcome) {
   const c = state.cipher;
   clearInterval(c.timerInterval);
@@ -5738,9 +5761,27 @@ function cipherEndGame(outcome) {
     correctVote: 0, // simplified for preview
   };
 
-  // Award XC to player
+  // Award XC to player. Two paths:
+  //   In Platform: post pflx_award_proposed → Console applies through
+  //     PflxDataBus.award() → pflx_player_changed → every surface updates.
+  //   Standalone: keep the local state.player.xc mutation so the demo works.
+  // The bus will also re-broadcast the canonical record back, which our
+  // identity listener picks up and writes into state.player — so we'd
+  // double-credit. Therefore: in Platform, skip the local += and let the
+  // round-trip handle it. In standalone, do the local mutation.
   const totalXC = Object.values(c.xcRewards).reduce((s,v) => s+v, 0);
-  if (state.player) state.player.xc += totalXC;
+  if (state.player && totalXC > 0) {
+    const inPlatform = (typeof window !== 'undefined' && window.parent !== window);
+    if (inPlatform) {
+      arenaPostAward(state.player.id, {
+        xc: totalXC,
+        reason: 'arena.cipher.' + outcome,
+        badge: won ? { id: 'b-arena-cipher-victor', name: 'Cipher Victor', category: 'primary' } : null
+      });
+    } else {
+      state.player.xc += totalXC;
+    }
+  }
 
   clearInterval(c.discussionInterval);
   if (won) { SFX.victory(); MUSIC.play('victory'); } else { SFX.defeat(); MUSIC.play('defeat'); }
@@ -5807,9 +5848,36 @@ function answerQuestion(idx) {
     setTimeout(() => {
       state.round++;
       if (state.round >= state.totalRounds) {
-        // Battle over — play victory or defeat
+        // Battle over — play victory or defeat + settle wager
         const won = state.myScore > state.oppScore;
         if (won) SFX.victory(); else SFX.defeat();
+
+        // ── Settle the wager through PflxDataBus when iframed by Platform.
+        // Wager-based: winner takes 2x wager (net +wager), loser -wager.
+        // Console runs PflxDataBus.award(), fires pflx_player_changed,
+        // every surface updates. In standalone mode, no XC change (the
+        // result text already says "You won X XC" but local mutation
+        // is intentionally skipped here for parity with Platform behavior).
+        try {
+          const delta = won ? Number(state.wager || 0) : -Number(state.wager || 0);
+          if (state.player && delta !== 0) {
+            const inPlatform = (typeof window !== 'undefined' && window.parent !== window);
+            if (inPlatform) {
+              arenaPostAward(state.player.id, {
+                xc: delta,
+                reason: 'arena.battle.' + (won ? 'win' : 'loss') + '.wager:' + Math.abs(delta),
+                badge: won ? { id: 'b-arena-battle-victor', name: 'Battle Victor', category: 'primary' } : null
+              });
+            }
+            // Mirror locally so the result screen "You won X XC" / "You lost X XC"
+            // reflects in any other Arena widget reading state.player.xc this
+            // session (leaderboard, wager screen). The Platform round-trip will
+            // overwrite state.player via the identity listener with the
+            // authoritative number, so any double-count is corrected within ~5ms.
+            state.player.xc = Math.max(0, (state.player.xc || 0) + delta);
+          }
+        } catch (e) { console.warn('[arena] wager settle failed', e); }
+
         state.screen = "result";
         render();
       } else {
