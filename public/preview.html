@@ -9316,6 +9316,19 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
           window.parent.postMessage(JSON.stringify({ type: 'pflx_identity_request' }), '*');
         } catch (e) {}
       }
+      // ── PflxDataBus.mc: MC data response / change broadcast ──
+      if (msg.type === 'pflx_mc_data' && msg.key && Array.isArray(msg.items)) {
+        try { window.dispatchEvent(new CustomEvent('pflx-mc-data', { detail: { key: msg.key, items: msg.items, opts: msg.opts || null, ackId: msg.ackId || null } })); } catch (e) {}
+      }
+      if (msg.type === 'pflx_mc_changed' && msg.key && Array.isArray(msg.items)) {
+        try { window.dispatchEvent(new CustomEvent('pflx-mc-changed', { detail: { key: msg.key, items: msg.items } })); } catch (e) {}
+      }
+
+      // ── PflxDataBus.award: reward granted (animations / feed) ──
+      if (msg.type === 'pflx_award_granted' && msg.playerId && msg.award) {
+        try { window.dispatchEvent(new CustomEvent('pflx-award-granted', { detail: { playerId: msg.playerId, award: msg.award, txId: msg.txId, player: msg.player || null } })); } catch (e) {}
+      }
+
       // ── PflxDataBus: Console says this player's record changed ──
       // Same handler — re-adopt with the fresh record so any updated avatar,
       // XC, badge count, rank override etc. propagates into the Arena view.
