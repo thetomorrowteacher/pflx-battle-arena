@@ -4,6 +4,21 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════════
+     PFLX PLATFORM GATING — kill the local login UI before first paint
+     Battle Arena no longer owns identity. The PFLX Platform is the only
+     login surface. This synchronous block runs before any CSS or render
+     so the legacy login form never appears on screen, even for a frame.
+═══════════════════════════════════════════════════════════════════ -->
+<script>
+  (function () {
+    try {
+      var inIframe = window.parent !== window;
+      // Set classes immediately on the documentElement so CSS below can use them.
+      document.documentElement.setAttribute('data-pflx-context', inIframe ? 'iframe' : 'standalone');
+    } catch (e) {}
+  })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1171,6 +1186,131 @@ nav .avatar-sub{font-size:9px;color:#666}
 .er-rank-num{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:900;color:#666;width:24px;text-align:center}
 .er-standing-row.winner .er-rank-num{color:var(--pflx-gold)}
 
+/* ═══════════════════════════════════════════════════════════════════
+   GUIDELINE VERIFICATION CHECKLIST
+   ═══════════════════════════════════════════════════════════════════ */
+.guideline-checklist{background:rgba(124,77,255,0.06);border:1px solid rgba(124,77,255,0.2);border-radius:12px;padding:16px;margin:12px 0 16px}
+.guideline-checklist h4{font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-purple);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+.gl-check-item{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(10,14,23,0.4);border:1px solid rgba(255,255,255,0.04);margin-bottom:6px;cursor:pointer;transition:all 0.2s}
+.gl-check-item:hover{border-color:rgba(124,77,255,0.3);background:rgba(124,77,255,0.08)}
+.gl-check-item.checked{border-color:rgba(0,230,118,0.3);background:rgba(0,230,118,0.06)}
+.gl-check-box{width:18px;height:18px;border-radius:5px;border:2px solid rgba(124,77,255,0.4);display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;flex-shrink:0;transition:all 0.2s;margin-top:1px}
+.gl-check-item.checked .gl-check-box{background:var(--pflx-green);border-color:var(--pflx-green);color:#fff}
+.gl-check-label{font-size:0.7rem;color:#ccc;line-height:1.4}
+.gl-check-item.checked .gl-check-label{color:rgba(0,230,118,0.9)}
+.gl-all-checked{font-size:0.6rem;color:var(--pflx-green);text-align:center;margin-top:8px;font-family:'Orbitron',monospace;font-weight:600;opacity:0;transition:opacity 0.3s}
+.gl-all-checked.visible{opacity:1}
+.gl-submit-blocked{opacity:0.4;pointer-events:none}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FILE UPLOAD FOR SUBMISSIONS
+   ═══════════════════════════════════════════════════════════════════ */
+.es-file-upload-zone{border:2px dashed rgba(0,229,255,0.2);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all 0.3s;position:relative;margin-top:10px}
+.es-file-upload-zone:hover{border-color:rgba(0,229,255,0.5);background:rgba(0,229,255,0.03)}
+.es-file-upload-zone.has-file{border-color:rgba(0,230,118,0.4);background:rgba(0,230,118,0.04)}
+.es-file-upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.es-file-preview{display:flex;align-items:center;gap:12px;justify-content:center}
+.es-file-preview img{max-width:120px;max-height:80px;border-radius:8px;border:1px solid rgba(255,255,255,0.1)}
+.es-file-name{font-size:0.65rem;color:var(--pflx-green);font-family:'Orbitron',monospace}
+.es-file-remove{background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.3);color:#ff1744;font-size:0.55rem;padding:4px 10px;border-radius:6px;cursor:pointer;margin-top:6px}
+.es-submission-img{max-width:100%;max-height:200px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);margin-top:8px}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN/CAMERA RECORDING CONTROLS
+   ═══════════════════════════════════════════════════════════════════ */
+.rec-controls{display:flex;gap:10px;justify-content:center;margin:16px 0;flex-wrap:wrap}
+.rec-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.1);transition:all 0.2s}
+.rec-btn-screen{background:rgba(41,121,255,0.12);border-color:rgba(41,121,255,0.3);color:#2979ff}
+.rec-btn-screen:hover{background:rgba(41,121,255,0.2)}
+.rec-btn-cam{background:rgba(224,64,251,0.12);border-color:rgba(224,64,251,0.3);color:#e040fb}
+.rec-btn-cam:hover{background:rgba(224,64,251,0.2)}
+.rec-btn.recording{animation:recPulse 1.5s infinite;border-color:rgba(255,23,68,0.6)}
+.rec-btn.recording .rec-dot{width:8px;height:8px;border-radius:50%;background:#ff1744;animation:recDot 1s infinite}
+@keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,23,68,0)}50%{box-shadow:0 0 0 6px rgba(255,23,68,0.15)}}
+@keyframes recDot{0%,100%{opacity:1}50%{opacity:0.3}}
+.rec-preview{position:relative;margin:12px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1)}
+.rec-preview video{width:100%;max-height:180px;background:#000;border-radius:12px}
+.rec-pip{position:absolute;bottom:12px;right:12px;width:120px;height:90px;border-radius:8px;border:2px solid rgba(224,64,251,0.5);overflow:hidden}
+.rec-pip video{width:100%;height:100%;object-fit:cover}
+.rec-saved{font-size:0.6rem;color:var(--pflx-green);text-align:center;margin-top:6px;font-family:'Orbitron',monospace}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHALLENGE SCHEDULING
+   ═══════════════════════════════════════════════════════════════════ */
+.schedule-panel{background:rgba(255,215,64,0.05);border:1px solid rgba(255,215,64,0.15);border-radius:12px;padding:16px;margin:12px 0}
+.schedule-panel h4{font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:700;color:var(--pflx-gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+.schedule-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.schedule-row input[type="datetime-local"]{background:rgba(10,14,23,0.8);border:1px solid rgba(255,215,64,0.2);border-radius:8px;padding:8px 12px;color:#fff;font-family:Inter,sans-serif;font-size:0.75rem}
+.schedule-row input[type="datetime-local"]::-webkit-calendar-picker-indicator{filter:invert(1)}
+.live-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);font-family:'Orbitron',monospace;font-size:0.5rem;color:#ff1744;font-weight:700;text-transform:uppercase;letter-spacing:0.1em}
+.live-badge .live-dot{width:6px;height:6px;border-radius:50%;background:#ff1744;animation:recDot 1s infinite}
+.go-live-btn{display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,rgba(255,23,68,0.2),rgba(224,64,251,0.2));border:1px solid rgba(255,23,68,0.4);color:#ff1744;font-family:'Orbitron',monospace;font-size:0.7rem;font-weight:700;cursor:pointer;transition:all 0.3s}
+.go-live-btn:hover{background:linear-gradient(135deg,rgba(255,23,68,0.3),rgba(224,64,251,0.3));transform:scale(1.03)}
+.scheduled-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;background:rgba(255,215,64,0.1);border:1px solid rgba(255,215,64,0.2);font-family:'Orbitron',monospace;font-size:0.5rem;color:var(--pflx-gold);font-weight:600}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPLIANCE REVIEW PHASE
+   ═══════════════════════════════════════════════════════════════════ */
+.compliance-phase{max-width:760px;margin:0 auto;padding:24px;position:relative;z-index:10}
+.cr-header{text-align:center;margin-bottom:24px}
+.cr-header h2{font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:var(--pflx-purple);text-transform:uppercase;letter-spacing:0.08em}
+.cr-header p{font-size:12px;color:#888;margin-top:6px}
+.cr-entry{background:rgba(10,14,23,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:20px;margin-bottom:16px;transition:all 0.3s}
+.cr-entry.flagged{border-color:rgba(255,23,68,0.3);background:rgba(255,23,68,0.04)}
+.cr-entry.approved{border-color:rgba(0,230,118,0.3);background:rgba(0,230,118,0.04)}
+.cr-entry-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cr-player{display:flex;align-items:center;gap:10px}
+.cr-av{width:36px;height:36px;border-radius:50%;background:rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden}
+.cr-name{font-family:'Orbitron',monospace;font-size:0.75rem;font-weight:600;color:#ddd}
+.cr-status-badge{padding:4px 12px;border-radius:6px;font-family:'Orbitron',monospace;font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em}
+.cr-status-badge.pending-review{background:rgba(255,215,64,0.1);border:1px solid rgba(255,215,64,0.2);color:var(--pflx-gold)}
+.cr-status-badge.peer-flagged{background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.3);color:#ff1744}
+.cr-status-badge.peer-approved{background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);color:#00e676}
+.cr-status-badge.host-approved{background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.4);color:#00e676}
+.cr-status-badge.disqualified{background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);color:#ff1744}
+
+.cr-kit-checks{margin:12px 0}
+.cr-kit-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(124,77,255,0.04);border:1px solid rgba(124,77,255,0.1);margin-bottom:6px}
+.cr-kit-label{flex:1;font-size:0.65rem;color:#ccc;line-height:1.4}
+.cr-kit-actions{display:flex;gap:6px}
+.cr-kit-btn{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;border:1px solid rgba(255,255,255,0.08);transition:all 0.2s}
+.cr-kit-btn.pass{background:rgba(0,230,118,0.08);color:#00e676}
+.cr-kit-btn.pass:hover,.cr-kit-btn.pass.active{background:rgba(0,230,118,0.2);border-color:rgba(0,230,118,0.4)}
+.cr-kit-btn.fail{background:rgba(255,23,68,0.08);color:#ff1744}
+.cr-kit-btn.fail:hover,.cr-kit-btn.fail.active{background:rgba(255,23,68,0.2);border-color:rgba(255,23,68,0.4)}
+
+.cr-peer-summary{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.cr-peer-chip{padding:3px 10px;border-radius:5px;font-size:0.5rem;font-family:'Orbitron',monospace;font-weight:600}
+.cr-peer-chip.pass-chip{background:rgba(0,230,118,0.1);color:#00e676;border:1px solid rgba(0,230,118,0.2)}
+.cr-peer-chip.fail-chip{background:rgba(255,23,68,0.1);color:#ff1744;border:1px solid rgba(255,23,68,0.2)}
+
+.cr-host-controls{display:flex;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06)}
+.cr-host-btn{padding:8px 18px;border-radius:8px;font-family:'Orbitron',monospace;font-size:0.6rem;font-weight:700;cursor:pointer;transition:all 0.2s;border:1px solid transparent}
+.cr-host-btn.approve{background:rgba(0,230,118,0.12);color:#00e676;border-color:rgba(0,230,118,0.3)}
+.cr-host-btn.approve:hover{background:rgba(0,230,118,0.2);transform:scale(1.03)}
+.cr-host-btn.flag{background:rgba(255,215,64,0.1);color:var(--pflx-gold);border-color:rgba(255,215,64,0.2)}
+.cr-host-btn.flag:hover{background:rgba(255,215,64,0.2);transform:scale(1.03)}
+.cr-host-btn.disqualify{background:rgba(255,23,68,0.1);color:#ff1744;border-color:rgba(255,23,68,0.2)}
+.cr-host-btn.disqualify:hover{background:rgba(255,23,68,0.2);transform:scale(1.03)}
+
+.cr-advance-bar{text-align:center;margin-top:24px;padding:16px;background:rgba(124,77,255,0.06);border:1px solid rgba(124,77,255,0.15);border-radius:12px}
+
+.ej-flag-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:5px;background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.2);font-family:'Orbitron',monospace;font-size:0.4rem;color:#ff1744;font-weight:600;margin-left:8px}
+.ej-dq-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:5px;background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);font-family:'Orbitron',monospace;font-size:0.4rem;color:#ff1744;font-weight:700;margin-left:8px;text-decoration:line-through}
+
+/* ═══════════════════════════════════════════════════════════════════
+   JUDGING — VIEW-BEFORE-VOTE GATE
+   ═══════════════════════════════════════════════════════════════════ */
+.ej-view-progress{text-align:center;margin-bottom:20px;padding:14px 20px;background:rgba(255,215,64,0.05);border:1px solid rgba(255,215,64,0.15);border-radius:12px}
+.ej-view-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.06);margin-top:10px;overflow:hidden}
+.ej-view-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--pflx-gold),var(--pflx-green));transition:width 0.4s ease}
+.ej-view-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;background:rgba(41,121,255,0.12);border:1px solid rgba(41,121,255,0.3);color:#2979ff;font-family:'Orbitron',monospace;font-size:0.55rem;font-weight:600;cursor:pointer;transition:all 0.2s}
+.ej-view-btn:hover{background:rgba(41,121,255,0.2);transform:scale(1.03)}
+.ej-view-btn.viewed{background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:#00e676;cursor:default}
+.ej-vote-locked{opacity:0.3;pointer-events:none;position:relative}
+.ej-vote-locked::after{content:'View all submissions first';position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:0.4rem;color:#888;font-family:'Orbitron',monospace}
+.ej-entry.not-viewed{border-left:3px solid rgba(41,121,255,0.4)}
+.ej-entry.viewed-entry{border-left:3px solid rgba(0,230,118,0.3)}
 
 /* ═══════════════════════════════════════════════════════════════════
    ESPORTS HOST SETTINGS
@@ -2270,11 +2410,71 @@ function togglePanel() {
 }
 
 function renderLogin() {
-  // HUD corner decorations (like Core Pathway)
-  const hudCorners = `
-    <div class="hud-corner hud-tl"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="8" cy="8" r="3" fill="rgba(0,229,255,0.5)"/><circle cx="20" cy="8" r="2" fill="rgba(0,229,255,0.3)"/><circle cx="8" cy="20" r="2" fill="rgba(0,229,255,0.3)"/><circle cx="20" cy="20" r="3" fill="rgba(0,229,255,0.5)"/><circle cx="14" cy="14" r="1.5" fill="rgba(0,229,255,0.4)"/></svg></div>
-    <div class="hud-corner hud-tr"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="20" width="3" height="4" fill="rgba(0,229,255,0.4)"/><rect x="9" y="16" width="3" height="8" fill="rgba(0,229,255,0.3)"/><rect x="14" y="12" width="3" height="12" fill="rgba(0,229,255,0.4)"/><rect x="19" y="8" width="3" height="16" fill="rgba(0,229,255,0.5)"/></svg></div>
-    <div class="hud-corner hud-bl"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="rgba(0,229,255,0.25)" stroke-width="1"/><circle cx="12" cy="12" r="4" stroke="rgba(0,229,255,0.15)" stroke-width="1"/><line x1="12" y1="2" x2="12" y2="6" stroke="rgba(0,229,255,0.3)" stroke-width="1"/><line x1="12" y1="18" x2="12" y2="22" stroke="rgba(0,229,255,0.3)" stroke-width="1"/><line x1="2" y1="12" x2="6" y2="12" stroke="rgba(0,229,255,0.3)" stroke-width="1"/><line x1="18" y1="12" x2="22" y2="12" stroke="rgba(0,229,255,0.3)" stroke-width="1"/></svg></div>`;
+  // ═══════════════════════════════════════════════════════════════════
+  // PFLX PLATFORM GATE — replaces the legacy login form entirely.
+  // Battle Arena no longer owns login. Identity comes from the Platform
+  // only. This function now renders either:
+  //   - A "Syncing with Platform" splash when iframed, waiting for the
+  //     postMessage handshake or URL-param adoption to complete.
+  //   - A blocking "Access via PFLX Platform" screen when opened
+  //     standalone (i.e. directly at pflx-battle-arena.vercel.app).
+  // Once adoptAndLogin runs, state.screen flips to "home" and this
+  // function is never called again.
+  // ═══════════════════════════════════════════════════════════════════
+  var inIframe = (typeof window !== 'undefined' && window.parent !== window);
+
+  if (!inIframe) {
+    // Standalone access — block permanently and direct the user to the Platform.
+    return '' +
+      '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;' +
+                  'background:linear-gradient(135deg,#02060f 0%,#0a1228 60%,#0f1830 100%);' +
+                  'font-family:Orbitron,monospace;color:#e0e6ff;z-index:2147483647;">' +
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:18px;max-width:460px;padding:32px;text-align:center;">' +
+          '<div style="font-size:56px;line-height:1;">🛰️</div>' +
+          '<div style="color:#00f0ff;font-size:18px;letter-spacing:3px;text-transform:uppercase;font-weight:700;">' +
+            'Access via PFLX Platform' +
+          '</div>' +
+          '<div style="color:#8a92b0;font-size:13px;line-height:1.6;font-family:Rajdhani,sans-serif;">' +
+            'Battle Arena runs inside the PFLX Platform. Your profile, X-Coin, badges, and progress are all managed there. ' +
+            'Open the Platform and launch this app from inside.' +
+          '</div>' +
+          '<a href="https://www.prototypeflx.com/" style="margin-top:8px;padding:12px 28px;' +
+                'background:linear-gradient(135deg,#00d4ff,#7c3aed);color:#fff;text-decoration:none;' +
+                'border-radius:10px;font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:2px;' +
+                'font-weight:700;box-shadow:0 4px 24px rgba(0,212,255,0.35);">OPEN PFLX PLATFORM →</a>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // Iframed but identity hasn't arrived yet — show the syncing splash.
+  // This matches the Pathways "Syncing with Platform" UX so all sub-apps
+  // present a consistent boot experience.
+  return '' +
+    '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;' +
+                'background:linear-gradient(135deg,#02060f 0%,#0a1228 60%,#0f1830 100%);' +
+                'font-family:Orbitron,monospace;color:#e0e6ff;z-index:2147483647;">' +
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:14px;">' +
+        '<div style="width:38px;height:38px;border-radius:50%;border:2px solid rgba(0,240,255,0.18);' +
+                    'border-top-color:#00f0ff;animation:pflx-arena-spin 0.9s linear infinite;"></div>' +
+        '<div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div>' +
+        '<div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>' +
+      '</div>' +
+      '<style>@keyframes pflx-arena-spin { to { transform: rotate(360deg); } }</style>' +
+    '</div>';
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Legacy login UI fully removed. The PFLX Platform is the sole login
+// surface for the entire suite. See git history (pre-commit 77af824)
+// if you ever need the brand-select + PIN form back.
+// ──────────────────────────────────────────────────────────────────────
+function _legacyLoginRemovedMarker_DO_NOT_CALL() {
+  return '';
+  // sweep — the entire legacy renderLoginLegacy body originally followed,
+  // but is now unreachable code we want stripped by the parser. We close
+  // this function with the closing brace previously belonging to the
+  // legacy renderLoginLegacy function (see EOF of this stub block).
+  /*
 
   if (state.loginStep === "select") {
     // Step 1: Brand selection dropdown — grouped Host / Players like X-Coin
@@ -2284,8 +2484,9 @@ function renderLogin() {
     const hostOpts = hosts.map(h =>
       `<option value="${h.id}">🛡 ${h.brand}</option>`
     ).join("");
+    // Privacy: brand-only — never expose real names to other players.
     const playerOpts = players.map(p =>
-      `<option value="${p.id}">${p.brand} — ${p.name}</option>`
+      `<option value="${p.id}">${p.brand || 'Player'}</option>`
     ).join("");
 
     return `${hudCorners}<div class="login-wrap"><div class="login-box">
@@ -2354,6 +2555,7 @@ function renderLogin() {
 
     <div class="login-footer">System Version 1.0.0 // Secure Connection</div>
   </div></div>`;
+  */
 }
 
 function renderHome() {
@@ -5592,6 +5794,29 @@ function cipherResumeAfterVote() {
   startExplorerLoop();
 }
 
+// ─────────────────────────────────────────────────────────────────
+// PflxDataBus client helper — propose an XC/badge award to the
+// PFLX Platform parent so the Console becomes the source of truth
+// for the player's economy. Console will fire pflx_player_changed
+// after applying, and every iframe (X-Coin home, Pathways card,
+// toolbar, hero, portfolio, DarkCampus feed) updates within ~5ms.
+// In standalone mode (no parent), we just no-op and the local
+// state.player.xc mutation above carries the visual update.
+// ─────────────────────────────────────────────────────────────────
+function arenaPostAward(playerId, awardObj) {
+  if (!playerId || !awardObj) return;
+  try {
+    if (typeof window !== 'undefined' && window.parent !== window) {
+      window.parent.postMessage(JSON.stringify({
+        type: 'pflx_award_proposed',
+        playerId: playerId,
+        source: 'arena',
+        award: awardObj
+      }), '*');
+    }
+  } catch (e) { console.warn('[arena] award post failed', e); }
+}
+
 function cipherEndGame(outcome) {
   const c = state.cipher;
   clearInterval(c.timerInterval);
@@ -5612,9 +5837,27 @@ function cipherEndGame(outcome) {
     correctVote: 0, // simplified for preview
   };
 
-  // Award XC to player
+  // Award XC to player. Two paths:
+  //   In Platform: post pflx_award_proposed → Console applies through
+  //     PflxDataBus.award() → pflx_player_changed → every surface updates.
+  //   Standalone: keep the local state.player.xc mutation so the demo works.
+  // The bus will also re-broadcast the canonical record back, which our
+  // identity listener picks up and writes into state.player — so we'd
+  // double-credit. Therefore: in Platform, skip the local += and let the
+  // round-trip handle it. In standalone, do the local mutation.
   const totalXC = Object.values(c.xcRewards).reduce((s,v) => s+v, 0);
-  if (state.player) state.player.xc += totalXC;
+  if (state.player && totalXC > 0) {
+    const inPlatform = (typeof window !== 'undefined' && window.parent !== window);
+    if (inPlatform) {
+      arenaPostAward(state.player.id, {
+        xc: totalXC,
+        reason: 'arena.cipher.' + outcome,
+        badge: won ? { id: 'b-arena-cipher-victor', name: 'Cipher Victor', category: 'primary' } : null
+      });
+    } else {
+      state.player.xc += totalXC;
+    }
+  }
 
   clearInterval(c.discussionInterval);
   if (won) { SFX.victory(); MUSIC.play('victory'); } else { SFX.defeat(); MUSIC.play('defeat'); }
@@ -5681,9 +5924,36 @@ function answerQuestion(idx) {
     setTimeout(() => {
       state.round++;
       if (state.round >= state.totalRounds) {
-        // Battle over — play victory or defeat
+        // Battle over — play victory or defeat + settle wager
         const won = state.myScore > state.oppScore;
         if (won) SFX.victory(); else SFX.defeat();
+
+        // ── Settle the wager through PflxDataBus when iframed by Platform.
+        // Wager-based: winner takes 2x wager (net +wager), loser -wager.
+        // Console runs PflxDataBus.award(), fires pflx_player_changed,
+        // every surface updates. In standalone mode, no XC change (the
+        // result text already says "You won X XC" but local mutation
+        // is intentionally skipped here for parity with Platform behavior).
+        try {
+          const delta = won ? Number(state.wager || 0) : -Number(state.wager || 0);
+          if (state.player && delta !== 0) {
+            const inPlatform = (typeof window !== 'undefined' && window.parent !== window);
+            if (inPlatform) {
+              arenaPostAward(state.player.id, {
+                xc: delta,
+                reason: 'arena.battle.' + (won ? 'win' : 'loss') + '.wager:' + Math.abs(delta),
+                badge: won ? { id: 'b-arena-battle-victor', name: 'Battle Victor', category: 'primary' } : null
+              });
+            }
+            // Mirror locally so the result screen "You won X XC" / "You lost X XC"
+            // reflects in any other Arena widget reading state.player.xc this
+            // session (leaderboard, wager screen). The Platform round-trip will
+            // overwrite state.player via the identity listener with the
+            // authoritative number, so any double-count is corrected within ~5ms.
+            state.player.xc = Math.max(0, (state.player.xc || 0) + delta);
+          }
+        } catch (e) { console.warn('[arena] wager settle failed', e); }
+
         state.screen = "result";
         render();
       } else {
@@ -7524,6 +7794,252 @@ function generateMaterialKit(modeId) {
   return { label: kit.label, ...kit.generate() };
 }
 
+// ── Guideline checklist from material kit ──
+function getGuidelineItems(match) {
+  if (!match.materialKit) return [];
+  return match.materialKit.items.map((item, i) => ({
+    id: 'gl_' + i,
+    label: item.label + ': ' + item.value,
+    checked: false
+  }));
+}
+
+// Track checklist state per match (in-memory, tied to session)
+const guidelineChecks = {}; // matchId -> { gl_0: true, gl_1: false, ... }
+
+function toggleGuidelineCheck(matchId, checkId) {
+  if (!guidelineChecks[matchId]) guidelineChecks[matchId] = {};
+  guidelineChecks[matchId][checkId] = !guidelineChecks[matchId][checkId];
+  // Update DOM directly without full re-render
+  const item = document.querySelector(`[data-gl="${checkId}"]`);
+  if (item) {
+    item.classList.toggle('checked', guidelineChecks[matchId][checkId]);
+  }
+  // Check if all are checked — update submit button
+  updateGuidelineSubmitGate(matchId);
+  SFX.click();
+}
+
+function updateGuidelineSubmitGate(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match || !match.materialKit) return;
+  const checks = guidelineChecks[matchId] || {};
+  const total = match.materialKit.items.length;
+  const checked = Object.values(checks).filter(Boolean).length;
+  const allDone = checked >= total;
+  const submitBtn = document.getElementById('esports-submit-btn');
+  const allMsg = document.getElementById('gl-all-msg');
+  if (submitBtn) {
+    submitBtn.classList.toggle('gl-submit-blocked', !allDone);
+    submitBtn.title = allDone ? '' : 'Confirm all guidelines before submitting';
+  }
+  if (allMsg) {
+    allMsg.classList.toggle('visible', allDone);
+  }
+}
+
+function renderGuidelineChecklist(match) {
+  if (!match.materialKit) return '';
+  const checks = guidelineChecks[match.id] || {};
+  const items = match.materialKit.items.map((item, i) => {
+    const id = 'gl_' + i;
+    const isChecked = checks[id] || false;
+    return `<div class="gl-check-item ${isChecked ? 'checked' : ''}" data-gl="${id}" onclick="toggleGuidelineCheck('${match.id}','${id}')">
+      <div class="gl-check-box">${isChecked ? '✓' : ''}</div>
+      <div class="gl-check-label">${item.label}: ${item.value}</div>
+    </div>`;
+  }).join('');
+  const total = match.materialKit.items.length;
+  const checked = Object.values(checks).filter(Boolean).length;
+  return `<div class="guideline-checklist">
+    <h4>✅ Guideline Verification (${checked}/${total})</h4>
+    <div style="font-size:0.6rem;color:#888;margin-bottom:10px">Confirm each constraint is met before submitting</div>
+    ${items}
+    <div class="gl-all-checked ${checked >= total ? 'visible' : ''}" id="gl-all-msg">All guidelines verified — ready to submit!</div>
+  </div>`;
+}
+
+// ── File upload for submissions ──
+let submissionFileData = {}; // matchId -> { name, type, dataUrl, preview }
+
+function handleSubmissionFileUpload(matchId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    alert('File must be under 10MB.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const isImage = file.type.startsWith('image/');
+    submissionFileData[matchId] = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      dataUrl: e.target.result,
+      isImage: isImage
+    };
+    // Update UI
+    const zone = document.getElementById('es-file-zone');
+    if (zone) {
+      zone.classList.add('has-file');
+      zone.innerHTML = `<div class="es-file-preview">
+        ${isImage ? `<img src="${e.target.result}" />` : `<div style="font-size:1.5rem">📄</div>`}
+        <div>
+          <div class="es-file-name">${file.name}</div>
+          <div style="font-size:0.55rem;color:#888">${(file.size / 1024).toFixed(0)} KB</div>
+          <button class="es-file-remove" onclick="event.stopPropagation();clearSubmissionFile('${matchId}')">Remove</button>
+        </div>
+      </div>
+      <input type="file" accept="image/*,video/*,.pdf,.zip,.psd,.ai,.sketch,.fig,.blend,.mp3,.wav" onchange="handleSubmissionFileUpload('${matchId}',this)" />`;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearSubmissionFile(matchId) {
+  delete submissionFileData[matchId];
+  const zone = document.getElementById('es-file-zone');
+  if (zone) {
+    zone.classList.remove('has-file');
+    zone.innerHTML = `<div style="font-size:1.5rem">📎</div>
+      <div style="font-size:0.65rem;color:#888;font-family:Orbitron,monospace">Upload File</div>
+      <div style="font-size:0.5rem;color:#555">Images, video, PDF, PSD, ZIP — up to 10MB</div>
+      <input type="file" accept="image/*,video/*,.pdf,.zip,.psd,.ai,.sketch,.fig,.blend,.mp3,.wav" onchange="handleSubmissionFileUpload('${matchId}',this)" />`;
+  }
+}
+
+// ── Screen share + camera recording ──
+let recorderState = { screen: null, cam: null, screenStream: null, camStream: null, screenChunks: [], camChunks: [], screenBlob: null, camBlob: null, screenUrl: '', camUrl: '' };
+
+async function startScreenRecording(matchId) {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    recorderState.screenStream = stream;
+    recorderState.screenChunks = [];
+    const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    mr.ondataavailable = e => { if (e.data.size > 0) recorderState.screenChunks.push(e.data); };
+    mr.onstop = () => {
+      recorderState.screenBlob = new Blob(recorderState.screenChunks, { type: 'video/webm' });
+      recorderState.screenUrl = URL.createObjectURL(recorderState.screenBlob);
+      recorderState.screen = null;
+      render();
+    };
+    mr.start(1000);
+    recorderState.screen = mr;
+    // Show preview
+    const previewEl = document.getElementById('rec-screen-preview');
+    if (previewEl) { previewEl.srcObject = stream; previewEl.play().catch(()=>{}); }
+    // Auto-stop when user stops sharing
+    stream.getVideoTracks()[0].onended = () => stopScreenRecording();
+    render();
+  } catch(e) { console.warn('Screen recording denied:', e); }
+}
+
+function stopScreenRecording() {
+  if (recorderState.screen) { recorderState.screen.stop(); }
+  if (recorderState.screenStream) { recorderState.screenStream.getTracks().forEach(t => t.stop()); recorderState.screenStream = null; }
+}
+
+async function startCamRecording(matchId) {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    recorderState.camStream = stream;
+    recorderState.camChunks = [];
+    const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    mr.ondataavailable = e => { if (e.data.size > 0) recorderState.camChunks.push(e.data); };
+    mr.onstop = () => {
+      recorderState.camBlob = new Blob(recorderState.camChunks, { type: 'video/webm' });
+      recorderState.camUrl = URL.createObjectURL(recorderState.camBlob);
+      recorderState.cam = null;
+      render();
+    };
+    mr.start(1000);
+    recorderState.cam = mr;
+    const previewEl = document.getElementById('rec-cam-preview');
+    if (previewEl) { previewEl.srcObject = stream; previewEl.play().catch(()=>{}); }
+    render();
+  } catch(e) { console.warn('Camera access denied:', e); }
+}
+
+function stopCamRecording() {
+  if (recorderState.cam) { recorderState.cam.stop(); }
+  if (recorderState.camStream) { recorderState.camStream.getTracks().forEach(t => t.stop()); recorderState.camStream = null; }
+}
+
+function renderRecordingControls(matchId) {
+  const isRecScreen = !!recorderState.screen;
+  const isRecCam = !!recorderState.cam;
+  const hasScreenRec = !!recorderState.screenUrl;
+  const hasCamRec = !!recorderState.camUrl;
+
+  return `<div style="margin:16px 0">
+    <div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:700;color:var(--pflx-cyan);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;text-align:center">🎬 Recording</div>
+    <div class="rec-controls">
+      <button class="rec-btn rec-btn-screen ${isRecScreen ? 'recording' : ''}" onclick="${isRecScreen ? `stopScreenRecording()` : `startScreenRecording('${matchId}')`}">
+        ${isRecScreen ? '<span class="rec-dot"></span> Stop Screen' : '🖥️ Record Screen'}
+      </button>
+      <button class="rec-btn rec-btn-cam ${isRecCam ? 'recording' : ''}" onclick="${isRecCam ? `stopCamRecording()` : `startCamRecording('${matchId}')`}">
+        ${isRecCam ? '<span class="rec-dot"></span> Stop Camera' : '📷 Record Camera'}
+      </button>
+    </div>
+    ${(isRecScreen || isRecCam) ? `<div class="rec-preview">
+      ${isRecScreen ? '<video id="rec-screen-preview" muted style="width:100%"></video>' : ''}
+      ${isRecCam ? `<div class="${isRecScreen ? 'rec-pip' : 'rec-preview'}"><video id="rec-cam-preview" muted style="width:100%;${isRecScreen ? '' : 'max-height:180px'}"></video></div>` : ''}
+    </div>` : ''}
+    ${hasScreenRec ? `<div class="rec-saved">✓ Screen recording saved <a href="${recorderState.screenUrl}" download="screen-recording.webm" style="color:var(--pflx-cyan);text-decoration:underline;font-size:0.55rem">Download</a></div>` : ''}
+    ${hasCamRec ? `<div class="rec-saved">✓ Camera recording saved <a href="${recorderState.camUrl}" download="camera-recording.webm" style="color:var(--pflx-cyan);text-decoration:underline;font-size:0.55rem">Download</a></div>` : ''}
+  </div>`;
+}
+
+// ── Challenge Scheduling ──
+function renderSchedulePanel(modeId) {
+  return `<div class="schedule-panel">
+    <h4>📅 Schedule Challenge</h4>
+    <div class="schedule-row">
+      <input type="datetime-local" id="schedule-datetime" />
+      <button class="btn-arena" style="font-size:0.6rem;padding:8px 14px" onclick="scheduleChallenge('${modeId}')">Schedule</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+      <button class="go-live-btn" onclick="goLiveChallenge('${modeId}')">
+        <span class="live-dot" style="width:8px;height:8px;border-radius:50%;background:#ff1744;animation:recDot 1s infinite"></span>
+        Go Live — Stream to Theater
+      </button>
+    </div>
+  </div>`;
+}
+
+function scheduleChallenge(modeId) {
+  const dt = document.getElementById('schedule-datetime');
+  if (!dt || !dt.value) { alert('Pick a date and time.'); return; }
+  const scheduleTime = new Date(dt.value).getTime();
+  if (scheduleTime < Date.now()) { alert('Choose a future time.'); return; }
+  // Store on the mode config
+  esportsHostConfig[modeId] = esportsHostConfig[modeId] || {};
+  esportsHostConfig[modeId].scheduledAt = scheduleTime;
+  saveEsportsConfig();
+  SFX.correct();
+  render();
+}
+
+function goLiveChallenge(modeId) {
+  // Send message to Platform to open virtual theater with this mode's stream
+  try {
+    window.parent.postMessage(JSON.stringify({
+      type: 'pflx_live_stream',
+      action: 'start',
+      source: 'creator_showdown',
+      modeId: modeId,
+      modeName: (ESPORTS_MODES.find(m => m.id === modeId) || {}).name || modeId,
+      streamUrl: window.location.href
+    }), '*');
+  } catch(e) {}
+  SFX.battleStart();
+  // Visual feedback
+  const btn = event.target.closest('.go-live-btn');
+  if (btn) { btn.innerHTML = '<span class="live-dot" style="width:8px;height:8px;border-radius:50%;background:#ff1744;animation:recDot 1s infinite"></span> LIVE — Streaming to Theater'; btn.style.borderColor = '#ff1744'; }
+}
+
 // ── Create a new match ──
 function esportsCreateMatch(title) {
   const mode = esportsState.selectedMode;
@@ -7650,16 +8166,33 @@ function esportsStartMatch(matchId) {
 function esportsSubmit(matchId) {
   const match = esportsState.matches.find(m => m.id === matchId);
   if (!match) return;
+
+  // Check guideline verification
+  if (match.materialKit) {
+    const checks = guidelineChecks[matchId] || {};
+    const total = match.materialKit.items.length;
+    const checked = Object.values(checks).filter(Boolean).length;
+    if (checked < total) { SFX.loginError(); alert('Please verify all battle kit guidelines before submitting.'); return; }
+  }
+
   const linkInput = document.getElementById('esports-sub-link');
   const notesInput = document.getElementById('esports-sub-notes');
   const link = linkInput ? linkInput.value.trim() : '';
   const notes = notesInput ? notesInput.value.trim() : '';
+  const fileData = submissionFileData[matchId] || null;
 
-  if (!link && !notes) { SFX.loginError(); return; }
+  if (!link && !notes && !fileData) { SFX.loginError(); return; }
 
   const contestant = match.contestants.find(c => c.id === state.player.id);
   if (contestant) {
-    contestant.submission = { link, notes, submittedAt: Date.now() };
+    contestant.submission = {
+      link, notes, submittedAt: Date.now(),
+      file: fileData ? { name: fileData.name, type: fileData.type, dataUrl: fileData.dataUrl, isImage: fileData.isImage } : null,
+      screenRecording: recorderState.screenUrl || null,
+      camRecording: recorderState.camUrl || null
+    };
+    // Clean up temp data
+    delete submissionFileData[matchId];
     saveEsportsState();
     SFX.correct();
     render();
@@ -7679,8 +8212,14 @@ function esportsEndSubmissions(matchId) {
     match.winner = (contestant && contestant.submission) ? state.player.id : null;
     esportsState.view = 'results';
   } else {
-    match.status = 'judging';
-    esportsState.view = 'judging';
+    // Route through compliance review if there's a battle kit
+    if (match.materialKit && match.materialKit.items.length > 0) {
+      match.status = 'compliance_review';
+      esportsState.view = 'compliance_review';
+    } else {
+      match.status = 'judging';
+      esportsState.view = 'judging';
+    }
   }
   saveEsportsState();
   SFX.timeout();
@@ -7693,8 +8232,11 @@ function esportsVote(matchId, playerId) {
   if (!match || match.status !== 'judging') return;
   // Can't vote for yourself
   if (playerId === state.player.id) return;
+  // Must view all submissions first
+  if (!hasViewedAll(matchId, match)) { SFX.loginError(); return; }
 
   const contestant = match.contestants.find(c => c.id === playerId);
+  if (!contestant || contestant.complianceStatus === 'disqualified') return;
   if (contestant) {
     contestant.votes++;
     saveEsportsState();
@@ -7708,8 +8250,8 @@ function esportsFinalizeMatch(matchId) {
   const match = esportsState.matches.find(m => m.id === matchId);
   if (!match) return;
 
-  // Winner = most votes; tie = first submitter
-  const withSubs = match.contestants.filter(c => c.submission);
+  // Winner = most votes; tie = first submitter; exclude disqualified
+  const withSubs = match.contestants.filter(c => c.submission && c.complianceStatus !== 'disqualified');
   if (withSubs.length === 0) {
     match.status = 'completed';
     esportsState.view = 'results';
@@ -8166,9 +8708,11 @@ function renderEsportsLobby() {
         <span class="mcb-label">Match Title</span>
         <input type="text" class="mcb-input" id="esports-match-title" placeholder="${mode.name} Challenge" />
       </div>
-      <div style="text-align:right;margin-top:16px">
-        <button class="btn-arena btn-arena-gold" style="font-size:0.75rem;padding:12px 24px" onclick="esportsCreateMatch(document.getElementById('esports-match-title').value)">🚀 Launch Challenge</button>
+      ${esportsHostConfig[mode.id]?.scheduledAt && esportsHostConfig[mode.id].scheduledAt > Date.now() ? `<div style="margin-top:12px"><div class="scheduled-tag">📅 Scheduled: ${new Date(esportsHostConfig[mode.id].scheduledAt).toLocaleString()}</div></div>` : ''}
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn-arena btn-arena-gold" style="font-size:0.75rem;padding:12px 24px" onclick="esportsCreateMatch(document.getElementById('esports-match-title').value)">🚀 Launch Now</button>
       </div>
+      ${isHostUser(state.player) ? renderSchedulePanel(mode.id) : ''}
     </div>
 
     ${openMatches.length > 0 ? `
@@ -8210,19 +8754,42 @@ function renderEsportsMatch() {
   // Submission form (only show if in_progress and not submitted)
   let submitSection = '';
   if (isInProgress && myEntry && !hasSubmitted) {
-    submitSection = `<div class="esports-submit">
-      <h4>📤 Submit Your Entry</h4>
-      <input type="text" class="es-link-input" id="esports-sub-link" placeholder="${mode.submissionLabel}" />
-      <textarea class="es-textarea" id="esports-sub-notes" placeholder="Notes about your submission (optional)" style="margin-top:8px"></textarea>
-      <div style="text-align:right;margin-top:12px">
-        <button class="btn-arena btn-arena-gold" style="font-size:0.7rem;padding:10px 20px" onclick="esportsSubmit('${match.id}')">Submit Entry</button>
+    const glChecks = guidelineChecks[match.id] || {};
+    const glTotal = match.materialKit ? match.materialKit.items.length : 0;
+    const glDone = Object.values(glChecks).filter(Boolean).length;
+    const allGlDone = glTotal === 0 || glDone >= glTotal;
+
+    submitSection = `
+      ${renderGuidelineChecklist(match)}
+      <div class="esports-submit">
+        <h4>📤 Submit Your Entry</h4>
+        <input type="text" class="es-link-input" id="esports-sub-link" placeholder="${mode.submissionLabel}" />
+        <textarea class="es-textarea" id="esports-sub-notes" placeholder="Notes about your submission (optional)" style="margin-top:8px"></textarea>
+        <div class="es-file-upload-zone ${submissionFileData[match.id] ? 'has-file' : ''}" id="es-file-zone">
+          ${submissionFileData[match.id] ? `<div class="es-file-preview">
+            ${submissionFileData[match.id].isImage ? `<img src="${submissionFileData[match.id].dataUrl}" />` : `<div style="font-size:1.5rem">📄</div>`}
+            <div>
+              <div class="es-file-name">${submissionFileData[match.id].name}</div>
+              <button class="es-file-remove" onclick="event.stopPropagation();clearSubmissionFile('${match.id}')">Remove</button>
+            </div>
+          </div>` : `<div style="font-size:1.5rem">📎</div>
+          <div style="font-size:0.65rem;color:#888;font-family:Orbitron,monospace">Upload File</div>
+          <div style="font-size:0.5rem;color:#555">Images, video, PDF, PSD, ZIP — up to 10MB</div>`}
+          <input type="file" accept="image/*,video/*,.pdf,.zip,.psd,.ai,.sketch,.fig,.blend,.mp3,.wav" onchange="handleSubmissionFileUpload('${match.id}',this)" />
+        </div>
+        <div style="text-align:right;margin-top:12px">
+          <button class="btn-arena btn-arena-gold ${!allGlDone ? 'gl-submit-blocked' : ''}" id="esports-submit-btn" style="font-size:0.7rem;padding:10px 20px" onclick="esportsSubmit('${match.id}')" title="${!allGlDone ? 'Confirm all guidelines before submitting' : ''}">Submit Entry</button>
+        </div>
       </div>
-    </div>`;
+      ${renderRecordingControls(match.id)}`;
   } else if (hasSubmitted) {
     submitSection = `<div class="esports-submit" style="border-color:rgba(0,230,118,0.2)">
       <h4 style="color:#00e676">✅ Entry Submitted</h4>
-      <p style="font-size:12px;color:#aaa;margin-top:4px">${myEntry.submission.link}</p>
+      <p style="font-size:12px;color:#aaa;margin-top:4px">${myEntry.submission.link || ''}</p>
       ${myEntry.submission.notes ? `<p style="font-size:11px;color:#666;margin-top:4px">${myEntry.submission.notes}</p>` : ''}
+      ${myEntry.submission.file ? `<div style="margin-top:8px">${myEntry.submission.file.isImage ? `<img src="${myEntry.submission.file.dataUrl}" class="es-submission-img" />` : `<div style="font-size:0.65rem;color:var(--pflx-cyan)">📄 ${myEntry.submission.file.name}</div>`}</div>` : ''}
+      ${myEntry.submission.screenRecording ? `<div class="rec-saved" style="margin-top:8px">🖥️ Screen recording attached <a href="${myEntry.submission.screenRecording}" download="screen-recording.webm" style="color:var(--pflx-cyan);text-decoration:underline">Download</a></div>` : ''}
+      ${myEntry.submission.camRecording ? `<div class="rec-saved">📷 Camera recording attached <a href="${myEntry.submission.camRecording}" download="camera-recording.webm" style="color:var(--pflx-cyan);text-decoration:underline">Download</a></div>` : ''}
     </div>`;
   }
 
@@ -8235,7 +8802,7 @@ function renderEsportsMatch() {
   }
   if (isInProgress && isHost) {
     actionButtons += `<div style="text-align:center;margin-top:16px">
-      <button class="btn-arena btn-arena-red" style="font-size:0.65rem;padding:8px 20px" onclick="esportsEndSubmissions('${match.id}')">⏹️ End Early — Go to Judging</button>
+      <button class="btn-arena btn-arena-red" style="font-size:0.65rem;padding:8px 20px" onclick="esportsEndSubmissions('${match.id}')">⏹️ End Early — Begin Review</button>
     </div>`;
   }
 
@@ -8288,26 +8855,289 @@ function renderEsportsMatch() {
 }
 
 // ── Render: Judging View ──
+// ══════════════════════════════════════════════════════════════════
+//  COMPLIANCE REVIEW PHASE
+//  Flow: submissions end → compliance_review → host approves → judging
+// ══════════════════════════════════════════════════════════════════
+
+// Peer compliance reviews: matchId -> { contestantId -> { reviewerId -> { kitIndex -> 'pass'|'fail' } } }
+const complianceReviews = {};
+// Host decisions: matchId -> { contestantId -> 'approved'|'flagged'|'disqualified' }
+const hostComplianceDecisions = {};
+
+function initComplianceData(matchId) {
+  if (!complianceReviews[matchId]) complianceReviews[matchId] = {};
+  if (!hostComplianceDecisions[matchId]) hostComplianceDecisions[matchId] = {};
+}
+
+function peerReviewKit(matchId, contestantId, kitIndex, verdict) {
+  initComplianceData(matchId);
+  const reviewerId = state.player.id;
+  if (!complianceReviews[matchId][contestantId]) complianceReviews[matchId][contestantId] = {};
+  if (!complianceReviews[matchId][contestantId][reviewerId]) complianceReviews[matchId][contestantId][reviewerId] = {};
+  complianceReviews[matchId][contestantId][reviewerId][kitIndex] = verdict;
+
+  // Update the specific button states inline for snappy feedback
+  const passBtn = document.querySelector(`[data-cr-pass="${contestantId}_${kitIndex}"]`);
+  const failBtn = document.querySelector(`[data-cr-fail="${contestantId}_${kitIndex}"]`);
+  if (passBtn) passBtn.classList.toggle('active', verdict === 'pass');
+  if (failBtn) failBtn.classList.toggle('active', verdict === 'fail');
+
+  // Update summary chips
+  updatePeerSummary(matchId, contestantId);
+  SFX.click();
+}
+
+function updatePeerSummary(matchId, contestantId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match || !match.materialKit) return;
+  const reviews = complianceReviews[matchId]?.[contestantId] || {};
+  const totalItems = match.materialKit.items.length;
+
+  // Tally across all reviewers for each kit item
+  const itemTallies = [];
+  for (let i = 0; i < totalItems; i++) {
+    let passes = 0, fails = 0;
+    Object.values(reviews).forEach(r => {
+      if (r[i] === 'pass') passes++;
+      if (r[i] === 'fail') fails++;
+    });
+    itemTallies.push({ passes, fails });
+  }
+
+  const summaryEl = document.getElementById('cr-summary-' + contestantId);
+  if (summaryEl) {
+    summaryEl.innerHTML = itemTallies.map((t, i) => {
+      if (t.passes === 0 && t.fails === 0) return '';
+      return `<span class="cr-peer-chip ${t.passes >= t.fails ? 'pass-chip' : 'fail-chip'}">#${i+1}: ${t.passes}✓ ${t.fails}✗</span>`;
+    }).join('');
+  }
+}
+
+function getComplianceSummary(matchId, contestantId, match) {
+  if (!match.materialKit) return { passRate: 1, totalReviewers: 0, itemResults: [] };
+  const reviews = complianceReviews[matchId]?.[contestantId] || {};
+  const totalItems = match.materialKit.items.length;
+  const reviewerIds = Object.keys(reviews);
+
+  const itemResults = [];
+  for (let i = 0; i < totalItems; i++) {
+    let passes = 0, fails = 0;
+    reviewerIds.forEach(rid => {
+      if (reviews[rid]?.[i] === 'pass') passes++;
+      if (reviews[rid]?.[i] === 'fail') fails++;
+    });
+    itemResults.push({ passes, fails, total: passes + fails });
+  }
+
+  const totalVotes = itemResults.reduce((s, r) => s + r.passes + r.fails, 0);
+  const totalPasses = itemResults.reduce((s, r) => s + r.passes, 0);
+  const passRate = totalVotes > 0 ? totalPasses / totalVotes : 1;
+
+  return { passRate, totalReviewers: reviewerIds.length, itemResults };
+}
+
+function hostDecision(matchId, contestantId, decision) {
+  initComplianceData(matchId);
+  hostComplianceDecisions[matchId][contestantId] = decision;
+
+  // Store decision on the match contestant for persistence
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (match) {
+    const c = match.contestants.find(x => x.id === contestantId);
+    if (c) c.complianceStatus = decision;
+    saveEsportsState();
+  }
+
+  SFX.click();
+  render();
+}
+
+function advanceToJudging(matchId) {
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match) return;
+  match.status = 'judging';
+  esportsState.view = 'judging';
+  saveEsportsState();
+  SFX.correct();
+  render();
+}
+
+function renderComplianceReview() {
+  const match = esportsState.matches.find(m => m.id === esportsState.activeMatch);
+  if (!match) return renderEsportsHub();
+
+  const isHost = match.hostId === state.player.id;
+  const myId = state.player.id;
+  initComplianceData(match.id);
+  const withSubs = match.contestants.filter(c => c.submission);
+  const others = withSubs.filter(c => c.id !== myId);
+  const kitItems = match.materialKit ? match.materialKit.items : [];
+
+  // Build entry cards
+  const entryCards = withSubs.map(c => {
+    const isSelf = c.id === myId;
+    const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
+    const myReview = complianceReviews[match.id]?.[c.id]?.[myId] || {};
+    const summary = getComplianceSummary(match.id, c.id, match);
+    const hostDec = hostComplianceDecisions[match.id]?.[c.id] || c.complianceStatus || '';
+
+    // Status badge
+    let statusBadge = '<span class="cr-status-badge pending-review">Pending Review</span>';
+    if (hostDec === 'approved') statusBadge = '<span class="cr-status-badge host-approved">✓ Approved</span>';
+    else if (hostDec === 'disqualified') statusBadge = '<span class="cr-status-badge disqualified">✗ Disqualified</span>';
+    else if (hostDec === 'flagged') statusBadge = '<span class="cr-status-badge peer-flagged">⚠ Flagged</span>';
+    else if (summary.totalReviewers > 0 && summary.passRate >= 0.5) statusBadge = '<span class="cr-status-badge peer-approved">Peers: Compliant</span>';
+    else if (summary.totalReviewers > 0) statusBadge = '<span class="cr-status-badge peer-flagged">Peers: Non-Compliant</span>';
+
+    // Kit item review rows (only for other people's submissions)
+    const kitRows = !isSelf && kitItems.length > 0 ? kitItems.map((item, i) => {
+      const myVerdict = myReview[i] || '';
+      return `<div class="cr-kit-item">
+        <div class="cr-kit-label"><strong>${item.label}:</strong> ${item.value}</div>
+        <div class="cr-kit-actions">
+          <button class="cr-kit-btn pass ${myVerdict === 'pass' ? 'active' : ''}" data-cr-pass="${c.id}_${i}" onclick="peerReviewKit('${match.id}','${c.id}',${i},'pass')" title="Meets requirement">✓</button>
+          <button class="cr-kit-btn fail ${myVerdict === 'fail' ? 'active' : ''}" data-cr-fail="${c.id}_${i}" onclick="peerReviewKit('${match.id}','${c.id}',${i},'fail')" title="Does not meet">✗</button>
+        </div>
+      </div>`;
+    }).join('') : '';
+
+    // Submission preview
+    const subPreview = `
+      ${c.submission.link ? `<a href="${c.submission.link}" target="_blank" style="font-size:0.65rem;color:var(--pflx-cyan);text-decoration:underline">🔗 ${c.submission.link}</a>` : ''}
+      ${c.submission.file ? `<div style="margin:6px 0">${c.submission.file.isImage ? `<img src="${c.submission.file.dataUrl}" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid rgba(255,255,255,0.08)" />` : `<span style="font-size:0.6rem;color:var(--pflx-cyan)">📄 ${c.submission.file.name}</span>`}</div>` : ''}
+      ${c.submission.notes ? `<div style="font-size:0.65rem;color:#999;margin-top:4px">${c.submission.notes}</div>` : ''}`;
+
+    // Host controls
+    const hostControls = isHost && !isSelf ? `<div class="cr-host-controls">
+      <button class="cr-host-btn approve ${hostDec === 'approved' ? 'active' : ''}" onclick="hostDecision('${match.id}','${c.id}','approved')">✓ Approve</button>
+      <button class="cr-host-btn flag ${hostDec === 'flagged' ? 'active' : ''}" onclick="hostDecision('${match.id}','${c.id}','flagged')">⚠ Flag</button>
+      <button class="cr-host-btn disqualify ${hostDec === 'disqualified' ? 'active' : ''}" onclick="hostDecision('${match.id}','${c.id}','disqualified')">✗ Disqualify</button>
+    </div>` : '';
+
+    return `<div class="cr-entry ${hostDec === 'approved' ? 'approved' : ''} ${hostDec === 'flagged' || hostDec === 'disqualified' ? 'flagged' : ''}" style="${isSelf ? 'opacity:0.7;border-left:3px solid var(--pflx-cyan)' : ''}">
+      <div class="cr-entry-header">
+        <div class="cr-player">
+          <div class="cr-av">${av}</div>
+          <div class="cr-name">${c.brand || c.name}${isSelf ? ' <span style="font-size:0.5rem;color:var(--pflx-cyan)">(You)</span>' : ''}</div>
+        </div>
+        ${statusBadge}
+      </div>
+      ${subPreview}
+      ${!isSelf && kitItems.length > 0 ? `<div class="cr-kit-checks">
+        <div style="font-family:Orbitron,monospace;font-size:0.55rem;font-weight:700;color:var(--pflx-purple);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Battle Kit Compliance Check</div>
+        ${kitRows}
+        <div class="cr-peer-summary" id="cr-summary-${c.id}">${summary.itemResults.map((t, i) => {
+          if (t.passes === 0 && t.fails === 0) return '';
+          return `<span class="cr-peer-chip ${t.passes >= t.fails ? 'pass-chip' : 'fail-chip'}">#${i+1}: ${t.passes}✓ ${t.fails}✗</span>`;
+        }).join('')}</div>
+      </div>` : ''}
+      ${isSelf ? '<div style="font-size:0.55rem;color:#666;margin-top:8px;font-style:italic">You cannot review your own submission</div>' : ''}
+      ${hostControls}
+    </div>`;
+  }).join('');
+
+  // Advance button — host only
+  const allDecided = isHost && others.every(c => {
+    const d = hostComplianceDecisions[match.id]?.[c.id] || c.complianceStatus || '';
+    return d === 'approved' || d === 'disqualified';
+  });
+
+  return `<div class="compliance-phase">
+    <button class="sq-back" onclick="esportsGoHub()" style="margin-bottom:16px">← Exit</button>
+    <div class="cr-header">
+      <h2>🔍 Compliance Review</h2>
+      <p>${match.modeName} • ${match.difficulty} — Review each submission against the battle kit requirements</p>
+      ${!isHost ? '<div style="font-size:0.55rem;color:var(--pflx-purple);margin-top:6px">Rate whether each entry meets the constraints. The host will make the final call.</div>' : '<div style="font-size:0.55rem;color:var(--pflx-gold);margin-top:6px">Review peer feedback, then approve or flag each entry. Advance to voting when ready.</div>'}
+    </div>
+
+    <div class="esports-prompt" style="margin-bottom:16px">
+      <div class="ep-label">Battle Kit</div>
+      <div class="ep-text" style="font-size:13px">${match.prompt}</div>
+      ${match.materialKit ? `<div style="margin-top:8px">${match.materialKit.items.map(item => `<div style="font-size:0.65rem;color:#bbb;margin-top:2px"><span style="color:var(--pflx-purple);font-weight:600">${item.label}:</span> ${item.value}</div>`).join('')}</div>` : ''}
+    </div>
+
+    ${entryCards}
+
+    ${isHost ? `<div class="cr-advance-bar">
+      ${allDecided ? `<div style="font-size:0.6rem;color:var(--pflx-green);margin-bottom:10px;font-family:Orbitron,monospace">✓ All entries reviewed</div>
+        <button class="btn-arena btn-arena-gold" style="font-size:0.8rem;padding:14px 32px" onclick="advanceToJudging('${match.id}')">⚖️ Advance to Voting</button>`
+        : `<div style="font-size:0.6rem;color:#888;font-family:Orbitron,monospace">Approve or disqualify all entries to proceed (${others.filter(c => {const d = hostComplianceDecisions[match.id]?.[c.id] || c.complianceStatus || ''; return d==='approved'||d==='disqualified';}).length}/${others.length} decided)</div>`}
+    </div>` : '<div style="text-align:center;font-size:11px;color:#888;margin-top:16px">Waiting for host to complete compliance review...</div>'}
+  </div>`;
+}
+
+// ── View-before-vote tracking ──
+const judgingViewed = {}; // matchId -> Set of contestant IDs the current player has viewed
+
+function markSubmissionViewed(matchId, contestantId) {
+  if (!judgingViewed[matchId]) judgingViewed[matchId] = new Set();
+  judgingViewed[matchId].add(contestantId);
+  // Update DOM inline for snappy feedback
+  const btn = document.querySelector(`[data-view-id="${contestantId}"]`);
+  if (btn) { btn.classList.add('viewed'); btn.innerHTML = '✓ Viewed'; }
+  const entry = document.querySelector(`[data-entry-id="${contestantId}"]`);
+  if (entry) { entry.classList.remove('not-viewed'); entry.classList.add('viewed-entry'); }
+  // Check if all non-self submissions are viewed → unlock vote buttons
+  const match = esportsState.matches.find(m => m.id === matchId);
+  if (!match) return;
+  const others = match.contestants.filter(c => c.submission && c.id !== state.player.id);
+  const allViewed = others.every(c => judgingViewed[matchId].has(c.id));
+  if (allViewed) {
+    document.querySelectorAll('.ej-vote-locked').forEach(el => el.classList.remove('ej-vote-locked'));
+  }
+  // Update progress bar
+  const viewed = others.filter(c => judgingViewed[matchId].has(c.id)).length;
+  const fillEl = document.getElementById('ej-view-fill');
+  const countEl = document.getElementById('ej-view-count');
+  if (fillEl) fillEl.style.width = (viewed / others.length * 100) + '%';
+  if (countEl) countEl.textContent = viewed + '/' + others.length + (allViewed ? ' — Ready to vote!' : ' reviewed');
+  SFX.click();
+}
+
+function hasViewedAll(matchId, match) {
+  if (!judgingViewed[matchId]) return false;
+  const others = match.contestants.filter(c => c.submission && c.id !== state.player.id);
+  return others.every(c => judgingViewed[matchId].has(c.id));
+}
+
 function renderEsportsJudging() {
   const match = esportsState.matches.find(m => m.id === esportsState.activeMatch);
   if (!match) return renderEsportsHub();
 
   const isHost = match.hostId === state.player.id;
+  const othersWithSubs = match.contestants.filter(c => c.submission && c.id !== state.player.id);
+  const viewedSet = judgingViewed[match.id] || new Set();
+  const viewedCount = othersWithSubs.filter(c => viewedSet.has(c.id)).length;
+  const allViewed = othersWithSubs.length === 0 || viewedCount >= othersWithSubs.length;
+  const viewPct = othersWithSubs.length > 0 ? (viewedCount / othersWithSubs.length * 100) : 100;
+
   const submissions = match.contestants.filter(c => c.submission).map(c => {
     const av = c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : c.avatar;
-    return `<div class="ej-entry">
+    const isSelf = c.id === state.player.id;
+    const isViewed = isSelf || viewedSet.has(c.id);
+    const voteDisabled = !isSelf && !allViewed;
+    const compStatus = c.complianceStatus || '';
+    const isDQ = compStatus === 'disqualified';
+    const isFlagged = compStatus === 'flagged';
+    const compBadge = isDQ ? '<span class="ej-dq-badge">DISQUALIFIED</span>' : (isFlagged ? '<span class="ej-flag-badge">⚠ FLAGGED</span>' : '');
+    return `<div class="ej-entry ${isSelf ? '' : (isViewed ? 'viewed-entry' : 'not-viewed')}" data-entry-id="${c.id}" style="${isSelf ? 'border-left:3px solid var(--pflx-cyan);opacity:0.85' : ''}${isDQ ? ';opacity:0.4;pointer-events:none' : ''}">
       <div class="ej-entry-header">
         <div class="ej-player">
           <div class="ej-av">${av}</div>
-          <div class="ej-name">${c.brand || c.name}</div>
+          <div class="ej-name">${c.brand || c.name}${isSelf ? ' <span style="font-size:0.5rem;color:var(--pflx-cyan)">(You)</span>' : ''}${compBadge}</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
+          ${!isSelf && !isDQ ? `<button class="ej-view-btn ${isViewed ? 'viewed' : ''}" data-view-id="${c.id}" onclick="event.stopPropagation();markSubmissionViewed('${match.id}','${c.id}')">${isViewed ? '✓ Viewed' : '👁️ Review'}</button>` : ''}
           <span style="font-family:Orbitron,monospace;font-size:0.7rem;color:var(--pflx-gold);font-weight:700">${c.votes} votes</span>
-          ${c.id !== state.player.id ? `<button class="ej-vote-btn" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : ''}
+          ${!isSelf && !isDQ ? `<button class="ej-vote-btn ${voteDisabled ? 'ej-vote-locked' : ''}" onclick="esportsVote('${match.id}','${c.id}')">⭐ Vote</button>` : (isSelf ? `<span style="font-size:0.5rem;color:#666;font-family:Orbitron,monospace">Can't self-vote</span>` : '')}
         </div>
       </div>
       ${c.submission.link ? `<a href="${c.submission.link}" target="_blank" class="ej-link">🔗 View Submission</a>` : ''}
+      ${c.submission.file ? `<div style="margin:8px 0">${c.submission.file.isImage ? `<img src="${c.submission.file.dataUrl}" class="es-submission-img" />` : `<div style="font-size:0.65rem;color:var(--pflx-cyan)">📄 ${c.submission.file.name}</div>`}</div>` : ''}
       ${c.submission.notes ? `<div class="ej-notes">${c.submission.notes}</div>` : ''}
+      ${c.submission.screenRecording ? `<div style="margin-top:8px"><video src="${c.submission.screenRecording}" controls style="width:100%;max-height:200px;border-radius:8px"></video><div style="font-size:0.5rem;color:#888;margin-top:2px">🖥️ Screen Recording</div></div>` : ''}
+      ${c.submission.camRecording ? `<div style="margin-top:8px"><video src="${c.submission.camRecording}" controls style="width:100%;max-height:150px;border-radius:8px"></video><div style="font-size:0.5rem;color:#888;margin-top:2px">📷 Camera Recording</div></div>` : ''}
     </div>`;
   }).join('');
 
@@ -8325,6 +9155,12 @@ function renderEsportsJudging() {
       <div class="ep-label">Prompt Was</div>
       <div class="ep-text" style="font-size:14px">${match.prompt}</div>
     </div>
+
+    ${othersWithSubs.length > 0 ? `<div class="ej-view-progress">
+      <div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:700;color:${allViewed ? 'var(--pflx-green)' : 'var(--pflx-gold)'};text-transform:uppercase;letter-spacing:0.08em">${allViewed ? '✓ All Submissions Reviewed — Vote Now!' : '👁️ Review All Submissions to Unlock Voting'}</div>
+      <div style="font-size:0.55rem;color:#888;margin-top:4px" id="ej-view-count">${viewedCount}/${othersWithSubs.length}${allViewed ? ' — Ready to vote!' : ' reviewed'}</div>
+      <div class="ej-view-bar"><div class="ej-view-fill" id="ej-view-fill" style="width:${viewPct}%"></div></div>
+    </div>` : ''}
 
     <div class="ej-submissions">${submissions}</div>
     ${noSubList}
@@ -8447,6 +9283,7 @@ function renderEsportsResults() {
 function renderEsportsScreen() {
   if (esportsState.view === 'lobby') return renderEsportsLobby();
   if (esportsState.view === 'match') return renderEsportsMatch();
+  if (esportsState.view === 'compliance_review') return renderComplianceReview();
   if (esportsState.view === 'judging') return renderEsportsJudging();
   if (esportsState.view === 'results') return renderEsportsResults();
   return renderEsportsHub();
@@ -8454,6 +9291,288 @@ function renderEsportsScreen() {
 
 // Init
 render();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PFLX BATTLE ARENA · PLATFORM SSO BRIDGE
+     Enforces: NO local login when running from PFLX Platform.
+       - Standalone access (not in iframe) → block screen.
+       - In iframe → request identity from Platform, hide login UI,
+         find the matching player in PLAYERS, auto-login.
+═══════════════════════════════════════════════════════════════════ -->
+<style>
+/* Hide local login screen entirely when running inside the Platform iframe */
+body.pflx-in-iframe .login-container,
+body.pflx-in-iframe #brandSelect,
+body.pflx-in-iframe #pinInput,
+body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !important; }
+#pflxArenaIframeGuard { position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#02060f 0%,#0a1228 60%,#0f1830 100%); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; font-family:'Orbitron','Share Tech Mono',monospace; color:#e0e6ff; }
+#pflxArenaIframeGuard .pf-spin { width:38px; height:38px; border-radius:50%; border:2px solid rgba(0,240,255,0.18); border-top-color:#00f0ff; animation:pflx-iframe-spin 0.9s linear infinite; }
+@keyframes pflx-iframe-spin { to { transform: rotate(360deg); } }
+</style>
+<script>
+(function () {
+  var PLATFORM_URL = 'https://www.prototypeflx.com/';
+
+  function showBlock(html) {
+    var g = document.getElementById('pflxArenaIframeGuard');
+    if (g) g.remove();
+    g = document.createElement('div');
+    g.id = 'pflxArenaIframeGuard';
+    g.innerHTML = html;
+    document.body.appendChild(g);
+  }
+  function hideBlock() {
+    var g = document.getElementById('pflxArenaIframeGuard');
+    if (g) g.remove();
+  }
+
+  // 1. STANDALONE access → permanently block. Apps run only inside Platform.
+  if (window.parent === window) {
+    showBlock(
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:18px;max-width:460px;padding:32px;text-align:center;">' +
+        '<div style="font-size:56px;line-height:1;">🛰️</div>' +
+        '<div style="color:#00f0ff;font-size:18px;letter-spacing:3px;text-transform:uppercase;font-weight:700;">Access via PFLX Platform</div>' +
+        '<div style="color:#8a92b0;font-size:13px;line-height:1.6;font-family:Rajdhani,sans-serif;">Battle Arena runs inside the PFLX Platform. Your profile, X-Coin, badges, and progress are all managed there. Open the Platform and launch this app from inside.</div>' +
+        '<a href="' + PLATFORM_URL + '" style="margin-top:8px;padding:12px 28px;background:linear-gradient(135deg,#00d4ff,#7c3aed);color:#fff;text-decoration:none;border-radius:10px;font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:2px;font-weight:700;box-shadow:0 4px 24px rgba(0,212,255,0.35);">OPEN PFLX PLATFORM →</a>' +
+      '</div>'
+    );
+    return;
+  }
+
+  // 2. IN IFRAME — hide login UI, adopt identity from URL params if Console
+  //    passed them, otherwise wait for postMessage. URL-param path is
+  //    instant — no spinner.
+  document.body.classList.add('pflx-in-iframe');
+
+  // Fast-path: Console builds iframe URLs with identity params via buildAppURL.
+  // If sso=pflx is in the URL, adopt immediately on first paint.
+  function adoptFromUrlParams() {
+    try {
+      var p = new URLSearchParams(window.location.search);
+      if (p.get('sso') !== 'pflx') return false;
+      var brand = p.get('brand');
+      if (!brand) return false;
+      var user = {
+        id: p.get('id') || null,
+        brand: brand,
+        name: p.get('user') || brand,
+        role: p.get('role') || 'Student',
+        cohort: p.get('cohort') || 'PlayerPool',
+        xc: parseInt(p.get('xc'), 10) || 0,
+        pin: p.get('pin') || ''
+      };
+      return adoptAndLogin(user);
+    } catch (e) { return false; }
+  }
+  // Defer one tick so PLAYERS / login / state / render are defined when our adopt runs.
+  setTimeout(function () {
+    if (adoptFromUrlParams()) return; // URL params worked — no spinner needed
+    // No URL identity — show the syncing spinner while we wait for postMessage
+    showBlock('<div class="pf-spin"></div><div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div><div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>');
+  }, 0);
+
+  function adoptAndLogin(user) {
+    if (!user || !user.brand) { console.warn('[arena-bridge] no user/brand to adopt'); return false; }
+    console.info('[arena-bridge] adopting Platform identity:', user.brand);
+    try {
+      localStorage.setItem('pflx_user', JSON.stringify({
+        id: user.id, brandName: user.brand, brand: user.brand, name: user.name || user.brand,
+        role: user.role || 'Student', cohort: user.cohort || 'PlayerPool',
+        xcoin: user.xc || 0, totalXcoin: user.totalXcoin || user.xc || 0,
+        digitalBadges: user.digitalBadges || 0, image: user.image || '',
+        level: user.level || 1, pin: user.pin || '', __pflxFromPlatform: true
+      }));
+    } catch (e) {}
+
+    // Try: find matching player in Arena's local PLAYERS by brand or id
+    var match = null;
+    if (typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
+      match = PLAYERS.find(function (p) {
+        return (p.brand || p.brandName || '').toUpperCase() === user.brand.toUpperCase()
+            || (p.id && p.id === user.id);
+      });
+    }
+
+    // Fallback: synthesize a player record so Arena has something to render against
+    if (!match && typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
+      var isHost = /admin|host|teacher|instructor|master/i.test(String(user.role || ''));
+      match = {
+        id: user.id || ('platform-' + Date.now()),
+        brand: user.brand,
+        brandName: user.brand,
+        name: user.name || user.brand,
+        role: isHost ? 'admin' : 'player',
+        pin: user.pin || '0000',
+        cohort: user.cohort || 'PlayerPool',
+        xcoin: user.xc || 0,
+        totalXcoin: user.totalXcoin || user.xc || 0,
+        digitalBadges: user.digitalBadges || 0,
+        image: user.image || '',
+        level: user.level || 1,
+        avatar: '',
+        isHost: isHost,
+        claimed: true,
+        arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 }
+      };
+      PLAYERS.push(match);
+      console.info('[arena-bridge] synthesized arena player for', user.brand);
+    }
+
+    if (!match) { console.warn('[arena-bridge] could not find or synthesize match'); return false; }
+
+    // Try login() function — preferred path
+    if (typeof login === 'function') {
+      try { login(match.id); hideBlock(); console.info('[arena-bridge] logged in via login()'); return true; } catch (e) { console.warn('[arena-bridge] login() threw', e); }
+    }
+    // Fallback: set state directly + re-render
+    try {
+      if (typeof state !== 'undefined') {
+        state.player = match;
+        state.screen = 'home';
+        state.loginStep = null;
+        state.selectedLoginPlayer = null;
+        state.pinValue = '';
+      }
+      if (typeof render === 'function') render();
+      hideBlock();
+      console.info('[arena-bridge] logged in via state-fallback');
+      return true;
+    } catch (e) { console.warn('[arena-bridge] state fallback failed', e); return false; }
+  }
+
+  // Listen for identity broadcasts from the Platform
+  window.addEventListener('message', function (ev) {
+    try {
+      var msg = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data;
+      if (!msg || typeof msg !== 'object') return;
+      if ((msg.type === 'pflx_identity_broadcast' || msg.type === 'pflx_identity_response') && msg.user) {
+        // Try immediately, then retry up to 30x as PLAYERS / login load asynchronously
+        if (adoptAndLogin(msg.user)) return;
+        var tries = 0;
+        var iv = setInterval(function () {
+          tries++;
+          if (adoptAndLogin(msg.user) || tries > 30) clearInterval(iv);
+        }, 200);
+      }
+      if (msg.type === 'pflx_force_identity_sync') {
+        try {
+          window.parent.postMessage(JSON.stringify({ type: 'pflx_identity_request' }), '*');
+        } catch (e) {}
+      }
+      // ── PflxDataBus.mc: MC data response / change broadcast ──
+      if (msg.type === 'pflx_mc_data' && msg.key && Array.isArray(msg.items)) {
+        try { window.dispatchEvent(new CustomEvent('pflx-mc-data', { detail: { key: msg.key, items: msg.items, opts: msg.opts || null, ackId: msg.ackId || null } })); } catch (e) {}
+      }
+      if (msg.type === 'pflx_mc_changed' && msg.key && Array.isArray(msg.items)) {
+        try { window.dispatchEvent(new CustomEvent('pflx-mc-changed', { detail: { key: msg.key, items: msg.items } })); } catch (e) {}
+      }
+
+      // ── PflxDataBus.award: reward granted (animations / feed) ──
+      if (msg.type === 'pflx_award_granted' && msg.playerId && msg.award) {
+        try { window.dispatchEvent(new CustomEvent('pflx-award-granted', { detail: { playerId: msg.playerId, award: msg.award, txId: msg.txId, player: msg.player || null } })); } catch (e) {}
+      }
+
+      // ── PflxDataBus: Console says this player's record changed ──
+      // Same handler — re-adopt with the fresh record so any updated avatar,
+      // XC, badge count, rank override etc. propagates into the Arena view.
+      if (msg.type === 'pflx_player_changed' && msg.player) {
+        var p = msg.player;
+        // Reshape canonical → arena's adoptAndLogin shape (it expects the
+        // legacy 'user' object with brand/xc/etc., so map field names).
+        var u = {
+          id: p.id,
+          name: p.name,
+          brand: p.brand || p.brandName,
+          brandName: p.brand || p.brandName,
+          role: p.role,
+          cohort: (Array.isArray(p.cohorts) ? p.cohorts.join(', ') : p.cohort),
+          email: p.email,
+          pin: p.pin,
+          xc: typeof p.xc === 'number' ? p.xc : (typeof p.xcoin === 'number' ? p.xcoin : 0),
+          totalXcoin: p.totalXcoin,
+          digitalBadges: p.digitalBadges,
+          image: p.image,
+          slogan: p.slogan,
+          level: p.level,
+          rank: p.rank,
+          studioId: p.studioId,
+          pathway: p.pathway
+        };
+        if (adoptAndLogin(u)) return;
+        var triesB = 0;
+        var ivB = setInterval(function () {
+          triesB++;
+          if (adoptAndLogin(u) || triesB > 30) clearInterval(ivB);
+        }, 200);
+      }
+    } catch (e) {}
+  });
+
+  // Tell Platform "I'm here, send me the active session"
+  function requestIdentity() {
+    try { window.parent.postMessage(JSON.stringify({ type: 'pflx_identity_request' }), '*'); } catch (e) {}
+    try { window.parent.postMessage(JSON.stringify({ type: 'pflx_subapp_ready', app: 'battle-arena' }), '*'); } catch (e) {}
+  }
+
+  // Cache poll: Platform's bridge writes localStorage 'pflx_user' for cross-app
+  // SSO. If it's there, we can adopt without waiting for a postMessage.
+  function pollCachedIdentity() {
+    try {
+      var raw = localStorage.getItem('pflx_user');
+      if (!raw) return false;
+      var u = JSON.parse(raw);
+      if (!u || !(u.brand || u.brandName)) return false;
+      var brand = u.brand || u.brandName;
+      return adoptAndLogin({
+        id: u.id, brand: brand, name: u.name || brand,
+        role: u.role, cohort: u.cohort, xc: u.xcoin || u.xc, totalXcoin: u.totalXcoin,
+        digitalBadges: u.digitalBadges, image: u.image, level: u.level, pin: u.pin
+      });
+    } catch (e) { return false; }
+  }
+
+  // BANNER VERSION — proves which preview.html is live so cache-misses are diagnosable.
+  console.info('[arena-bridge] PflxBridge v3 (' + new Date().toISOString().slice(0,10) + ') — in iframe; awaiting Platform identity');
+
+  requestIdentity();
+  // Retry-with-poll: every 500ms check both message-based identity (handler above)
+  // and the cached pflx_user. Also re-request from parent on each tick until we
+  // get someone logged in.
+  var attempts = 0;
+  var poll = setInterval(function () {
+    attempts++;
+    if (typeof state !== 'undefined' && state.player) { clearInterval(poll); return; }
+    requestIdentity();
+    pollCachedIdentity();
+    if (attempts > 20) clearInterval(poll); // give up after ~10s
+  }, 500);
+
+  // Wrap render() so the login screen is BYPASSED when in iframe with a
+  // cached identity. This is the strongest backstop: even if state somehow
+  // gets reset to 'login', the next render call adopts the cached identity
+  // and switches to 'home'.
+  var origRender = (typeof render === 'function') ? render : null;
+  if (origRender) {
+    window.render = function () {
+      try {
+        if (window.parent !== window && typeof state !== 'undefined' && state.screen === 'login' && !state.player) {
+          if (pollCachedIdentity()) {
+            // adoptAndLogin already called login() / state-fallback which sets screen='home'
+            // and calls render(). Don't double-render.
+            return;
+          }
+        }
+      } catch (e) {}
+      return origRender.apply(this, arguments);
+    };
+    // Also make the inner-scope render reference point to the wrapped one
+    try { render = window.render; } catch (e) {}
+  }
+
+  // Safety: if no identity arrives in 12s, hide the spinner so the user can see the app.
+  setTimeout(function () { hideBlock(); }, 12000);
+})();
 </script>
 </body>
 </html>
