@@ -4,6 +4,21 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════════
+     PFLX PLATFORM GATING — kill the local login UI before first paint
+     Battle Arena no longer owns identity. The PFLX Platform is the only
+     login surface. This synchronous block runs before any CSS or render
+     so the legacy login form never appears on screen, even for a frame.
+═══════════════════════════════════════════════════════════════════ -->
+<script>
+  (function () {
+    try {
+      var inIframe = window.parent !== window;
+      // Set classes immediately on the documentElement so CSS below can use them.
+      document.documentElement.setAttribute('data-pflx-context', inIframe ? 'iframe' : 'standalone');
+    } catch (e) {}
+  })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -2395,6 +2410,64 @@ function togglePanel() {
 }
 
 function renderLogin() {
+  // ═══════════════════════════════════════════════════════════════════
+  // PFLX PLATFORM GATE — replaces the legacy login form entirely.
+  // Battle Arena no longer owns login. Identity comes from the Platform
+  // only. This function now renders either:
+  //   - A "Syncing with Platform" splash when iframed, waiting for the
+  //     postMessage handshake or URL-param adoption to complete.
+  //   - A blocking "Access via PFLX Platform" screen when opened
+  //     standalone (i.e. directly at pflx-battle-arena.vercel.app).
+  // Once adoptAndLogin runs, state.screen flips to "home" and this
+  // function is never called again.
+  // ═══════════════════════════════════════════════════════════════════
+  var inIframe = (typeof window !== 'undefined' && window.parent !== window);
+
+  if (!inIframe) {
+    // Standalone access — block permanently and direct the user to the Platform.
+    return '' +
+      '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;' +
+                  'background:linear-gradient(135deg,#02060f 0%,#0a1228 60%,#0f1830 100%);' +
+                  'font-family:Orbitron,monospace;color:#e0e6ff;z-index:2147483647;">' +
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:18px;max-width:460px;padding:32px;text-align:center;">' +
+          '<div style="font-size:56px;line-height:1;">🛰️</div>' +
+          '<div style="color:#00f0ff;font-size:18px;letter-spacing:3px;text-transform:uppercase;font-weight:700;">' +
+            'Access via PFLX Platform' +
+          '</div>' +
+          '<div style="color:#8a92b0;font-size:13px;line-height:1.6;font-family:Rajdhani,sans-serif;">' +
+            'Battle Arena runs inside the PFLX Platform. Your profile, X-Coin, badges, and progress are all managed there. ' +
+            'Open the Platform and launch this app from inside.' +
+          '</div>' +
+          '<a href="https://www.prototypeflx.com/" style="margin-top:8px;padding:12px 28px;' +
+                'background:linear-gradient(135deg,#00d4ff,#7c3aed);color:#fff;text-decoration:none;' +
+                'border-radius:10px;font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:2px;' +
+                'font-weight:700;box-shadow:0 4px 24px rgba(0,212,255,0.35);">OPEN PFLX PLATFORM →</a>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // Iframed but identity hasn't arrived yet — show the syncing splash.
+  // This matches the Pathways "Syncing with Platform" UX so all sub-apps
+  // present a consistent boot experience.
+  return '' +
+    '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;' +
+                'background:linear-gradient(135deg,#02060f 0%,#0a1228 60%,#0f1830 100%);' +
+                'font-family:Orbitron,monospace;color:#e0e6ff;z-index:2147483647;">' +
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:14px;">' +
+        '<div style="width:38px;height:38px;border-radius:50%;border:2px solid rgba(0,240,255,0.18);' +
+                    'border-top-color:#00f0ff;animation:pflx-arena-spin 0.9s linear infinite;"></div>' +
+        '<div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div>' +
+        '<div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>' +
+      '</div>' +
+      '<style>@keyframes pflx-arena-spin { to { transform: rotate(360deg); } }</style>' +
+    '</div>';
+}
+
+// Legacy renderLogin body retained below ONLY so it can still be referenced
+// by any code paths we missed. It will never be called because renderLogin
+// above returns first. Kept as dead code rather than deleted so a future
+// rollback is clean; safe to remove once the gate has been live for a week.
+function renderLoginLegacy() {
   // HUD corner decorations (like Core Pathway)
   const hudCorners = `
     <div class="hud-corner hud-tl"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="8" cy="8" r="3" fill="rgba(0,229,255,0.5)"/><circle cx="20" cy="8" r="2" fill="rgba(0,229,255,0.3)"/><circle cx="8" cy="20" r="2" fill="rgba(0,229,255,0.3)"/><circle cx="20" cy="20" r="3" fill="rgba(0,229,255,0.5)"/><circle cx="14" cy="14" r="1.5" fill="rgba(0,229,255,0.4)"/></svg></div>
