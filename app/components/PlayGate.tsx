@@ -153,7 +153,7 @@ export default function PlayGate() {
         {/* Logo */}
         <div className="mb-6 flex items-center justify-center">
           <img
-            src="/battle-arena.png"
+            src="/PFLX%20Battle%20Arena%20Icon.png"
             alt="PFLX Battle Arena"
             className="w-40 h-40 object-contain drop-shadow-[0_0_24px_rgba(0,212,255,0.45)]"
           />
