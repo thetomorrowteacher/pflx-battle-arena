@@ -5,6 +5,7 @@ import PflxBridge from "./components/PflxBridge";
 import PflxIframeGuard from "./components/PflxIframeGuard";
 import RoleGuard from "./components/RoleGuard";
 import CloudSaveToast from "./components/CloudSaveToast";
+import PflxTour from "./components/PflxTour";
 
 export const metadata: Metadata = {
   title: "PFLX Battle Arena",
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PflxIframeGuard />
         <RoleGuard />
         <CloudSaveToast />
+        <PflxTour />
       </body>
     </html>
   );
