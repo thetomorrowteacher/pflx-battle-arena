@@ -9347,12 +9347,20 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
 
   // Fast-path: Console builds iframe URLs with identity params via buildAppURL.
   // If sso=pflx is in the URL, adopt immediately on first paint.
+  //
+  // Brand-fallback chain: the previous version required p.get('brand') to be
+  // truthy. For a fresh self-signed-up player like Sphinx Link, the parent
+  // platform built the iframe URL before activeSession.brand had resolved,
+  // sending brand=&. That empty string was falsy, the early-return fired,
+  // the post-message-wait spinner showed forever, and the player was
+  // trapped. The new behavior synthesizes a brand from user / id / "Player"
+  // when the param is empty. PflxBridge will refresh it with the real value
+  // once it lands. sso=pflx alone is identity enough for us to render.
   function adoptFromUrlParams() {
     try {
       var p = new URLSearchParams(window.location.search);
       if (p.get('sso') !== 'pflx') return false;
-      var brand = p.get('brand');
-      if (!brand) return false;
+      var brand = p.get('brand') || p.get('user') || p.get('id') || 'Player';
       var user = {
         id: p.get('id') || null,
         brand: brand,
@@ -9366,14 +9374,29 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
     } catch (e) { return false; }
   }
   // Defer one tick so PLAYERS / login / state / render are defined when our adopt runs.
+  // No spinner fallback — the platform always launches us with sso=pflx, so
+  // adoptFromUrlParams() always succeeds. If it ever doesn't, the player
+  // should see the app render and let PflxBridge hydrate identity
+  // asynchronously rather than stare at a spinner with no escape.
   setTimeout(function () {
-    if (adoptFromUrlParams()) return; // URL params worked — no spinner needed
-    // No URL identity — show the syncing spinner while we wait for postMessage
-    showBlock('<div class="pf-spin"></div><div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div><div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>');
+    if (adoptFromUrlParams()) return;
+    // Fallback adopt — synthesize the bare minimum identity so the app
+    // can render. PflxBridge will overwrite this when the real identity
+    // arrives over postMessage.
+    try { adoptAndLogin({ brand: 'Player', name: 'Player', role: 'Student', cohort: 'PlayerPool', xc: 0, pin: '' }); } catch (e) {}
   }, 0);
 
   function adoptAndLogin(user) {
-    if (!user || !user.brand) { console.warn('[arena-bridge] no user/brand to adopt'); return false; }
+    // Brand-fallback chain. The previous version returned false when
+    // user.brand was empty, which trapped Sphinx-class fresh signups
+    // on the syncing spinner. Now we synthesize "Player" so the app
+    // always renders and PflxBridge can hydrate the real brand over
+    // postMessage as soon as it arrives.
+    if (!user) user = {};
+    if (!user.brand) {
+      user.brand = user.name || user.id || 'Player';
+      console.info('[arena-bridge] no brand in adopt payload, synthesizing:', user.brand);
+    }
     console.info('[arena-bridge] adopting Platform identity:', user.brand);
     try {
       localStorage.setItem('pflx_user', JSON.stringify({
