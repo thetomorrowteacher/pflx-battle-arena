@@ -23,80 +23,37 @@ export default function PflxIframeGuard() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // ── ONLY block we keep ── standalone access (someone loaded the
+    // Battle Arena URL directly in a tab instead of via the PFLX
+    // Platform iframe). For everything else — embedded in ANY iframe —
+    // we render immediately. The reasoning:
+    //
+    //   1. The Battle Arena URL is only ever embedded by the PFLX
+    //      Platform shell. There is no other consumer.
+    //   2. The shared pflx-app-bootstrap.js (loaded in layout.tsx as a
+    //      beforeInteractive Script) independently enforces the cohort
+    //      access gate by reading allowedApps from the URL and rendering
+    //      its OWN ACCESS DENIED overlay when the player isn't allowed
+    //      in. PflxIframeGuard is NOT the gate — it's just a "wait for
+    //      identity" curtain that was strangling fresh self-signups.
+    //   3. The Sphinx Link class of bug — a self-signed-up player whose
+    //      record hadn't fully resolved by the time the iframe URL was
+    //      built — kept finding new edge cases that defeated each
+    //      tightening of the fast-paths. The right answer is to trust
+    //      the parent: if we're in an iframe, we were launched by
+    //      something that intended to launch us, and PflxBridge will
+    //      hydrate identity via postMessage on its own schedule.
+    //
+    // PflxBridge still listens for pflx_identity_broadcast and updates
+    // local state when it arrives, so the app will pick up the real
+    // brand / role / cohort once they land. There is no race that this
+    // guard's spinner ever actually fixed — every loop only delayed
+    // the player.
     if (window.parent === window) {
-      setState("blocked"); // standalone access — block permanently
+      setState("blocked");
       return;
     }
-    // Fast-path 1 — any platform-launched URL. Previously we required both
-    // sso=pflx AND brand. That trapped fresh self-signups where the parent
-    // built the iframe URL before activeSession.brand resolved (brand=""
-    // is a falsy URLSearchParams value). The platform is the auth source
-    // of truth — if it launched us with sso=pflx, that's identity enough
-    // for us to render. PflxBridge will hydrate the actual brand /
-    // role / cohort over postMessage shortly after.
-    try {
-      const p = new URLSearchParams(window.location.search);
-      if (p.get("sso") === "pflx") {
-        setState("ready");
-        return;
-      }
-    } catch {}
-    // Fast-path 2 — anything in localStorage that looks like a prior
-    // identity. Same loosened rule: presence is enough; field shape
-    // doesn't matter. PflxBridge will refresh it with fresh data.
-    try {
-      const cached = localStorage.getItem("pflx_user") || localStorage.getItem("pflx_identity") || localStorage.getItem("pflx_active_session");
-      if (cached && cached.length > 2) {
-        setState("ready");
-        return;
-      }
-    } catch {}
-    // Fast-path 3 — even with no identity hint at all, if we're embedded
-    // by the platform domain, trust the parent. This is the new floor
-    // for the Sphinx Link class of bug: a self-signed-up player whose
-    // record landed in the parent after the iframe URL was built.
-    try {
-      const ref = String(document.referrer || "");
-      if (ref.indexOf("prototypeflx.com") !== -1
-       || ref.indexOf("pflx-platform") !== -1
-       || ref.indexOf("localhost") !== -1) {
-        setState("ready");
-        return;
-      }
-    } catch {}
-
-    setState("syncing");
-    let cleared = false;
-    const reveal = () => {
-      if (cleared) return;
-      cleared = true;
-      setState("ready");
-    };
-    window.addEventListener("pflx-identity-changed", reveal as EventListener);
-    // Proactively ask the parent for identity. The platform shell responds
-    // with pflx_identity_broadcast which PflxBridge translates into the
-    // pflx-identity-changed event the reveal handler listens for.
-    try {
-      window.parent.postMessage(JSON.stringify({ type: "pflx_identity_request" }), "*");
-    } catch {}
-    // Retry the request a few times in case the parent isn't ready yet.
-    const retryTimers: number[] = [];
-    [200, 600, 1200].forEach((delay) => {
-      retryTimers.push(window.setTimeout(() => {
-        if (cleared) return;
-        try { window.parent.postMessage(JSON.stringify({ type: "pflx_identity_request" }), "*"); } catch {}
-      }, delay));
-    });
-    // Safety: never trap longer than 1.5s. Reduced from 3.5s because
-    // even when identity is genuinely missing, we'd rather render the
-    // app and let the player click into a screen they can act on than
-    // stare at a spinner for 3+ seconds wondering if it's broken.
-    const timer = window.setTimeout(reveal, 1500);
-    return () => {
-      window.removeEventListener("pflx-identity-changed", reveal as EventListener);
-      window.clearTimeout(timer);
-      retryTimers.forEach((t) => window.clearTimeout(t));
-    };
+    setState("ready");
   }, []);
 
   if (state === "ready") return null;
