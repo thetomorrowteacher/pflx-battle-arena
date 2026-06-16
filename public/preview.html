@@ -9483,8 +9483,17 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
       console.info('[arena-bridge] merged fresh fields into existing player:', match.brand, 'image?', !!match.image);
     }
 
-    // Fallback: synthesize a player record so Arena has something to render against
-    if (!match && typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
+    // Fallback: synthesize a player record so Arena has something to render
+    // against. CRITICAL: do NOT gate this on PLAYERS being defined. The
+    // previous version required PLAYERS to be loaded before it would
+    // synthesize, but PLAYERS is async-loaded and on a fresh self-signup
+    // adopt runs before it's ready. Without a synthesized match, state.player
+    // stays null, the home view renders blank, and the player stares at a
+    // black screen instead of the spinner — same trap, new symptom. Always
+    // synthesize the match. Push it onto PLAYERS only if PLAYERS is already
+    // an array; otherwise it just lives on state.player and that's enough
+    // for the home view to render.
+    if (!match) {
       var isHost = /admin|host|teacher|instructor|master/i.test(String(user.role || ''));
       match = {
         id: user.id || ('platform-' + Date.now()),
@@ -9504,11 +9513,11 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
         claimed: true,
         arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 }
       };
-      PLAYERS.push(match);
-      console.info('[arena-bridge] synthesized arena player for', user.brand);
+      if (typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
+        try { PLAYERS.push(match); } catch (e) {}
+      }
+      console.info('[arena-bridge] synthesized arena player for', user.brand, '(PLAYERS defined?', typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS), ')');
     }
-
-    if (!match) { console.warn('[arena-bridge] could not find or synthesize match'); return false; }
 
     // Try login() function — preferred path
     if (typeof login === 'function') {
