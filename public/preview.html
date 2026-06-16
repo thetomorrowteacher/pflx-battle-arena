@@ -2446,21 +2446,29 @@ function renderLogin() {
       '</div>';
   }
 
-  // Iframed but identity hasn't arrived yet — show the syncing splash.
-  // This matches the Pathways "Syncing with Platform" UX so all sub-apps
-  // present a consistent boot experience.
-  return '' +
-    '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;' +
-                'background:linear-gradient(135deg,#02060f 0%,#0a1228 60%,#0f1830 100%);' +
-                'font-family:Orbitron,monospace;color:#e0e6ff;z-index:2147483647;">' +
-      '<div style="display:flex;flex-direction:column;align-items:center;gap:14px;">' +
-        '<div style="width:38px;height:38px;border-radius:50%;border:2px solid rgba(0,240,255,0.18);' +
-                    'border-top-color:#00f0ff;animation:pflx-arena-spin 0.9s linear infinite;"></div>' +
-        '<div style="color:#00f0ff;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Syncing with Platform</div>' +
-        '<div style="color:#6a7290;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Loading your profile across all apps</div>' +
-      '</div>' +
-      '<style>@keyframes pflx-arena-spin { to { transform: rotate(360deg); } }</style>' +
-    '</div>';
+  // Iframed — DO NOT show a spinner. Force state.screen = 'home' on the
+  // next tick and render the home view immediately. The Syncing with
+  // Platform spinner that lived here trapped fresh self-signups like
+  // Sphinx Link: their identity hadn't fully resolved on the parent
+  // when the iframe URL was built, the adopt path raced ahead of the
+  // PLAYERS array being loaded, and the spinner never got dismissed.
+  // The right answer is the same one we applied to the Next.js guard:
+  // trust the parent. If we're iframed, we were launched by the PFLX
+  // Platform shell. Render the home view; PflxBridge will hydrate the
+  // real identity over postMessage in its own time.
+  try {
+    setTimeout(function () {
+      try {
+        if (typeof state !== 'undefined' && state.screen === 'login') {
+          state.screen = 'home';
+          if (typeof render === 'function') render();
+        }
+      } catch (e) {}
+    }, 0);
+  } catch (e) {}
+  // Return a minimal transparent shell — gets replaced the moment state
+  // flips. No spinner, no overlay, no trap.
+  return '<div style="position:fixed;inset:0;background:#02060f;"></div>';
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -9373,18 +9381,50 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
       return adoptAndLogin(user);
     } catch (e) { return false; }
   }
-  // Defer one tick so PLAYERS / login / state / render are defined when our adopt runs.
-  // No spinner fallback — the platform always launches us with sso=pflx, so
-  // adoptFromUrlParams() always succeeds. If it ever doesn't, the player
-  // should see the app render and let PflxBridge hydrate identity
-  // asynchronously rather than stare at a spinner with no escape.
-  setTimeout(function () {
-    if (adoptFromUrlParams()) return;
-    // Fallback adopt — synthesize the bare minimum identity so the app
-    // can render. PflxBridge will overwrite this when the real identity
+  // Defer one tick so PLAYERS / login / state / render are defined when our
+  // adopt runs. We retry every 100ms for up to 6 seconds because PLAYERS
+  // and login / state / render are async-loaded; the prior single-shot
+  // setTimeout(0) raced ahead of those and lost, leaving the player on
+  // the syncing spinner permanently. The retry loop guarantees one of
+  // those attempts will land after the runtime is fully wired up.
+  var __adoptTries = 0;
+  var __adoptIv = setInterval(function () {
+    __adoptTries++;
+    if (adoptFromUrlParams()) { clearInterval(__adoptIv); return; }
+    // Hard fallback after 1.2s — synthesize a bare-minimum identity and
+    // force state.screen = 'home' so the player isn't trapped on the
+    // spinner. PflxBridge will overwrite this when the real identity
     // arrives over postMessage.
-    try { adoptAndLogin({ brand: 'Player', name: 'Player', role: 'Student', cohort: 'PlayerPool', xc: 0, pin: '' }); } catch (e) {}
-  }, 0);
+    if (__adoptTries >= 12) {
+      clearInterval(__adoptIv);
+      try {
+        adoptAndLogin({ brand: 'Player', name: 'Player', role: 'Student', cohort: 'PlayerPool', xc: 0, pin: '' });
+      } catch (e) {}
+      // Even if adoptAndLogin failed (PLAYERS still undefined, login()
+      // threw, etc.), flip the screen and re-render so something other
+      // than the syncing spinner shows.
+      try {
+        if (typeof state !== 'undefined' && state.screen === 'login') {
+          state.screen = 'home';
+          if (typeof render === 'function') render();
+          if (typeof hideBlock === 'function') hideBlock();
+        }
+      } catch (e) {}
+    }
+  }, 100);
+  // Belt-and-suspenders: 6-second hard ceiling on the spinner regardless
+  // of what the adopt loop is doing. This is the FINAL backstop —
+  // nothing can keep the player on the syncing screen past this point.
+  setTimeout(function () {
+    try {
+      clearInterval(__adoptIv);
+      if (typeof state !== 'undefined' && state.screen === 'login') {
+        state.screen = 'home';
+        if (typeof render === 'function') render();
+      }
+      if (typeof hideBlock === 'function') hideBlock();
+    } catch (e) {}
+  }, 6000);
 
   function adoptAndLogin(user) {
     // Brand-fallback chain. The previous version returned false when
