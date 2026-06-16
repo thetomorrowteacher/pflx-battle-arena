@@ -2138,7 +2138,20 @@ const MUSIC = (() => {
 // State
 let state = {
   screen: "login", // login | home | side_quests | cipher_lobby | cipher_rules | cipher_role | cipher_hunt | cipher_sabotage | cipher_discuss | cipher_vote | cipher_result | wager | battle | result | leaderboard | lobby | settings
-  player: null,
+  // Default to a safe stub so the renderers never crash on a null
+  // state.player. Every field that renderNav / renderSidePanel / etc
+  // touches is here with a zero/empty default. adoptAndLogin overwrites
+  // this with the real (or synthesized) player record as soon as it
+  // succeeds; PflxBridge refreshes it again when real identity arrives.
+  player: {
+    id: 'pending', brand: 'Player', brandName: 'Player', name: 'Player',
+    role: 'player', pin: '0000', cohort: 'PlayerPool',
+    xc: 0, xcoin: 0, totalXcoin: 0, digitalBadges: 0,
+    image: '', level: 1, rank: 1,
+    avatar: 'PL', avatarText: 'PL', isHost: false, claimed: true,
+    stats: { ap: 0, battles: 0, wins: 0, losses: 0, kills: 0, deaths: 0, totalBattles: 0, bestWinStreak: 0, netXcPL: 0 },
+    arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 }
+  },
   selectedMode: null,
   wager: 500,
   battle: null,
@@ -2235,6 +2248,7 @@ function spaceshipBgHTML() {
 }
 
 function render() {
+ try {
   // Save focused input before DOM rebuild
   const activeEl = document.activeElement;
   if (activeEl && activeEl.id && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
@@ -2281,6 +2295,23 @@ function render() {
     state._focusId = null;
     state._focusCursor = null;
   }
+ } catch (e) {
+   // Defensive: if any renderer threw mid-frame, log and show a recovery
+   // message instead of letting the blank page persist. Sphinx-class bugs
+   // were producing a black screen because renderNav crashed on a null
+   // state.player; this catch ensures the player always sees SOMETHING.
+   console.error('[arena render] crashed:', e);
+   try {
+     var app = document.getElementById("app");
+     if (app) {
+       app.innerHTML = '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#02060f;color:#e0e6ff;font-family:Orbitron,monospace;gap:14px;">' +
+         '<div style="color:#00d4ff;font-size:14px;letter-spacing:3px;text-transform:uppercase;">Battle Arena</div>' +
+         '<div style="color:#8a92b0;font-size:11px;letter-spacing:1.5px;">' + (e && e.message ? e.message : 'render error') + '</div>' +
+         '<button onclick="location.reload()" style="margin-top:10px;padding:10px 20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:#00d4ff;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;border-radius:8px;cursor:pointer;">RELOAD</button>' +
+         '</div>';
+     }
+   } catch (e2) {}
+ }
 }
 
 function renderNav() {
