@@ -9495,6 +9495,15 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
     // for the home view to render.
     if (!match) {
       var isHost = /admin|host|teacher|instructor|master/i.test(String(user.role || ''));
+      // CRITICAL: match must include EVERY field the Arena renderers read,
+      // or render() throws mid-frame and the screen goes blank. The two
+      // bites that have already burned us:
+      //   • renderNav reads p.stats.ap (NOT p.arenaStats)
+      //   • renderNav reads p.xc.toLocaleString() (NOT p.xcoin)
+      // Provide both spellings + a complete stats shape so every consumer
+      // finds what it expects. PflxBridge overwrites these as real data
+      // arrives over postMessage.
+      var _xc = user.xc || user.xcoin || 0;
       match = {
         id: user.id || ('platform-' + Date.now()),
         brand: user.brand,
@@ -9503,14 +9512,23 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
         role: isHost ? 'admin' : 'player',
         pin: user.pin || '0000',
         cohort: user.cohort || 'PlayerPool',
-        xcoin: user.xc || 0,
-        totalXcoin: user.totalXcoin || user.xc || 0,
+        // XC under both keys — different renderers read different ones.
+        xc: _xc,
+        xcoin: _xc,
+        totalXcoin: user.totalXcoin || _xc,
         digitalBadges: user.digitalBadges || 0,
         image: user.image || '',
         level: user.level || 1,
-        avatar: '',
+        rank: user.rank || 1,
+        avatar: (user.brand || 'P').slice(0, 2).toUpperCase(),
+        avatarText: (user.brand || 'P').slice(0, 2).toUpperCase(),
         isHost: isHost,
         claimed: true,
+        // stats — used by renderNav (p.stats.ap), renderSidePanel
+        // (p.stats.battles, p.stats.wins), getRankInfo (p.stats.ap), etc.
+        // arenaStats is the legacy field name; keep it populated too for
+        // any consumer that reads it directly.
+        stats: { ap: 0, battles: 0, wins: 0, losses: 0, kills: 0, deaths: 0, totalBattles: 0, bestWinStreak: 0, netXcPL: 0 },
         arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 }
       };
       if (typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
