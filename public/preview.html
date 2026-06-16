@@ -2139,8 +2139,11 @@ const MUSIC = (() => {
 let state = {
   screen: "login", // login | home | side_quests | cipher_lobby | cipher_rules | cipher_role | cipher_hunt | cipher_sabotage | cipher_discuss | cipher_vote | cipher_result | wager | battle | result | leaderboard | lobby | settings
   // Default to a safe stub so the renderers never crash on a null
-  // state.player. Every field that renderNav / renderSidePanel / etc
-  // touches is here with a zero/empty default. adoptAndLogin overwrites
+  // state.player. Every field that renderNav / renderSidePanel etc.
+  // touches is here with a zero/empty default. Critical missing fields
+  // that bit us in the field — stats.won / stats.lost / stats.streak /
+  // stats.bestStreak (renderSidePanel) and bc.sig / bc.exe / bc.pre /
+  // bc.pri (badge dots) — are all here now. adoptAndLogin overwrites
   // this with the real (or synthesized) player record as soon as it
   // succeeds; PflxBridge refreshes it again when real identity arrives.
   player: {
@@ -2149,8 +2152,15 @@ let state = {
     xc: 0, xcoin: 0, totalXcoin: 0, digitalBadges: 0,
     image: '', level: 1, rank: 1,
     avatar: 'PL', avatarText: 'PL', isHost: false, claimed: true,
-    stats: { ap: 0, battles: 0, wins: 0, losses: 0, kills: 0, deaths: 0, totalBattles: 0, bestWinStreak: 0, netXcPL: 0 },
-    arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 }
+    stats: {
+      ap: 0, battles: 0, wins: 0, losses: 0,
+      won: 0, lost: 0, streak: 0, bestStreak: 0,
+      kills: 0, deaths: 0, totalBattles: 0, bestWinStreak: 0, netXcPL: 0
+    },
+    arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 },
+    // Badge counts — bc.sig (signature), bc.exe (executive),
+    // bc.pre (premium), bc.pri (primary).
+    bc: { sig: 0, exe: 0, pre: 0, pri: 0 }
   },
   selectedMode: null,
   wager: 500,
@@ -9556,11 +9566,18 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
         isHost: isHost,
         claimed: true,
         // stats — used by renderNav (p.stats.ap), renderSidePanel
-        // (p.stats.battles, p.stats.wins), getRankInfo (p.stats.ap), etc.
-        // arenaStats is the legacy field name; keep it populated too for
-        // any consumer that reads it directly.
-        stats: { ap: 0, battles: 0, wins: 0, losses: 0, kills: 0, deaths: 0, totalBattles: 0, bestWinStreak: 0, netXcPL: 0 },
-        arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 }
+        // (p.stats.battles, p.stats.wins, p.stats.won, p.stats.lost,
+        // p.stats.streak, p.stats.bestStreak), getRankInfo (p.stats.ap),
+        // and several others. arenaStats is the legacy field name kept
+        // populated too for any consumer that reads it directly.
+        stats: {
+          ap: 0, battles: 0, wins: 0, losses: 0,
+          won: 0, lost: 0, streak: 0, bestStreak: 0,
+          kills: 0, deaths: 0, totalBattles: 0, bestWinStreak: 0, netXcPL: 0
+        },
+        arenaStats: { totalBattles: 0, bestWinStreak: 0, netXcPL: 0, wins: 0, losses: 0 },
+        // Badge counts — read by renderSidePanel's badge-dot block.
+        bc: { sig: 0, exe: 0, pre: 0, pri: 0 }
       };
       if (typeof PLAYERS !== 'undefined' && Array.isArray(PLAYERS)) {
         try { PLAYERS.push(match); } catch (e) {}
