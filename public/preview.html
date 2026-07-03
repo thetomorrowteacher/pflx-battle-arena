@@ -2654,6 +2654,28 @@ const STUDIO_TEMPLATES = [
   { id: 'monster-tamer', name: 'Monster Tamer', icon: '🐉', ready: false, desc: 'Quiz battles to tame and evolve monsters. COMING SOON.' },
   { id: 'rogue-runner', name: 'Rogue Runner', icon: '🏃', ready: false, desc: 'Roguelite dungeon runs fueled by knowledge. COMING SOON.' }
 ];
+const STUDIO_BACKGROUNDS = [
+  { id: 'space',   label: 'Deep Space' },
+  { id: 'neon',    label: 'Neon City' },
+  { id: 'crimson', label: 'Crimson Nebula' },
+  { id: 'emerald', label: 'Emerald Grid' },
+  { id: 'void',    label: 'Pure Void' },
+  { id: 'sunset',  label: 'Solar Sunset' }
+];
+const STUDIO_BG_CSS = {
+  space:   'radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%)',
+  neon:    'radial-gradient(ellipse at 50% 110%, #2b0a4d 0%, #05010d 60%)',
+  crimson: 'radial-gradient(ellipse at 50% -10%, #3a0a18 0%, #0d0406 60%)',
+  emerald: 'radial-gradient(ellipse at 50% -10%, #06301f 0%, #04100a 60%)',
+  void:    '#020308',
+  sunset:  'linear-gradient(180deg, #3a1a0a 0%, #0d0604 55%)'
+};
+const STUDIO_EMBLEMS = ['⚔','🛡','🐉','🚀','🧠','⚡','🔥','🌊','🦾','👾','🏰','🎯'];
+const STUDIO_DIFFICULTY = [
+  { id: 'easy',   label: 'Easy — Cadet' },
+  { id: 'normal', label: 'Normal — Ranger' },
+  { id: 'hard',   label: 'Hard — Veteran' }
+];
 const STUDIO_ACCENTS = [
   { id: 'cyan', label: 'Arena Cyan', hex: '#00e5ff' },
   { id: 'gold', label: 'Victory Gold', hex: '#ffd740' },
@@ -2700,6 +2722,56 @@ const baGames = {
 };
 
 let studioSelTemplate = 'quiz-card-duel';
+let studioSelEmblem = '⚔';
+let studioEditId = null; // editing a published game → publish updates in place
+function studioPickEmblem(e) {
+  studioSelEmblem = e;
+  const grid = document.getElementById('stEmblems');
+  if (grid) Array.prototype.forEach.call(grid.children, function (b) {
+    b.style.borderColor = b.getAttribute('data-e') === e ? 'rgba(255,215,64,0.8)' : 'rgba(255,255,255,0.12)';
+    b.style.boxShadow = b.getAttribute('data-e') === e ? '0 0 12px rgba(255,215,64,0.35)' : 'none';
+  });
+  studioPreview();
+}
+// Live theme preview strip — updates without a full render.
+function studioPreview() {
+  const box = document.getElementById('stPreview');
+  if (!box) return;
+  const val = function (id, fb) { const el = document.getElementById(id); return el ? el.value : fb; };
+  const accent = val('stAccent', '#00e5ff');
+  const bg = STUDIO_BG_CSS[val('stBg', 'space')] || STUDIO_BG_CSS.space;
+  const title = (val('stTitle', '') || '').trim() || 'YOUR GAME';
+  box.style.background = bg;
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:14px 16px">' +
+    '<span style="font-size:1.6rem;filter:drop-shadow(0 0 8px ' + accent + ')">' + studioSelEmblem + '</span>' +
+    '<div><div style="font-family:Orbitron,monospace;font-size:0.7rem;font-weight:800;letter-spacing:0.12em;color:' + accent + ';text-shadow:0 0 12px ' + accent + '99">' + dkEsc(title.toUpperCase()) + '</div>' +
+    '<div style="font-size:0.5rem;color:rgba(255,255,255,0.5);letter-spacing:0.1em;margin-top:2px">LIVE THEME PREVIEW</div></div></div>';
+}
+function studioEditGame(id) {
+  const g = baGames.byId(id);
+  if (!g) return;
+  studioEditId = id;
+  studioSelTemplate = g.template;
+  studioSelEmblem = (g.config && g.config.emblem) || '⚔';
+  state.screen = 'studio';
+  render();
+  // prefill after render
+  setTimeout(function () {
+    const set = function (id2, v) { const el = document.getElementById(id2); if (el != null && v != null) el.value = v; };
+    set('stTitle', g.title);
+    set('stDesc', g.description || '');
+    set('stDeck', g.deckId);
+    set('stRival', (g.config && g.config.rivalName) || '');
+    set('stTime', (g.config && g.config.roundTime) || 15);
+    set('stAccent', (g.config && g.config.accent) || '#00e5ff');
+    set('stBg', (g.config && g.config.background) || 'space');
+    set('stDiff', (g.config && g.config.difficulty) || 'normal');
+    set('stOrder', (g.config && g.config.ordered) ? 'ordered' : 'shuffled');
+    set('stSound', (g.config && g.config.sound === false) ? 'off' : 'on');
+    studioPreview();
+  }, 40);
+}
+function studioCancelEdit() { studioEditId = null; render(); }
 function studioPickTemplate(id) {
   const t = STUDIO_TEMPLATES.find(function (x) { return x.id === id; });
   if (!t || !t.ready) return;
@@ -2711,12 +2783,22 @@ function studioReadConfig() {
   const val = function (id, fb) { const el = document.getElementById(id); return el ? el.value : fb; };
   return {
     title: (val('stTitle', '') || '').trim(),
+    description: (val('stDesc', '') || '').trim().slice(0, 140),
     deckId: val('stDeck', ''),
     template: studioSelTemplate,
     accent: val('stAccent', '#00e5ff'),
+    background: STUDIO_BG_CSS[val('stBg', 'space')] ? val('stBg', 'space') : 'space',
+    emblem: STUDIO_EMBLEMS.indexOf(studioSelEmblem) !== -1 ? studioSelEmblem : '⚔',
+    difficulty: ['easy', 'normal', 'hard'].indexOf(val('stDiff', 'normal')) !== -1 ? val('stDiff', 'normal') : 'normal',
+    ordered: val('stOrder', 'shuffled') === 'ordered',
+    sound: val('stSound', 'on') !== 'off',
     rivalName: (val('stRival', '') || '').trim() || 'RIVAL AI',
     roundTime: Math.max(8, Math.min(30, parseInt(val('stTime', '15'), 10) || 15))
   };
+}
+function studioConfigOf(c) {
+  return { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
+           ordered: c.ordered, sound: c.sound, rivalName: c.rivalName, roundTime: c.roundTime };
 }
 
 function studioTest() {
@@ -2724,7 +2806,7 @@ function studioTest() {
   if (!c.deckId) { alert('Pick a Knowledge Deck first (import one on the DECKS screen).'); return; }
   const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === c.template && t.ready; });
   if (!tpl) return;
-  arenaGameLaunch(c.deckId, tpl.file, { title: c.title || tpl.name, config: { title: c.title, accent: c.accent, rivalName: c.rivalName, roundTime: c.roundTime } });
+  arenaGameLaunch(c.deckId, tpl.file, { title: c.title || tpl.name, config: Object.assign({ title: c.title }, studioConfigOf(c)) });
 }
 
 async function studioPublish() {
@@ -2738,13 +2820,18 @@ async function studioPublish() {
   const btn = document.getElementById('stPublishBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'PUBLISHING…'; }
   try {
+    const existing = studioEditId ? baGames.byId(studioEditId) : null;
     await baGames.upsert({
-      id: dkUid('game'), title: c.title, template: tpl.id, deckId: c.deckId,
-      config: { accent: c.accent, rivalName: c.rivalName, roundTime: c.roundTime },
-      createdBy: (state.player && state.player.id) || 'unknown',
-      createdByName: (state.player && state.player.brand) || '',
-      createdAt: new Date().toISOString(), plays: 0
+      id: existing ? existing.id : dkUid('game'),
+      title: c.title, description: c.description, template: tpl.id, deckId: c.deckId,
+      config: studioConfigOf(c),
+      createdBy: existing ? existing.createdBy : ((state.player && state.player.id) || 'unknown'),
+      createdByName: existing ? existing.createdByName : ((state.player && state.player.brand) || ''),
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      plays: existing ? (existing.plays || 0) : 0
     });
+    studioEditId = null;
     SFX.click();
     render();
   } catch (e) {
@@ -2786,12 +2873,12 @@ function arenaStudioCardsHtml() {
     return '<div class="mode-card glass-panel glass-panel-hover" style="cursor:pointer" onclick="arenaStudioPlay(\'' + g.id + '\')">' +
       '<div class="mode-content">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-        '<div class="mode-head" style="margin:0"><div class="mode-icon">' + tpl.icon + '</div>' +
+        '<div class="mode-head" style="margin:0"><div class="mode-icon">' + dkEsc((g.config && g.config.emblem) || tpl.icon) + '</div>' +
         '<div><div class="mode-name">' + dkEsc(g.title) + '</div>' +
         '<div class="mode-meta">by ' + dkEsc(g.createdByName || 'a player') + ' · ' + (g.plays || 0) + ' plays</div></div></div>' +
         '<span class="cipher-status-badge active" style="font-size:0.5rem">player-made</span>' +
       '</div>' +
-      '<div class="mode-desc">' + tpl.name + ' on "' + dkEsc(d ? d.name : 'deleted deck') + '"' + (d && d.subject ? ' · ' + dkEsc(d.subject) : '') + '</div>' +
+      '<div class="mode-desc">' + (g.description ? dkEsc(g.description) + '<br><span style="opacity:0.6">' : '') + tpl.name + ' on "' + dkEsc(d ? d.name : 'deleted deck') + '"' + (d && d.subject ? ' · ' + dkEsc(d.subject) : '') + (g.description ? '</span>' : '') + '</div>' +
       '<div class="mode-tags" style="margin-top:12px"><span class="mode-tag team">Solo</span><span class="mode-tag beta">Studio</span></div>' +
       '</div></div>';
   }).join('');
@@ -2821,11 +2908,15 @@ function renderStudio() {
       }).join('')}
     </div>
 
-    <div class="glass-panel" style="border-radius:14px;border:1px solid rgba(0,229,255,0.3);padding:20px;margin-bottom:22px">
-      <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:#00e5ff;letter-spacing:0.14em;margin-bottom:14px">⚙ CONFIGURE — ${(STUDIO_TEMPLATES.find(function (t) { return t.id === studioSelTemplate; }) || {}).name.toUpperCase()}</div>
+    <div class="glass-panel" style="border-radius:14px;border:1px solid ${studioEditId ? 'rgba(255,215,64,0.5)' : 'rgba(0,229,255,0.3)'};padding:20px;margin-bottom:22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <span style="font-family:Orbitron,monospace;font-size:0.7rem;color:#00e5ff;letter-spacing:0.14em">⚙ ${studioEditId ? '✎ EDITING — ' : 'CONFIGURE — '}${(STUDIO_TEMPLATES.find(function (t) { return t.id === studioSelTemplate; }) || {}).name.toUpperCase()}</span>
+        ${studioEditId ? '<button class="btn-arena" style="font-size:0.5rem;padding:5px 12px" onclick="studioCancelEdit()">CANCEL EDIT</button>' : ''}
+      </div>
+      <div id="stPreview" style="border:1px solid rgba(255,255,255,0.12);border-radius:10px;margin-bottom:14px;overflow:hidden"></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:12px">
         <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">GAME TITLE *</div>
-          <input id="stTitle" placeholder="e.g. Biology Boss Battle" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 12px;font-size:0.7rem;color:#e6f8ff;outline:none" /></div>
+          <input id="stTitle" placeholder="e.g. Biology Boss Battle" oninput="studioPreview()" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 12px;font-size:0.7rem;color:#e6f8ff;outline:none" /></div>
         <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">KNOWLEDGE DECK *</div>
           <select id="stDeck" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="">— pick a deck (min 4 cards) —</option>
@@ -2838,14 +2929,37 @@ function renderStudio() {
             <option value="10">10s — Hardcore</option><option value="15" selected>15s — Standard</option><option value="20">20s — Relaxed</option>
           </select></div>
         <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">ACCENT THEME</div>
-          <select id="stAccent" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+          <select id="stAccent" onchange="studioPreview()" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             ${STUDIO_ACCENTS.map(function (a) { return '<option value="' + a.hex + '">' + a.label + '</option>'; }).join('')}
           </select></div>
+        <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">BACKGROUND</div>
+          <select id="stBg" onchange="studioPreview()" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            ${STUDIO_BACKGROUNDS.map(function (b) { return '<option value="' + b.id + '">' + b.label + '</option>'; }).join('')}
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">DIFFICULTY</div>
+          <select id="stDiff" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            ${STUDIO_DIFFICULTY.map(function (d) { return '<option value="' + d.id + '"' + (d.id === 'normal' ? ' selected' : '') + '>' + d.label + '</option>'; }).join('')}
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">QUESTION ORDER</div>
+          <select id="stOrder" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            <option value="shuffled" selected>Shuffled every run</option>
+            <option value="ordered">Deck order (lesson mode)</option>
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">SOUND FX</div>
+          <select id="stSound" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            <option value="on" selected>On</option><option value="off">Off</option>
+          </select></div>
       </div>
+      <div style="margin-bottom:12px"><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">DESCRIPTION (SHOWN ON THE SHELF)</div>
+        <textarea id="stDesc" rows="2" maxlength="140" placeholder="Tell players what this game is about…" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 12px;font-size:0.65rem;color:#e6f8ff;outline:none;resize:vertical"></textarea></div>
+      <div style="margin-bottom:12px"><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:6px">GAME EMBLEM</div>
+        <div id="stEmblems" style="display:flex;gap:6px;flex-wrap:wrap">
+          ${STUDIO_EMBLEMS.map(function (e) { return '<button data-e="' + e + '" onclick="studioPickEmblem(\'' + e + '\')" style="font-size:1.15rem;width:42px;height:42px;border-radius:8px;cursor:pointer;background:rgba(10,20,36,0.85);border:1px solid ' + (e === studioSelEmblem ? 'rgba(255,215,64,0.8)' : 'rgba(255,255,255,0.12)') + ';' + (e === studioSelEmblem ? 'box-shadow:0 0 12px rgba(255,215,64,0.35)' : '') + '">' + e + '</button>'; }).join('')}
+        </div></div>
       <div id="stErr" style="display:none;font-size:0.6rem;color:#ff5252;margin-bottom:10px"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn-arena" style="font-size:0.6rem;padding:10px 22px" onclick="studioTest()">🎮 TEST RUN</button>
-        <button id="stPublishBtn" class="btn-arena btn-arena-gold" style="font-size:0.6rem;padding:10px 26px" onclick="studioPublish()">🚀 PUBLISH TO SIDE QUESTS</button>
+        <button id="stPublishBtn" class="btn-arena btn-arena-gold" style="font-size:0.6rem;padding:10px 26px" onclick="studioPublish()">${studioEditId ? '💾 SAVE CHANGES' : '🚀 PUBLISH TO SIDE QUESTS'}</button>
       </div>
       ${decks.length === 0 ? '<div style="margin-top:10px;font-size:0.55rem;color:#ffd740">No decks yet — <a href="#" onclick="goScreen(\'decks\')" style="color:#00e5ff">import one on the DECKS screen</a> first.</div>' : ''}
     </div>
@@ -2861,6 +2975,7 @@ function renderStudio() {
           '<div style="font-size:0.55rem;color:#5a6a8a;margin-bottom:10px">' + tpl.icon + ' ' + tpl.name + ' · ' + dkEsc(d ? d.name : 'deck deleted') + '<br>by ' + dkEsc(g.createdByName || 'player') + ' · ' + (g.plays || 0) + ' plays</div>' +
           '<div style="margin-top:auto;display:flex;gap:6px">' +
             '<button class="btn-arena btn-arena-gold" style="font-size:0.5rem;padding:6px 14px;flex:1" onclick="arenaStudioPlay(\'' + g.id + '\')">▶ PLAY</button>' +
+            (canDelete ? '<button class="btn-arena" style="font-size:0.5rem;padding:6px 12px" onclick="studioEditGame(\'' + g.id + '\')">✎</button>' : '') +
             (canDelete ? '<button class="btn-arena btn-arena-red" style="font-size:0.5rem;padding:6px 10px" onclick="studioDelete(\'' + g.id + '\')">✕</button>' : '') +
           '</div></div>';
       }).join('')}
@@ -2883,7 +2998,7 @@ function render() {
   else if (state.screen === "home") { app.innerHTML = bg + panel + renderNav() + renderHome(); }
   else if (state.screen === "side_quests") { app.innerHTML = bg + panel + renderNav() + renderSideQuests(); }
   else if (state.screen === "decks") { app.innerHTML = bg + panel + renderNav() + renderDecks(); }
-  else if (state.screen === "studio") { app.innerHTML = bg + panel + renderNav() + renderStudio(); }
+  else if (state.screen === "studio") { app.innerHTML = bg + panel + renderNav() + renderStudio(); setTimeout(function () { try { studioPreview(); } catch (e) {} }, 30); }
   else if (state.screen === "mode_admin") { app.innerHTML = bg + panel + renderNav() + renderModeAdmin(); }
   else if (state.screen === "live_play") { app.innerHTML = bg + panel + renderNav() + renderLivePlay(); }
   else if (state.screen === "cipher_select") { app.innerHTML = bg + panel + renderNav() + renderCipherSelect(); }

@@ -146,6 +146,36 @@
     cfg: { title: '', accent: '', rivalName: 'RIVAL AI', roundTime: 15 }
   };
 
+  // ── Studio assets: backgrounds (whitelisted) + synth SFX ──
+  var BG_CSS = {
+    space:   'radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%)',
+    neon:    'radial-gradient(ellipse at 50% 110%, #2b0a4d 0%, #05010d 60%)',
+    crimson: 'radial-gradient(ellipse at 50% -10%, #3a0a18 0%, #0d0406 60%)',
+    emerald: 'radial-gradient(ellipse at 50% -10%, #06301f 0%, #04100a 60%)',
+    void:    '#020308',
+    sunset:  'linear-gradient(180deg, #3a1a0a 0%, #0d0604 55%)'
+  };
+  var DIFF_MULT = { easy: 0.75, normal: 1, hard: 1.3 };
+  var sfx = {
+    enabled: true, ctx: null,
+    beep: function (freq, dur, type, vol) {
+      if (!this.enabled) return;
+      try {
+        this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        var o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type || 'square'; o.frequency.value = freq;
+        g.gain.value = vol || 0.04;
+        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + (dur || 0.12));
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + (dur || 0.12));
+      } catch (e) {}
+    },
+    good: function () { this.beep(660, 0.09); var s2 = this; setTimeout(function () { s2.beep(990, 0.12); }, 70); },
+    bad: function () { this.beep(160, 0.25, 'sawtooth', 0.05); },
+    hit: function () { this.beep(440, 0.06, 'triangle', 0.03); }
+  };
+
   // Studio config (cartridge contract: host may send `config` with the deck)
   function applyConfig(cfg) {
     cfg = cfg || {};
@@ -153,9 +183,17 @@
       title: String(cfg.title || '').slice(0, 60),
       accent: /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '',
       rivalName: String(cfg.rivalName || 'RIVAL AI').slice(0, 24) || 'RIVAL AI',
-      roundTime: Math.max(8, Math.min(30, parseInt(cfg.roundTime, 10) || 15))
+      roundTime: Math.max(8, Math.min(30, parseInt(cfg.roundTime, 10) || 15)),
+      background: BG_CSS[cfg.background] ? cfg.background : 'space',
+      emblem: (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '⚔',
+      difficulty: DIFF_MULT[cfg.difficulty] ? cfg.difficulty : 'normal',
+      ordered: !!cfg.ordered,
+      sound: cfg.sound !== false
     };
     S.roundTime = S.cfg.roundTime;
+    S.dmgMult = DIFF_MULT[S.cfg.difficulty];
+    sfx.enabled = S.cfg.sound;
+    if (S.cfg.background !== 'space') document.body.style.background = BG_CSS[S.cfg.background];
     if (S.cfg.accent) {
       var st = document.createElement('style');
       st.textContent =
@@ -271,13 +309,15 @@
       S.cpuHp -= dmg;
       floater('-' + dmg, '#00e5ff', 'cpu');
       flash('flashCpu');
+      sfx.good();
     } else {
       if (pick >= 0 && cards[pick]) { cards[pick].classList.remove('dim'); cards[pick].classList.add('wrong'); }
       S.streak = 0;
-      var cd = cpuDamage(S.idx);
+      var cd = Math.round(cpuDamage(S.idx) * (S.dmgMult || 1));
       S.meHp -= cd;
       floater('-' + cd, '#ff4d6d', 'me');
       flash('flashMe');
+      sfx.bad();
     }
     updateBars();
 
@@ -321,7 +361,10 @@
     if (S.cfg.title) {
       document.title = S.cfg.title + ' — PFLX Battle Arena';
       var big = document.querySelector('#intro .big');
-      if (big) big.textContent = '⚔ ' + S.cfg.title.toUpperCase();
+      if (big) big.textContent = (S.cfg.emblem || '⚔') + ' ' + S.cfg.title.toUpperCase();
+    } else {
+      var big2 = document.querySelector('#intro .big');
+      if (big2 && S.cfg.emblem && S.cfg.emblem !== '⚔') big2.textContent = S.cfg.emblem + ' QUIZ CARD DUEL';
     }
     $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
       'Answer fast to hit harder. Streaks stack bonus damage.<br>Wrong answers and timeouts let the rival strike back.';
@@ -335,6 +378,15 @@
       $('stage').style.display = 'flex';
       S.meHp = 100; S.cpuHp = 100; S.idx = 0; S.correct = 0; S.streak = 0; S.bestStreak = 0; S.over = false; S.reported = false;
       S.rounds = buildRounds(S.deck.cards);
+      if (S.cfg.ordered) {
+        var order = {};
+        S.deck.cards.forEach(function (c, i) { order[c.term + '\u0001' + c.definition] = i; });
+        S.rounds.sort(function (a, b) {
+          var ka = order[a.term + '\u0001' + a.choices[a.correctIdx]] || 0;
+          var kb = order[b.term + '\u0001' + b.choices[b.correctIdx]] || 0;
+          return ka - kb;
+        });
+      }
       updateBars();
       showRound();
     },

@@ -290,11 +290,47 @@
     accent: '#00e5ff'
   };
 
+  var BG_CSS = {
+    space:   'radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%)',
+    neon:    'radial-gradient(ellipse at 50% 110%, #2b0a4d 0%, #05010d 60%)',
+    crimson: 'radial-gradient(ellipse at 50% -10%, #3a0a18 0%, #0d0406 60%)',
+    emerald: 'radial-gradient(ellipse at 50% -10%, #06301f 0%, #04100a 60%)',
+    void:    '#020308',
+    sunset:  'linear-gradient(180deg, #3a1a0a 0%, #0d0604 55%)'
+  };
+  var DIFF_MULT = { easy: 0.8, normal: 1, hard: 1.3 };
+  var sfx = {
+    enabled: true, ctx: null,
+    beep: function (freq, dur, type, vol) {
+      if (!this.enabled) return;
+      try {
+        this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        var o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type || 'square'; o.frequency.value = freq;
+        g.gain.value = vol || 0.04;
+        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + (dur || 0.12));
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + (dur || 0.12));
+      } catch (e) {}
+    },
+    good: function () { this.beep(660, 0.09); var s2 = this; setTimeout(function () { s2.beep(990, 0.12); }, 70); },
+    bad: function () { this.beep(160, 0.25, 'sawtooth', 0.05); },
+    hit: function () { this.beep(440, 0.06, 'triangle', 0.03); }
+  };
+
   function applyConfig(cfg) {
     cfg = cfg || {};
     G.cfg.title = String(cfg.title || '').slice(0, 60);
     G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
+    G.cfg.background = BG_CSS[cfg.background] ? cfg.background : 'space';
+    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🌱';
+    G.cfg.difficulty = DIFF_MULT[cfg.difficulty] ? cfg.difficulty : 'normal';
+    G.cfg.ordered = !!cfg.ordered;
+    G.cfg.sound = cfg.sound !== false;
     if (G.cfg.accent) G.accent = G.cfg.accent;
+    sfx.enabled = G.cfg.sound;
+    if (G.cfg.background !== 'space') document.body.style.background = BG_CSS[G.cfg.background];
     return G.cfg;
   }
 
@@ -404,6 +440,7 @@
       G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.correct++;
       var gain = answerReward(G.streak);
       G.sim.energy += gain;
+      sfx.good();
       banner('+' + gain + ' ⚡');
       G.qIdx++;
       setTimeout(showQuestion, 650);
@@ -411,6 +448,7 @@
       if (els[i]) els[i].classList.add('wrong');
       Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
       G.streak = 0;
+      sfx.bad();
       G.lockT = 4;
       var lk = $('qLock');
       lk.style.display = 'block';
@@ -459,7 +497,9 @@
     var dt = Math.min(0.05, (now - G.lastT) / 1000 || 0.016);
     G.lastT = now;
     if (G.lockT > 0) G.lockT -= dt;
+    var killsBefore = G.sim.kills;
     simStep(G.sim, dt);
+    if (G.sim.kills > killsBefore) sfx.hit();
     draw();
     hud();
     if (G.sim.over) { endScreen(); return; }
@@ -474,7 +514,7 @@
     if (G.cfg.title) {
       document.title = G.cfg.title + ' — PFLX Battle Arena';
       var big = document.querySelector('#intro .big');
-      if (big) big.textContent = '🌱 ' + G.cfg.title.toUpperCase();
+      if (big) big.textContent = (G.cfg.emblem || '🌱') + ' ' + G.cfg.title.toUpperCase();
     }
     $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
       'Answer questions to generate ⚡ energy. Spend it on defenders.<br>🔫 shoots · 🧱 blocks · 🔋 generates. Survive 3 waves.';
@@ -487,9 +527,18 @@
       var intro = $('intro'); if (intro) intro.remove();
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       $('wrap').style.display = 'flex';
-      G.sim = newSim(1);
+      G.sim = newSim(DIFF_MULT[G.cfg.difficulty] || 1);
       G.correct = 0; G.streak = 0; G.bestStreak = 0; G.qIdx = 0; G.lockT = 0; G.reported = false;
       G.questions = buildQuestions(G.deck.cards);
+      if (G.cfg.ordered) {
+        var order = {};
+        G.deck.cards.forEach(function (c, i) { order[c.term + '\u0001' + c.definition] = i; });
+        G.questions.sort(function (a, b) {
+          var ka = order[a.term + '\u0001' + a.choices[a.correctIdx]] || 0;
+          var kb = order[b.term + '\u0001' + b.choices[b.correctIdx]] || 0;
+          return ka - kb;
+        });
+      }
       // palette
       $('palette').innerHTML = Object.keys(DEF_TYPES).map(function (t) {
         var d = DEF_TYPES[t];
