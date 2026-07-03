@@ -2501,7 +2501,7 @@ function arenaGameLaunch(deckId, gameFile, opts) {
   ov.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(2,5,10,0.96);display:flex;flex-direction:column';
   ov.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(0,229,255,0.25)">' +
-      '<span style="font-family:Orbitron,monospace;font-size:0.65rem;letter-spacing:0.14em;color:#00e5ff">⚔ ' + dkEsc((opts && opts.title) || 'QUIZ CARD DUEL') + ' — ' + dkEsc(d.name) + '</span>' +
+      '<span style="font-family:Orbitron,monospace;font-size:0.65rem;letter-spacing:0.14em;color:#00e5ff">🎮 ' + dkEsc((opts && opts.title) || 'ARENA GAME') + ' — ' + dkEsc(d.name) + '</span>' +
       '<span id="arenaGameXcNote" style="font-family:Orbitron,monospace;font-size:0.55rem;color:#ffd740"></span>' +
       '<button class="btn-arena btn-arena-red" style="font-size:0.55rem;padding:6px 14px" onclick="arenaGameClose()">✕ CLOSE</button>' +
     '</div>' +
@@ -2649,7 +2649,8 @@ function renderDecks() {
 const STUDIO_TEMPLATES = [
   { id: 'quiz-card-duel', name: 'Quiz Card Duel', icon: '⚔', file: 'games/quiz-card-duel.html', ready: true,
     desc: 'HP battle vs a rival AI. Answer fast to hit harder; streaks stack damage.' },
-  { id: 'lane-defense', name: 'Lane Defense', icon: '🌱', ready: false, desc: 'PvZ-style — answer to plant defenders. COMING SOON.' },
+  { id: 'lane-defense', name: 'Lane Defense', icon: '🌱', file: 'games/lane-defense.html', ready: true,
+    desc: 'Raiders march down 5 lanes. Answer questions to generate energy, place defenders, survive 3 waves.' },
   { id: 'monster-tamer', name: 'Monster Tamer', icon: '🐉', ready: false, desc: 'Quiz battles to tame and evolve monsters. COMING SOON.' },
   { id: 'rogue-runner', name: 'Rogue Runner', icon: '🏃', ready: false, desc: 'Roguelite dungeon runs fueled by knowledge. COMING SOON.' }
 ];
@@ -2698,12 +2699,20 @@ const baGames = {
   }
 };
 
+let studioSelTemplate = 'quiz-card-duel';
+function studioPickTemplate(id) {
+  const t = STUDIO_TEMPLATES.find(function (x) { return x.id === id; });
+  if (!t || !t.ready) return;
+  studioSelTemplate = id;
+  SFX.click();
+  render();
+}
 function studioReadConfig() {
   const val = function (id, fb) { const el = document.getElementById(id); return el ? el.value : fb; };
   return {
     title: (val('stTitle', '') || '').trim(),
     deckId: val('stDeck', ''),
-    template: val('stTemplate', 'quiz-card-duel'),
+    template: studioSelTemplate,
     accent: val('stAccent', '#00e5ff'),
     rivalName: (val('stRival', '') || '').trim() || 'RIVAL AI',
     roundTime: Math.max(8, Math.min(30, parseInt(val('stTime', '15'), 10) || 15))
@@ -2773,15 +2782,16 @@ function arenaStudioCardsHtml() {
     '<div class="mode-tags" style="margin-top:12px"><span class="mode-tag beta">Studio</span></div></div></div>';
   const cards = games.map(function (g) {
     const d = baDecks.byId(g.deckId);
+    const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === g.template; }) || { icon: '⚔', name: 'Quiz Card Duel' };
     return '<div class="mode-card glass-panel glass-panel-hover" style="cursor:pointer" onclick="arenaStudioPlay(\'' + g.id + '\')">' +
       '<div class="mode-content">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-        '<div class="mode-head" style="margin:0"><div class="mode-icon">⚔</div>' +
+        '<div class="mode-head" style="margin:0"><div class="mode-icon">' + tpl.icon + '</div>' +
         '<div><div class="mode-name">' + dkEsc(g.title) + '</div>' +
         '<div class="mode-meta">by ' + dkEsc(g.createdByName || 'a player') + ' · ' + (g.plays || 0) + ' plays</div></div></div>' +
         '<span class="cipher-status-badge active" style="font-size:0.5rem">player-made</span>' +
       '</div>' +
-      '<div class="mode-desc">Quiz Card Duel on "' + dkEsc(d ? d.name : 'deleted deck') + '"' + (d && d.subject ? ' · ' + dkEsc(d.subject) : '') + '</div>' +
+      '<div class="mode-desc">' + tpl.name + ' on "' + dkEsc(d ? d.name : 'deleted deck') + '"' + (d && d.subject ? ' · ' + dkEsc(d.subject) : '') + '</div>' +
       '<div class="mode-tags" style="margin-top:12px"><span class="mode-tag team">Solo</span><span class="mode-tag beta">Studio</span></div>' +
       '</div></div>';
   }).join('');
@@ -2801,18 +2811,18 @@ function renderStudio() {
 
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px">
       ${STUDIO_TEMPLATES.map(function (t) {
-        return '<div class="glass-panel" style="border-radius:12px;padding:14px;border:1px solid ' + (t.ready ? 'rgba(0,229,255,0.4)' : 'rgba(255,255,255,0.08)') + ';' + (t.ready ? '' : 'opacity:0.45') + '">' +
+        const sel = t.id === studioSelTemplate;
+        return '<div class="glass-panel" ' + (t.ready ? 'onclick="studioPickTemplate(\'' + t.id + '\')"' : '') + ' style="border-radius:12px;padding:14px;cursor:' + (t.ready ? 'pointer' : 'default') + ';border:1px solid ' + (sel ? 'rgba(255,215,64,0.7)' : t.ready ? 'rgba(0,229,255,0.4)' : 'rgba(255,255,255,0.08)') + ';' + (t.ready ? '' : 'opacity:0.45') + (sel ? 'box-shadow:0 0 16px rgba(255,215,64,0.25);' : '') + '">' +
           '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:1.3rem">' + t.icon + '</span>' +
           '<span style="font-family:Orbitron,monospace;font-size:0.62rem;font-weight:700;color:#e6f8ff;letter-spacing:0.06em">' + t.name + '</span></div>' +
           '<div style="font-size:0.55rem;color:#8a9ab8;line-height:1.5">' + t.desc + '</div>' +
-          (t.ready ? '<div style="margin-top:8px;font-size:0.5rem;color:#00e676;font-family:Orbitron,monospace;letter-spacing:0.1em">● SELECTED</div>' : '') +
+          (sel ? '<div style="margin-top:8px;font-size:0.5rem;color:#ffd740;font-family:Orbitron,monospace;letter-spacing:0.1em">● SELECTED</div>' : t.ready ? '<div style="margin-top:8px;font-size:0.5rem;color:#00e676;font-family:Orbitron,monospace;letter-spacing:0.1em">READY — CLICK TO SELECT</div>' : '') +
         '</div>';
       }).join('')}
     </div>
 
     <div class="glass-panel" style="border-radius:14px;border:1px solid rgba(0,229,255,0.3);padding:20px;margin-bottom:22px">
-      <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:#00e5ff;letter-spacing:0.14em;margin-bottom:14px">⚙ CONFIGURE — QUIZ CARD DUEL</div>
-      <input type="hidden" id="stTemplate" value="quiz-card-duel" />
+      <div style="font-family:Orbitron,monospace;font-size:0.7rem;color:#00e5ff;letter-spacing:0.14em;margin-bottom:14px">⚙ CONFIGURE — ${(STUDIO_TEMPLATES.find(function (t) { return t.id === studioSelTemplate; }) || {}).name.toUpperCase()}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:12px">
         <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">GAME TITLE *</div>
           <input id="stTitle" placeholder="e.g. Biology Boss Battle" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 12px;font-size:0.7rem;color:#e6f8ff;outline:none" /></div>
@@ -2844,10 +2854,11 @@ function renderStudio() {
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
       ${mine.length === 0 ? '<div class="glass-panel" style="grid-column:1/-1;border-radius:12px;padding:30px;text-align:center;font-size:0.65rem;color:#8a9ab8">Nothing published yet — configure above and hit PUBLISH.</div>' : mine.map(function (g) {
         const d = baDecks.byId(g.deckId);
+        const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === g.template; }) || { icon: '⚔', name: 'Quiz Card Duel' };
         const canDelete = host || g.createdBy === (state.player && state.player.id);
         return '<div class="glass-panel" style="border-radius:12px;padding:14px;border:1px solid rgba(0,229,255,0.15);display:flex;flex-direction:column">' +
           '<div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#e6f8ff;margin-bottom:4px">' + dkEsc(g.title) + '</div>' +
-          '<div style="font-size:0.55rem;color:#5a6a8a;margin-bottom:10px">⚔ Quiz Card Duel · ' + dkEsc(d ? d.name : 'deck deleted') + '<br>by ' + dkEsc(g.createdByName || 'player') + ' · ' + (g.plays || 0) + ' plays</div>' +
+          '<div style="font-size:0.55rem;color:#5a6a8a;margin-bottom:10px">' + tpl.icon + ' ' + tpl.name + ' · ' + dkEsc(d ? d.name : 'deck deleted') + '<br>by ' + dkEsc(g.createdByName || 'player') + ' · ' + (g.plays || 0) + ' plays</div>' +
           '<div style="margin-top:auto;display:flex;gap:6px">' +
             '<button class="btn-arena btn-arena-gold" style="font-size:0.5rem;padding:6px 14px;flex:1" onclick="arenaStudioPlay(\'' + g.id + '\')">▶ PLAY</button>' +
             (canDelete ? '<button class="btn-arena btn-arena-red" style="font-size:0.5rem;padding:6px 10px" onclick="studioDelete(\'' + g.id + '\')">✕</button>' : '') +

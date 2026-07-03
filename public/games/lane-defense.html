@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Lane Defense — PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     LANE DEFENSE — Arena Game Cartridge #2 (July 2026).
+     PvZ-style: raiders march down 5 lanes. Answering deck questions
+     generates ENERGY; spend it to place defenders. Survive 3 waves.
+     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1 (see quiz-card-duel.html).
+     game id: 'lane-defense'. Config accepted: { title, accent }.
+     Engine: dependency-free canvas 2D with a PURE simulation core
+     (window.LD._core) — the whole game is Node-testable headlessly.
+     ═══════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%); color:#e6f8ff;
+         font-family:'Rajdhani',sans-serif; overflow:hidden; user-select:none; }
+  #wrap { height:100%; display:flex; flex-direction:column; max-width:860px; margin:0 auto; padding:10px; gap:8px; }
+
+  #hud { display:flex; justify-content:space-between; align-items:center; font-family:'Orbitron'; font-size:10px; letter-spacing:0.12em; }
+  #hud .pill { background:rgba(0,0,0,0.4); border:1px solid rgba(0,229,255,0.25); border-radius:8px; padding:5px 12px; }
+  #energyPill { color:#ffd740; border-color:rgba(255,215,64,0.4) !important; }
+  #livesPill { color:#ff4d6d; border-color:rgba(255,77,109,0.4) !important; }
+  #wavePill { color:#7df9ff; }
+
+  #field { position:relative; width:100%; }
+  canvas { display:block; width:100%; border-radius:12px; border:1px solid rgba(0,229,255,0.3);
+           box-shadow:0 0 24px rgba(0,229,255,0.12); background:#050b16; }
+
+  #palette { display:flex; gap:8px; }
+  .def-btn { flex:1; background:rgba(10,20,36,0.85); border:1px solid rgba(255,255,255,0.14); border-radius:10px;
+             padding:8px 6px; cursor:pointer; text-align:center; transition:all 0.15s; }
+  .def-btn.sel { border-color:#7df9ff; box-shadow:0 0 14px rgba(0,229,255,0.4); background:rgba(0,229,255,0.1); }
+  .def-btn.broke { opacity:0.4; }
+  .def-btn .ic { font-size:18px; }
+  .def-btn .nm { font-family:'Orbitron'; font-size:7px; letter-spacing:0.1em; color:#cfe3ff; margin-top:2px; }
+  .def-btn .cost { font-size:9px; color:#ffd740; font-weight:700; }
+
+  #quiz { background:rgba(4,10,20,0.9); border:1px solid rgba(0,229,255,0.3); border-radius:12px; padding:10px 12px; }
+  #qTerm { font-family:'Orbitron'; font-size:12px; font-weight:800; color:#f4feff; margin-bottom:8px; text-align:center; }
+  #qTerm .kick { display:block; font-size:7px; letter-spacing:0.2em; color:#00e5ff; margin-bottom:3px; }
+  #qAnswers { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .qa { background:rgba(10,20,36,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:8px;
+        font-size:11.5px; font-weight:600; cursor:pointer; color:#cfe3ff; line-height:1.3; transition:all 0.12s; word-break:break-word; }
+  .qa:hover { border-color:rgba(0,229,255,0.6); }
+  .qa.correct { border-color:#00e676; background:rgba(0,230,118,0.14); color:#c9ffe2; }
+  .qa.wrong { border-color:#ff4d6d; background:rgba(255,77,109,0.12); color:#ffd3dc; }
+  .qa.dim { opacity:0.35; pointer-events:none; }
+  #qLock { font-size:10px; color:#ff9f40; text-align:center; margin-top:6px; display:none; font-family:'Orbitron'; letter-spacing:0.1em; }
+
+  .screen { position:fixed; inset:0; background:rgba(2,5,10,0.93); backdrop-filter:blur(6px); z-index:100;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .big { font-family:'Orbitron'; font-weight:900; font-size:clamp(24px,6.5vw,42px); letter-spacing:0.1em; margin-bottom:10px; }
+  .btn { font-family:'Orbitron'; font-size:12px; font-weight:800; letter-spacing:0.12em; padding:13px 34px;
+         border-radius:10px; border:1px solid rgba(0,229,255,0.55); background:rgba(0,229,255,0.12); color:#7df9ff;
+         cursor:pointer; transition:all 0.15s; margin:6px; }
+  .btn:hover { background:rgba(0,229,255,0.25); box-shadow:0 0 18px rgba(0,229,255,0.35); }
+  .btn.gold { border-color:rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740; }
+  .sub { font-size:14px; color:#8a9ab8; margin-bottom:20px; max-width:460px; line-height:1.6; }
+  .stat-row { display:flex; gap:24px; margin-bottom:22px; }
+  .stat { text-align:center; }
+  .stat b { display:block; font-family:'Orbitron'; font-size:20px; color:#ffd740; }
+  .stat span { font-size:10px; letter-spacing:0.12em; color:#7a8db0; }
+  #waveBanner { position:fixed; top:38%; left:50%; transform:translateX(-50%); font-family:'Orbitron'; font-weight:900;
+                font-size:clamp(20px,5vw,34px); color:#ffd740; text-shadow:0 0 22px rgba(255,215,64,0.7); z-index:60;
+                pointer-events:none; opacity:0; transition:opacity 0.4s; letter-spacing:0.14em; }
+</style>
+</head>
+<body>
+<div id="wrap" style="display:none">
+  <div id="hud">
+    <span class="pill" id="wavePill">WAVE 1 / 3</span>
+    <span class="pill" id="energyPill">⚡ 100</span>
+    <span class="pill" id="livesPill">♥ 3</span>
+  </div>
+  <div id="field"><canvas id="cv" width="840" height="420"></canvas></div>
+  <div id="palette"></div>
+  <div id="quiz">
+    <div id="qTerm"><span class="kick">ANSWER TO GENERATE ENERGY</span><span id="qTermText"></span></div>
+    <div id="qAnswers"></div>
+    <div id="qLock"></div>
+  </div>
+</div>
+<div id="waveBanner"></div>
+<div class="screen" id="intro">
+  <div class="big" style="color:#7df9ff;text-shadow:0 0 20px rgba(0,229,255,0.6)">🌱 LANE DEFENSE</div>
+  <div class="sub" id="introSub">Waiting for deck…</div>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="LD.start()">▶ DEFEND</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DEMO_DECK = {
+    id: 'demo', name: 'PFLX Demo Deck', subject: 'PFLX Lore',
+    cards: [
+      { term: 'X-Coin', definition: 'The digital currency of the PFLX ecosystem' },
+      { term: 'Core Pathways', definition: 'Learning modules mapped as stations in open space' },
+      { term: 'Battle Arena', definition: 'Esports and challenges hub for quick XC' },
+      { term: 'DarkCampus', definition: 'Global professional network for rising creators' },
+      { term: 'Mission Control', definition: 'Project and task management center' },
+      { term: 'Evo Rank', definition: 'The progression rank earned across PFLX' }
+    ]
+  };
+
+  // ═════════════ PURE SIMULATION CORE (Node-testable) ═════════════
+  var DEF_TYPES = {
+    blaster:   { icon: '🔫', name: 'BLASTER',   cost: 100, hp: 60,  fireCd: 1.1, dmg: 10, shotSpd: 4.5 },
+    wall:      { icon: '🧱', name: 'WALL',      cost: 50,  hp: 220 },
+    generator: { icon: '🔋', name: 'GENERATOR', cost: 75,  hp: 50,  energyPerSec: 3 }
+  };
+  var LANES = 5, COLS = 7;
+
+  function makeWaves(difficulty) {
+    // 3 waves; enemy hp/speed/count ramp. difficulty 1 = standard.
+    var d = difficulty || 1;
+    var waves = [];
+    for (var w = 0; w < 3; w++) {
+      var count = Math.round((5 + w * 4) * d);
+      var entries = [];
+      for (var i = 0; i < count; i++) {
+        entries.push({
+          t: 2 + i * (3.2 - w * 0.6),                    // spawn cadence tightens per wave
+          lane: (i * 2 + w) % LANES,                      // deterministic spread
+          hp: Math.round((30 + w * 18) * d),
+          spd: 0.24 + w * 0.05 + (i % 3) * 0.02,          // cells/sec
+          dps: 12 + w * 4
+        });
+      }
+      waves.push(entries);
+    }
+    return waves;
+  }
+
+  function newSim(difficulty) {
+    return {
+      t: 0, wave: 0, waves: makeWaves(difficulty),
+      queue: null, betweenT: 0,
+      enemies: [], defenders: [], shots: [],
+      energy: 100, lives: 3, kills: 0,
+      over: false, won: false, waveStarted: false
+    };
+  }
+
+  function simStartWave(s) {
+    s.queue = s.waves[s.wave].map(function (e) { return Object.assign({}, e, { t: e.t + s.t }); });
+    s.waveStarted = true;
+  }
+
+  function canPlace(s, lane, col) {
+    if (lane < 0 || lane >= LANES || col < 0 || col >= COLS - 1) return false; // last col is the spawn edge
+    return !s.defenders.some(function (d) { return d.lane === lane && d.col === col; });
+  }
+
+  function place(s, type, lane, col) {
+    var def = DEF_TYPES[type];
+    if (!def || s.over) return false;
+    if (s.energy < def.cost || !canPlace(s, lane, col)) return false;
+    s.energy -= def.cost;
+    s.defenders.push({ type: type, lane: lane, col: col, hp: def.hp, cd: 0 });
+    return true;
+  }
+
+  function answerReward(streak) { return 40 + Math.min(30, (streak || 0) * 10); }
+
+  function simStep(s, dt) {
+    if (s.over) return;
+    s.t += dt;
+
+    // spawn
+    if (s.queue) {
+      for (var i = s.queue.length - 1; i >= 0; i--) {
+        if (s.t >= s.queue[i].t) {
+          var e = s.queue.splice(i, 1)[0];
+          s.enemies.push({ lane: e.lane, x: COLS - 0.2, hp: e.hp, maxHp: e.hp, spd: e.spd, dps: e.dps });
+        }
+      }
+    }
+
+    // defenders act
+    s.defenders.forEach(function (d) {
+      var def = DEF_TYPES[d.type];
+      if (d.type === 'generator') s.energy += def.energyPerSec * dt;
+      if (d.type === 'blaster') {
+        d.cd -= dt;
+        if (d.cd <= 0) {
+          var target = s.enemies.some(function (e) { return e.lane === d.lane && e.x > d.col; });
+          if (target) {
+            s.shots.push({ lane: d.lane, x: d.col + 0.4, dmg: def.dmg, spd: def.shotSpd });
+            d.cd = def.fireCd;
+          }
+        }
+      }
+    });
+
+    // shots travel + hit
+    for (var si = s.shots.length - 1; si >= 0; si--) {
+      var sh = s.shots[si];
+      sh.x += sh.spd * dt;
+      if (sh.x > COLS + 0.5) { s.shots.splice(si, 1); continue; }
+      var hit = null, hd = Infinity;
+      s.enemies.forEach(function (e) {
+        if (e.lane !== sh.lane) return;
+        var dd = e.x - sh.x;
+        if (dd > -0.15 && dd < 0.25 && dd < hd) { hit = e; hd = dd; }
+      });
+      if (hit) {
+        hit.hp -= sh.dmg;
+        s.shots.splice(si, 1);
+        if (hit.hp <= 0) {
+          s.enemies.splice(s.enemies.indexOf(hit), 1);
+          s.kills++;
+        }
+      }
+    }
+
+    // enemies march / chew defenders / breach
+    for (var ei = s.enemies.length - 1; ei >= 0; ei--) {
+      var en = s.enemies[ei];
+      var blocker = null;
+      s.defenders.forEach(function (d) {
+        if (d.lane === en.lane && Math.abs((d.col + 0.5) - en.x) < 0.45 && en.x > d.col) blocker = d;
+      });
+      if (blocker) {
+        blocker.hp -= en.dps * dt;
+        if (blocker.hp <= 0) s.defenders.splice(s.defenders.indexOf(blocker), 1);
+      } else {
+        en.x -= en.spd * dt;
+        if (en.x <= 0) {
+          s.enemies.splice(ei, 1);
+          s.lives--;
+          s.breach = (s.breach || 0) + 1;
+          if (s.lives <= 0) { s.over = true; s.won = false; return; }
+        }
+      }
+    }
+
+    // wave completion → next / win
+    if (s.waveStarted && s.queue && s.queue.length === 0 && s.enemies.length === 0) {
+      if (s.wave >= s.waves.length - 1) { s.over = true; s.won = true; return; }
+      s.waveStarted = false;
+      s.betweenT = 3;
+      s.wave++;
+      s.queue = null;
+    }
+    if (!s.waveStarted && s.betweenT > 0) {
+      s.betweenT -= dt;
+      if (s.betweenT <= 0) simStartWave(s);
+    }
+  }
+
+  function scoreFor(s, correct, bestStreak) {
+    return s.kills * 5 + correct * 10 + Math.max(0, s.lives) * 20 + bestStreak * 5 + (s.won ? 30 : 0);
+  }
+
+  // ═════════════ quiz (energy source) ═════════════
+  function buildQuestions(cards, rand) {
+    rand = rand || shuffle;
+    var usable = (cards || []).filter(function (c) { return c && c.term && c.definition; });
+    if (usable.length < 4) return [];
+    return rand(usable.slice()).map(function (c) {
+      var others = usable.filter(function (x) { return x !== c && x.definition !== c.definition; });
+      var distractors = rand(others.slice()).slice(0, 3).map(function (x) { return x.definition; });
+      while (distractors.length < 3) distractors.push('None of the above');
+      var choices = rand(distractors.concat([c.definition]));
+      return { term: c.term, choices: choices, correctIdx: choices.indexOf(c.definition) };
+    });
+  }
+
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function $(id) { return document.getElementById(id); }
+  function post(msg) { try { if (window.parent !== window) window.parent.postMessage(msg, '*'); } catch (e) {} }
+
+  // ═════════════ runtime state ═════════════
+  var G = {
+    deck: null, player: { id: 'demo', brand: 'Defender' },
+    cfg: { title: '', accent: '' },
+    sim: null, questions: [], qIdx: 0,
+    correct: 0, streak: 0, bestStreak: 0, lockT: 0,
+    selType: 'blaster', raf: null, lastT: 0, reported: false,
+    accent: '#00e5ff'
+  };
+
+  function applyConfig(cfg) {
+    cfg = cfg || {};
+    G.cfg.title = String(cfg.title || '').slice(0, 60);
+    G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
+    if (G.cfg.accent) G.accent = G.cfg.accent;
+    return G.cfg;
+  }
+
+  // ═════════════ rendering (canvas) ═════════════
+  var CW = 840, CH = 420, CELL_W = CW / COLS, CELL_H = CH / LANES;
+  function draw() {
+    var cv = $('cv');
+    if (!cv) return;
+    var ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, CW, CH);
+    // grid
+    for (var l = 0; l < LANES; l++) {
+      for (var c = 0; c < COLS; c++) {
+        ctx.fillStyle = (l + c) % 2 ? 'rgba(0,229,255,0.030)' : 'rgba(0,229,255,0.012)';
+        ctx.fillRect(c * CELL_W, l * CELL_H, CELL_W, CELL_H);
+      }
+    }
+    // breach line
+    ctx.fillStyle = 'rgba(255,77,109,0.35)';
+    ctx.fillRect(0, 0, 3, CH);
+    var s = G.sim;
+    if (!s) return;
+    // defenders
+    s.defenders.forEach(function (d) {
+      var def = DEF_TYPES[d.type];
+      var x = d.col * CELL_W + CELL_W / 2, y = d.lane * CELL_H + CELL_H / 2;
+      ctx.save();
+      ctx.shadowColor = G.accent; ctx.shadowBlur = 12;
+      ctx.fillStyle = d.type === 'wall' ? 'rgba(160,180,210,0.9)' : d.type === 'generator' ? 'rgba(255,215,64,0.85)' : G.accent;
+      ctx.beginPath();
+      if (d.type === 'wall') ctx.rect(x - CELL_W * 0.28, y - CELL_H * 0.34, CELL_W * 0.56, CELL_H * 0.68);
+      else ctx.arc(x, y, Math.min(CELL_W, CELL_H) * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      // hp sliver
+      var def0 = DEF_TYPES[d.type];
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x - 18, y + CELL_H * 0.32, 36, 4);
+      ctx.fillStyle = '#00e676';
+      ctx.fillRect(x - 18, y + CELL_H * 0.32, 36 * Math.max(0, d.hp / def0.hp), 4);
+      ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(def.icon, x, y - 1);
+    });
+    // enemies
+    s.enemies.forEach(function (e) {
+      var x = e.x * CELL_W, y = e.lane * CELL_H + CELL_H / 2;
+      ctx.save();
+      ctx.shadowColor = '#ff4d6d'; ctx.shadowBlur = 14;
+      ctx.fillStyle = 'rgba(255,77,109,0.9)';
+      ctx.beginPath();
+      ctx.moveTo(x - 14, y); ctx.lineTo(x + 10, y - 14); ctx.lineTo(x + 10, y + 14); ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x - 14, y - 22, 28, 4);
+      ctx.fillStyle = '#ff9f40';
+      ctx.fillRect(x - 14, y - 22, 28 * Math.max(0, e.hp / e.maxHp), 4);
+    });
+    // shots
+    ctx.fillStyle = G.accent;
+    s.shots.forEach(function (sh) {
+      var x = sh.x * CELL_W, y = sh.lane * CELL_H + CELL_H / 2;
+      ctx.save(); ctx.shadowColor = G.accent; ctx.shadowBlur = 10;
+      ctx.fillRect(x - 8, y - 2, 16, 4);
+      ctx.restore();
+    });
+  }
+
+  function hud() {
+    var s = G.sim;
+    $('wavePill').textContent = 'WAVE ' + Math.min(3, s.wave + 1) + ' / 3';
+    $('energyPill').textContent = '⚡ ' + Math.floor(s.energy);
+    $('livesPill').textContent = '♥ ' + Math.max(0, s.lives);
+    var pal = $('palette');
+    Array.prototype.forEach.call(pal.children, function (btn) {
+      var def = DEF_TYPES[btn.getAttribute('data-type')];
+      btn.classList.toggle('sel', btn.getAttribute('data-type') === G.selType);
+      btn.classList.toggle('broke', s.energy < def.cost);
+    });
+  }
+
+  function banner(text) {
+    var b = $('waveBanner');
+    b.textContent = text;
+    b.style.opacity = '1';
+    clearTimeout(banner._t);
+    banner._t = setTimeout(function () { b.style.opacity = '0'; }, 1600);
+  }
+
+  // ═════════════ quiz UI ═════════════
+  function showQuestion() {
+    if (!G.questions.length) return;
+    if (G.qIdx >= G.questions.length) G.qIdx = 0;
+    var q = G.questions[G.qIdx];
+    $('qTermText').textContent = q.term;
+    $('qAnswers').innerHTML = q.choices.map(function (ch, i) {
+      return '<div class="qa" data-i="' + i + '" onclick="LD.answer(' + i + ')">' + esc(ch) + '</div>';
+    }).join('');
+  }
+
+  function answer(i) {
+    if (G.lockT > 0 || !G.sim || G.sim.over) return;
+    var q = G.questions[G.qIdx];
+    var els = $('qAnswers').querySelectorAll('.qa');
+    if (els[q.correctIdx]) els[q.correctIdx].classList.add('correct');
+    if (i === q.correctIdx) {
+      G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.correct++;
+      var gain = answerReward(G.streak);
+      G.sim.energy += gain;
+      banner('+' + gain + ' ⚡');
+      G.qIdx++;
+      setTimeout(showQuestion, 650);
+    } else {
+      if (els[i]) els[i].classList.add('wrong');
+      Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
+      G.streak = 0;
+      G.lockT = 4;
+      var lk = $('qLock');
+      lk.style.display = 'block';
+      var iv = setInterval(function () {
+        lk.textContent = '⌛ ENERGY OFFLINE ' + Math.ceil(G.lockT) + 's';
+        if (G.lockT <= 0) { clearInterval(iv); lk.style.display = 'none'; G.qIdx++; showQuestion(); }
+      }, 200);
+    }
+  }
+
+  // ═════════════ game flow ═════════════
+  function reportResult() {
+    if (G.reported) return;
+    G.reported = true;
+    var s = G.sim;
+    post({
+      type: 'pflx_arena_game_result', game: 'lane-defense',
+      deckId: G.deck ? G.deck.id : 'demo',
+      score: scoreFor(s, G.correct, G.bestStreak),
+      correct: G.correct, total: G.questions.length,
+      bestStreak: G.bestStreak, won: !!s.won
+    });
+  }
+
+  function endScreen() {
+    reportResult();
+    var s = G.sim;
+    var sc = scoreFor(s, G.correct, G.bestStreak);
+    var el = document.createElement('div');
+    el.className = 'screen';
+    el.innerHTML =
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 SECTOR HELD' : '💥 OVERRUN') + '</div>' +
+      '<div class="sub">' + (s.won ? 'All three waves broke against your line.' : 'The raiders breached the perimeter. Rebuild and try again.') + '</div>' +
+      '<div class="stat-row">' +
+        '<div class="stat"><b>' + sc + '</b><span>SCORE</span></div>' +
+        '<div class="stat"><b>' + s.kills + '</b><span>KILLS</span></div>' +
+        '<div class="stat"><b>' + G.correct + '</b><span>CORRECT</span></div>' +
+        '<div class="stat"><b>' + Math.max(0, s.lives) + '</b><span>LIVES LEFT</span></div>' +
+      '</div>' +
+      '<div><button class="btn gold" onclick="LD.rematch()">⟳ REBUILD</button>' +
+      '<button class="btn" onclick="LD.exit()">✕ EXIT</button></div>';
+    document.body.appendChild(el);
+  }
+
+  function loop(now) {
+    var dt = Math.min(0.05, (now - G.lastT) / 1000 || 0.016);
+    G.lastT = now;
+    if (G.lockT > 0) G.lockT -= dt;
+    simStep(G.sim, dt);
+    draw();
+    hud();
+    if (G.sim.over) { endScreen(); return; }
+    G.raf = requestAnimationFrame(loop);
+  }
+
+  function initWithDeck(deck, player) {
+    G.deck = deck;
+    if (player && player.brand) G.player = { id: player.id || 'p', brand: player.brand };
+    G.questions = buildQuestions(deck.cards);
+    if (!G.questions.length) { $('introSub').textContent = 'This deck needs at least 4 cards.'; return; }
+    if (G.cfg.title) {
+      document.title = G.cfg.title + ' — PFLX Battle Arena';
+      var big = document.querySelector('#intro .big');
+      if (big) big.textContent = '🌱 ' + G.cfg.title.toUpperCase();
+    }
+    $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
+      'Answer questions to generate ⚡ energy. Spend it on defenders.<br>🔫 shoots · 🧱 blocks · 🔋 generates. Survive 3 waves.';
+    $('startBtn').style.display = 'inline-block';
+  }
+
+  window.LD = {
+    _core: { newSim: newSim, simStep: simStep, simStartWave: simStartWave, place: place, canPlace: canPlace, makeWaves: makeWaves, answerReward: answerReward, scoreFor: scoreFor, buildQuestions: buildQuestions, DEF_TYPES: DEF_TYPES, LANES: LANES, COLS: COLS, applyConfig: applyConfig },
+    start: function () {
+      var intro = $('intro'); if (intro) intro.remove();
+      document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
+      $('wrap').style.display = 'flex';
+      G.sim = newSim(1);
+      G.correct = 0; G.streak = 0; G.bestStreak = 0; G.qIdx = 0; G.lockT = 0; G.reported = false;
+      G.questions = buildQuestions(G.deck.cards);
+      // palette
+      $('palette').innerHTML = Object.keys(DEF_TYPES).map(function (t) {
+        var d = DEF_TYPES[t];
+        return '<div class="def-btn" data-type="' + t + '" onclick="LD.pick(\'' + t + '\')">' +
+          '<div class="ic">' + d.icon + '</div><div class="nm">' + d.name + '</div><div class="cost">⚡' + d.cost + '</div></div>';
+      }).join('');
+      showQuestion();
+      simStartWave(G.sim);
+      banner('WAVE 1');
+      G.lastT = performance.now();
+      if (G.raf) cancelAnimationFrame(G.raf);
+      G.raf = requestAnimationFrame(loop);
+    },
+    pick: function (t) { G.selType = t; hud(); },
+    answer: answer,
+    rematch: function () { window.LD.start(); },
+    exit: function () {
+      post({ type: 'pflx_arena_game_exit' });
+      if (window.parent === window) location.reload();
+    }
+  };
+
+  // canvas click → place selected defender
+  document.addEventListener('DOMContentLoaded', function () {
+    $('cv').addEventListener('click', function (ev) {
+      if (!G.sim || G.sim.over) return;
+      var r = ev.target.getBoundingClientRect();
+      var col = Math.floor(((ev.clientX - r.left) / r.width) * COLS);
+      var lane = Math.floor(((ev.clientY - r.top) / r.height) * LANES);
+      var def = DEF_TYPES[G.selType];
+      if (G.sim.energy < def.cost) { banner('NEED ⚡' + def.cost); return; }
+      if (!place(G.sim, G.selType, lane, col)) banner('BLOCKED');
+      hud();
+    });
+  });
+
+  // handshake
+  var gotDeck = false;
+  window.addEventListener('message', function (e) {
+    var m = e.data;
+    if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+    if (!m || m.type !== 'pflx_arena_deck' || !m.deck) return;
+    gotDeck = true;
+    applyConfig(m.config);
+    initWithDeck(m.deck, m.player);
+  });
+  post({ type: 'pflx_game_ready', game: 'lane-defense' });
+  setTimeout(function () { if (!gotDeck) initWithDeck(DEMO_DECK, null); }, 1600);
+})();
+</script>
+</body>
+</html>
