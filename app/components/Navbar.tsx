@@ -46,6 +46,12 @@ export default function Navbar() {
             Leaderboard
           </Link>
           <Link
+            href="/decks"
+            className="font-mono text-xs tracking-wider text-gray-400 hover:text-pflx-cyan transition-colors uppercase"
+          >
+            Decks
+          </Link>
+          <Link
             href="/cartridges"
             className="font-mono text-xs tracking-wider text-gray-400 hover:text-pflx-gold transition-colors uppercase"
           >
