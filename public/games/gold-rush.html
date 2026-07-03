@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Gold Rush — PFLX Battle Arena</title>
+<title>Crypto Heist — PFLX Battle Arena</title>
 <!-- ═══════════════════════════════════════════════════════════════
-     GOLD RUSH — Arena Game Cartridge #4 (July 2026).
-     Blooket-Gold-Quest-style: answer a question, then pick 1 of 3
-     mystery chests — gold, jackpots, DOUBLE, STEAL from a rival,
-     SWAP fortunes, or lose a cut. Three AI rivals dig alongside you;
-     most gold after the final round wins. Luck keeps every run alive.
+     CRYPTO HEIST — Arena Game Cartridge #4 (July 2026).
+     CryptoHack-style (sci-fi retheme of the Gold-Quest luck loop):
+     answer a question, then crack 1 of 3 encrypted caches — crypto,
+     jackpots, OVERCLOCK (double), HACK a rival wallet, hot-SWAP
+     wallets, or trip a FIREWALL TRACE and lose a cut. Three rival AIs
+     mine alongside you; richest wallet after the final block wins.
      Speaks ARENA GAME CARTRIDGE CONTRACT v0.1. game id: 'gold-rush'.
      Config: { title, accent, background, emblem, difficulty, ordered,
      sound }. Pure core: window.GR._core (chest odds Node-testable).
@@ -79,20 +80,20 @@
   <div id="board"></div>
   <div id="roundStrip"><span id="roundLbl">ROUND 1 / 12</span><span id="streakLbl"></span></div>
   <div id="quiz">
-    <div id="qTerm"><span class="kick">ANSWER TO DIG — WRONG = RIVALS DIG WITHOUT YOU</span><span id="qTermText"></span></div>
+    <div id="qTerm"><span class="kick">ANSWER TO MINE — WRONG = RIVAL RIGS MINE WITHOUT YOU</span><span id="qTermText"></span></div>
     <div id="qAnswers"></div>
     <div id="chests">
-      <div class="chest" onclick="GR.pick(0)"><div class="box">🎁</div><div class="lbl">CHEST I</div></div>
-      <div class="chest" onclick="GR.pick(1)"><div class="box">🎁</div><div class="lbl">CHEST II</div></div>
-      <div class="chest" onclick="GR.pick(2)"><div class="box">🎁</div><div class="lbl">CHEST III</div></div>
+      <div class="chest" onclick="GR.pick(0)"><div class="box">🗄️</div><div class="lbl">CACHE I</div></div>
+      <div class="chest" onclick="GR.pick(1)"><div class="box">🗄️</div><div class="lbl">CACHE II</div></div>
+      <div class="chest" onclick="GR.pick(2)"><div class="box">🗄️</div><div class="lbl">CACHE III</div></div>
     </div>
     <div id="outcome"><div class="oIcon"></div><div class="oText"></div><div class="oSub"></div></div>
   </div>
 </div>
 <div class="screen" id="intro">
-  <div class="big" style="color:#ffd740;text-shadow:0 0 20px rgba(255,215,64,0.6)">🪙 GOLD RUSH</div>
+  <div class="big" style="color:#ffd740;text-shadow:0 0 20px rgba(255,215,64,0.6)">💠 CRYPTO HEIST</div>
   <div class="sub" id="introSub">Waiting for deck…</div>
-  <button class="btn gold" id="startBtn" style="display:none" onclick="GR.start()">▶ START DIGGING</button>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="GR.start()">▶ JACK IN</button>
 </div>
 
 <script>
@@ -113,14 +114,14 @@
 
   // ═════════════ PURE CORE (Node-testable) ═════════════
   var OUTCOMES = [
-    { id: 'gold-s',  w: 24, icon: '🪙', label: 'GOLD',       color: '#ffd740' },
-    { id: 'gold-m',  w: 18, icon: '💰', label: 'BIG GOLD',   color: '#ffd740' },
-    { id: 'gold-l',  w: 9,  icon: '👑', label: 'JACKPOT',    color: '#ffd740' },
-    { id: 'double',  w: 8,  icon: '✨', label: 'DOUBLE UP',  color: '#00e676' },
-    { id: 'steal',   w: 13, icon: '🦝', label: 'STEAL',      color: '#00e5ff' },
-    { id: 'swap',    w: 7,  icon: '🔀', label: 'SWAP',       color: '#b388ff' },
-    { id: 'lose',    w: 12, icon: '💸', label: 'CAVE-IN',    color: '#ff4d6d' },
-    { id: 'nothing', w: 9,  icon: '🕸', label: 'EMPTY',      color: '#8a9ab8' }
+    { id: 'gold-s',  w: 24, icon: '💠', label: 'CRYPTO',       color: '#ffd740' },
+    { id: 'gold-m',  w: 18, icon: '🧊', label: 'COLD WALLET',  color: '#ffd740' },
+    { id: 'gold-l',  w: 9,  icon: '🌐', label: 'MOTHERLODE',   color: '#ffd740' },
+    { id: 'double',  w: 8,  icon: '⚡', label: 'OVERCLOCK',    color: '#00e676' },
+    { id: 'steal',   w: 13, icon: '👾', label: 'HACK RIVAL',   color: '#00e5ff' },
+    { id: 'swap',    w: 7,  icon: '🔀', label: 'WALLET SWAP',  color: '#b388ff' },
+    { id: 'lose',    w: 12, icon: '🚨', label: 'FIREWALL TRACE', color: '#ff4d6d' },
+    { id: 'nothing', w: 9,  icon: '🕳', label: 'CORRUPTED',    color: '#8a9ab8' }
   ];
   var RIVAL_NAMES = ['NOVA-7', 'VEX', 'ORION'];
   var DIFF = {
@@ -152,37 +153,37 @@
     rand = rand || Math.random;
     var meta = OUTCOMES.find(function (o) { return o.id === id; }) || OUTCOMES[0];
     var out = { icon: meta.icon, color: meta.color, text: '', sub: '' };
-    if (id === 'gold-s') { var g1 = 40 + Math.floor(rand() * 60); s.me += g1; out.text = '+' + g1 + ' GOLD'; }
-    else if (id === 'gold-m') { var g2 = 110 + Math.floor(rand() * 90); s.me += g2; out.text = '+' + g2 + ' GOLD'; }
-    else if (id === 'gold-l') { var g3 = 240 + Math.floor(rand() * 160); s.me += g3; out.text = 'JACKPOT! +' + g3; }
+    if (id === 'gold-s') { var g1 = 40 + Math.floor(rand() * 60); s.me += g1; out.text = '+' + g1 + ' ₵RYPTO'; }
+    else if (id === 'gold-m') { var g2 = 110 + Math.floor(rand() * 90); s.me += g2; out.text = '+' + g2 + ' ₵RYPTO'; }
+    else if (id === 'gold-l') { var g3 = 240 + Math.floor(rand() * 160); s.me += g3; out.text = 'MOTHERLODE! +' + g3; }
     else if (id === 'double') {
       var gain = Math.min(1200, s.me); // doubling capped so runaway leads stay beatable
       s.me += gain;
-      out.text = 'DOUBLE UP! +' + gain;
-      out.sub = 'Your pile doubled.';
+      out.text = 'OVERCLOCKED! +' + gain;
+      out.sub = 'Your mining rig doubled its wallet.';
     }
     else if (id === 'steal') {
       var rich = s.rivals.reduce(function (a, b) { return b.gold > a.gold ? b : a; }, s.rivals[0]);
       var take = Math.floor(rich.gold * 0.3);
       rich.gold -= take; s.me += take;
-      out.text = 'STOLE ' + take + ' FROM ' + rich.name;
-      out.sub = rich.name + ' is furious.';
+      out.text = 'HACKED ' + take + ' FROM ' + rich.name;
+      out.sub = rich.name + '\u2019s firewall is down.';
     }
     else if (id === 'swap') {
       var idx = Math.floor(rand() * s.rivals.length);
       var r2 = s.rivals[idx];
       var mine = s.me;
       s.me = r2.gold; r2.gold = mine;
-      out.text = 'SWAPPED WITH ' + r2.name;
+      out.text = 'WALLET SWAP WITH ' + r2.name;
       out.sub = (s.me >= mine ? 'Trade up!' : 'Ouch — they got the better end.');
     }
     else if (id === 'lose') {
       var loss = Math.floor(s.me * 0.3);
       s.me -= loss;
-      out.text = '-' + loss + ' GOLD';
-      out.sub = 'A tunnel collapsed on your stash.';
+      out.text = '-' + loss + ' ₵RYPTO';
+      out.sub = 'Firewall trace — security seized a cut of your wallet.';
     }
-    else { out.text = 'EMPTY CHEST'; out.sub = 'Just cobwebs in this one.'; }
+    else { out.text = 'CORRUPTED CACHE'; out.sub = 'The data in this one is unreadable junk.'; }
     return out;
   }
 
@@ -270,7 +271,7 @@
     chest: function () { this.beep(520, 0.08, 'triangle'); var s2 = this; setTimeout(function () { s2.beep(700, 0.08, 'triangle'); }, 70); setTimeout(function () { s2.beep(950, 0.14, 'triangle'); }, 140); }
   };
 
-  var G = { deck: null, player: { id: 'demo', brand: 'Prospector' },
+  var G = { deck: null, player: { id: 'demo', brand: 'Netrunner' },
             cfg: { title: '', accent: '', emblem: '🪙', difficulty: 'normal', ordered: false, sound: true },
             s: null, questions: [], qIdx: 0, chestSet: null, reported: false };
 
@@ -279,7 +280,7 @@
     G.cfg.title = String(cfg.title || '').slice(0, 60);
     G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
     G.cfg.background = BG_CSS[cfg.background] ? cfg.background : 'space';
-    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🪙';
+    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '💠';
     G.cfg.difficulty = DIFF[cfg.difficulty] ? cfg.difficulty : 'normal';
     G.cfg.ordered = !!cfg.ordered;
     G.cfg.sound = cfg.sound !== false;
@@ -296,10 +297,10 @@
     $('board').innerHTML = all.map(function (p) {
       return '<div class="digger' + (p.me ? ' me' : '') + (p === lead && lead.gold > 0 ? ' leader' : '') + '">' +
         '<div class="nm">' + (p.me ? '⭐ ' : '🤖 ') + esc(p.name) + '</div>' +
-        '<div class="au">🪙 ' + Math.max(0, Math.floor(p.gold)).toLocaleString() + '</div>' +
+        '<div class="au">💠 ' + Math.max(0, Math.floor(p.gold)).toLocaleString() + '</div>' +
       '</div>';
     }).join('');
-    $('roundLbl').textContent = 'ROUND ' + Math.min(s.rounds, s.round + 1) + ' / ' + s.rounds;
+    $('roundLbl').textContent = 'BLOCK ' + Math.min(s.rounds, s.round + 1) + ' / ' + s.rounds;
     $('streakLbl').textContent = s.streak >= 2 ? '🔥 STREAK ×' + s.streak : '';
   }
 
@@ -343,7 +344,7 @@
       sfx.bad();
       // no chest — rivals still dig
       setTimeout(function () {
-        showOutcome({ icon: '⛏', color: '#8a9ab8', text: 'NO DIG THIS ROUND', sub: 'The rivals kept digging without you…' });
+        showOutcome({ icon: '📡', color: '#8a9ab8', text: 'ACCESS DENIED', sub: 'Your rig idled while the rival AIs kept mining…' });
       }, 750);
     }
   }
@@ -395,16 +396,16 @@
     var el = document.createElement('div');
     el.className = 'screen';
     el.innerHTML =
-      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 RICHEST IN THE RUSH' : '💸 OUT-DUG') + '</div>' +
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 MASTER NETRUNNER' : '🚨 OUT-MINED') + '</div>' +
       '<div class="sub">' + standings.map(function (p, i) {
-        return (i + 1) + '. ' + (p.me ? '⭐ ' : '') + esc(p.name) + ' — 🪙 ' + Math.floor(p.gold).toLocaleString();
+        return (i + 1) + '. ' + (p.me ? '⭐ ' : '') + esc(p.name) + ' — 💠 ' + Math.floor(p.gold).toLocaleString();
       }).join('<br>') + '</div>' +
       '<div class="stat-row">' +
         '<div class="stat"><b>' + scoreFor(s) + '</b><span>SCORE</span></div>' +
         '<div class="stat"><b>' + s.correct + '</b><span>CORRECT</span></div>' +
         '<div class="stat"><b>×' + s.bestStreak + '</b><span>BEST STREAK</span></div>' +
       '</div>' +
-      '<div><button class="btn gold" onclick="GR.rematch()">⟳ NEW RUSH</button>' +
+      '<div><button class="btn gold" onclick="GR.rematch()">⟳ NEW HEIST</button>' +
       '<button class="btn" onclick="GR.exit()">✕ EXIT</button></div>';
     document.body.appendChild(el);
   }
@@ -420,7 +421,7 @@
       if (big) big.textContent = (G.cfg.emblem || '🪙') + ' ' + G.cfg.title.toUpperCase();
     }
     $('introSub').innerHTML = 'Deck: <b style="color:#ffd740">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
-      'Answer right → pick a mystery chest: gold, DOUBLE, STEAL, SWAP… or a cave-in.<br>Out-dig three AI rivals across ' + ((DIFF[G.cfg.difficulty] || DIFF.normal).rounds) + ' rounds.';
+      'Answer right → crack an encrypted cache: crypto, OVERCLOCK, HACK, SWAP… or a firewall trace.<br>Out-mine three rival AIs across ' + ((DIFF[G.cfg.difficulty] || DIFF.normal).rounds) + ' blocks.';
     $('startBtn').style.display = 'inline-block';
   }
 

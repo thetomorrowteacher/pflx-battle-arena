@@ -6,7 +6,8 @@
 <title>Knowledge Tycoon — PFLX Battle Arena</title>
 <!-- ═══════════════════════════════════════════════════════════════
      KNOWLEDGE TYCOON — Arena Game Cartridge #3 (July 2026).
-     The Gimkit-style economy loop: answer questions → earn CASH →
+     Sci-fi data-startup theme. The Gimkit-style economy loop:
+     answer questions → earn CREDITS →
      spend it in the UPGRADE SHOP (cash/answer, streak bonus,
      auto-miner, time warp) → snowball to the target before the clock.
      Win = cash ON HAND reaches the target (spend-vs-bank tension).
@@ -80,7 +81,7 @@
 <body>
 <div id="wrap" style="display:none">
   <div id="topbar">
-    <div id="cash"><small>CASH ON HAND</small>$0</div>
+    <div id="cash"><small>CREDITS BANKED</small>$0</div>
     <div style="flex:1">
       <div class="tbar"><div id="timeFill"></div></div>
       <div class="tbar"><div id="goalFill"></div></div>
@@ -91,13 +92,13 @@
     <div id="qTerm"><span class="kick">ANSWER TO EARN — <span id="perTxt">$10</span> / CORRECT</span><span id="qTermText"></span></div>
     <div id="qAnswers"></div>
   </div>
-  <div style="font-family:Orbitron;font-size:8px;letter-spacing:0.16em;color:#ffd740">💰 UPGRADE SHOP</div>
+  <div style="font-family:Orbitron;font-size:8px;letter-spacing:0.16em;color:#ffd740">🧪 UPGRADE LAB</div>
   <div id="shop"></div>
 </div>
 <div class="screen" id="intro">
   <div class="big" style="color:#ffd740;text-shadow:0 0 20px rgba(255,215,64,0.6)">💰 KNOWLEDGE TYCOON</div>
   <div class="sub" id="introSub">Waiting for deck…</div>
-  <button class="btn gold" id="startBtn" style="display:none" onclick="KT.start()">▶ OPEN FOR BUSINESS</button>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="KT.start()">▶ BOOT THE STARTUP</button>
 </div>
 
 <script>
@@ -118,11 +119,11 @@
 
   // ═════════════ PURE CORE (Node-testable) ═════════════
   var UPGRADES = {
-    cashPer: { icon: '💵', name: 'CASH / ANSWER', costs: [50, 150, 400, 900, 2000], bonus: [10, 25, 60, 150, 400],
+    cashPer: { icon: '💳', name: 'CREDITS / ANSWER', costs: [50, 150, 400, 900, 2000], bonus: [10, 25, 60, 150, 400],
                fx: function (v) { return '+$' + v + ' per correct'; } },
     streak:  { icon: '🔥', name: 'STREAK BONUS', costs: [80, 240, 700, 1600], bonus: [5, 12, 30, 80],
                fx: function (v) { return '+$' + v + ' × streak'; } },
-    auto:    { icon: '🤖', name: 'AUTO-MINER', costs: [120, 350, 900, 2200], bonus: [2, 6, 15, 40],
+    auto:    { icon: '🛰', name: 'ORBITAL MINER', costs: [120, 350, 900, 2200], bonus: [2, 6, 15, 40],
                fx: function (v) { return '+$' + v + ' / second'; } },
     time:    { icon: '⏳', name: 'TIME WARP', costs: [200, 600, 1500], bonus: [15, 15, 15],
                fx: function (v) { return '+' + v + 's on the clock'; } }
@@ -284,7 +285,7 @@
 
   function hud() {
     var s = G.s;
-    $('cash').innerHTML = '<small>CASH ON HAND</small>' + fmt(s.cash);
+    $('cash').innerHTML = '<small>CREDITS BANKED</small>' + fmt(s.cash);
     $('goalTxt').textContent = fmt(s.target);
     var mm = Math.floor(Math.max(0, s.timeLeft) / 60), ss = Math.floor(Math.max(0, s.timeLeft) % 60);
     $('timeTxt').textContent = mm + ':' + String(ss).padStart(2, '0');
@@ -358,15 +359,15 @@
     var el = document.createElement('div');
     el.className = 'screen';
     el.innerHTML =
-      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 TYCOON!' : '⏰ CLOSED DOWN') + '</div>' +
-      '<div class="sub">' + (s.won ? 'You banked the target with time to spare.' : 'The clock beat the bank — invest smarter and reopen.') + '</div>' +
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 UNICORN STATUS' : '⏰ SERVERS SEIZED') + '</div>' +
+      '<div class="sub">' + (s.won ? 'Your data empire hit the valuation target with time to spare.' : 'The runway ran out — reinvest smarter and reboot.') + '</div>' +
       '<div class="stat-row">' +
         '<div class="stat"><b>' + scoreFor(s) + '</b><span>SCORE</span></div>' +
         '<div class="stat"><b>' + fmt(s.earned) + '</b><span>TOTAL EARNED</span></div>' +
         '<div class="stat"><b>' + s.correct + '</b><span>CORRECT</span></div>' +
         '<div class="stat"><b>×' + s.bestStreak + '</b><span>BEST STREAK</span></div>' +
       '</div>' +
-      '<div><button class="btn gold" onclick="KT.rematch()">⟳ REOPEN SHOP</button>' +
+      '<div><button class="btn gold" onclick="KT.rematch()">⟳ REBOOT STARTUP</button>' +
       '<button class="btn" onclick="KT.exit()">✕ EXIT</button></div>';
     document.body.appendChild(el);
   }
@@ -391,7 +392,7 @@
       if (big) big.textContent = (G.cfg.emblem || '💰') + ' ' + G.cfg.title.toUpperCase();
     }
     $('introSub').innerHTML = 'Deck: <b style="color:#ffd740">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
-      'Answer to earn cash. Reinvest in the UPGRADE SHOP to snowball.<br>Bank <b style="color:#00e676">' + fmt(d.target) + '</b> before the clock runs out.';
+      'Answer to earn credits. Reinvest in the UPGRADE LAB to snowball.<br>Bank <b style="color:#00e676">' + fmt(d.target) + '</b> before the clock runs out.';
     $('startBtn').style.display = 'inline-block';
   }
 
