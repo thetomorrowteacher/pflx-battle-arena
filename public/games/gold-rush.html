@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Gold Rush — PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     GOLD RUSH — Arena Game Cartridge #4 (July 2026).
+     Blooket-Gold-Quest-style: answer a question, then pick 1 of 3
+     mystery chests — gold, jackpots, DOUBLE, STEAL from a rival,
+     SWAP fortunes, or lose a cut. Three AI rivals dig alongside you;
+     most gold after the final round wins. Luck keeps every run alive.
+     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1. game id: 'gold-rush'.
+     Config: { title, accent, background, emblem, difficulty, ordered,
+     sound }. Pure core: window.GR._core (chest odds Node-testable).
+     ═══════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%); color:#e6f8ff;
+         font-family:'Rajdhani',sans-serif; overflow:hidden; user-select:none; }
+  #wrap { height:100%; display:flex; flex-direction:column; max-width:780px; margin:0 auto; padding:12px; gap:10px; }
+
+  #board { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .digger { background:rgba(10,20,36,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px 10px; text-align:center; }
+  .digger.me { border-color:rgba(255,215,64,0.6); box-shadow:0 0 14px rgba(255,215,64,0.2); }
+  .digger.leader { border-color:rgba(0,230,118,0.6); }
+  .digger .nm { font-family:'Orbitron'; font-size:7.5px; letter-spacing:0.1em; color:#8a9ab8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .digger .au { font-family:'Orbitron'; font-size:13px; font-weight:900; color:#ffd740; margin-top:2px; }
+
+  #roundStrip { display:flex; justify-content:space-between; font-family:'Orbitron'; font-size:9px; letter-spacing:0.14em; color:#7a8db0; }
+  #streakLbl { color:#ff9f40; }
+
+  #quiz { background:rgba(4,10,20,0.9); border:1px solid rgba(255,215,64,0.3); border-radius:14px; padding:14px; flex:1; display:flex; flex-direction:column; }
+  #qTerm { font-family:'Orbitron'; font-size:clamp(13px,3.8vw,19px); font-weight:800; color:#f4feff; margin-bottom:12px; text-align:center; }
+  #qTerm .kick { display:block; font-size:7px; letter-spacing:0.2em; color:#ffd740; margin-bottom:4px; }
+  #qAnswers { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .qa { background:rgba(10,20,36,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:12px 10px;
+        font-size:13.5px; font-weight:600; cursor:pointer; color:#cfe3ff; line-height:1.3; transition:all 0.12s; word-break:break-word; }
+  .qa:hover { border-color:rgba(255,215,64,0.6); transform:translateY(-2px); }
+  .qa.correct { border-color:#00e676; background:rgba(0,230,118,0.14); color:#c9ffe2; }
+  .qa.wrong { border-color:#ff4d6d; background:rgba(255,77,109,0.12); color:#ffd3dc; }
+  .qa.dim { opacity:0.35; pointer-events:none; }
+
+  #chests { display:none; grid-template-columns:repeat(3,1fr); gap:12px; flex:1; align-content:center; }
+  .chest { background:linear-gradient(160deg, rgba(255,215,64,0.10), rgba(10,20,36,0.9));
+           border:1px solid rgba(255,215,64,0.45); border-radius:16px; padding:26px 10px; text-align:center; cursor:pointer;
+           transition:all 0.15s; animation:chestIn 0.35s cubic-bezier(0.22,1,0.36,1) backwards; }
+  .chest:nth-child(2){animation-delay:0.07s} .chest:nth-child(3){animation-delay:0.14s}
+  @keyframes chestIn { from { transform:translateY(20px) scale(0.9); opacity:0; } }
+  .chest:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(255,215,64,0.25); }
+  .chest .box { font-size:44px; filter:drop-shadow(0 0 10px rgba(255,215,64,0.5)); }
+  .chest .lbl { font-family:'Orbitron'; font-size:8px; letter-spacing:0.16em; color:#ffd740; margin-top:8px; }
+  .chest.opened { pointer-events:none; }
+
+  #outcome { display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  #outcome .oIcon { font-size:56px; margin-bottom:8px; }
+  #outcome .oText { font-family:'Orbitron'; font-size:clamp(14px,4vw,22px); font-weight:900; letter-spacing:0.08em; }
+  #outcome .oSub { font-size:13px; color:#8a9ab8; margin-top:6px; }
+
+  .screen { position:fixed; inset:0; background:rgba(2,5,10,0.93); backdrop-filter:blur(6px); z-index:100;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .big { font-family:'Orbitron'; font-weight:900; font-size:clamp(24px,6.5vw,42px); letter-spacing:0.1em; margin-bottom:10px; }
+  .btn { font-family:'Orbitron'; font-size:12px; font-weight:800; letter-spacing:0.12em; padding:13px 34px;
+         border-radius:10px; border:1px solid rgba(0,229,255,0.55); background:rgba(0,229,255,0.12); color:#7df9ff;
+         cursor:pointer; transition:all 0.15s; margin:6px; }
+  .btn:hover { background:rgba(0,229,255,0.25); box-shadow:0 0 18px rgba(0,229,255,0.35); }
+  .btn.gold { border-color:rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740; }
+  .sub { font-size:14px; color:#8a9ab8; margin-bottom:20px; max-width:460px; line-height:1.6; }
+  .stat-row { display:flex; gap:24px; margin-bottom:22px; flex-wrap:wrap; justify-content:center; }
+  .stat { text-align:center; }
+  .stat b { display:block; font-family:'Orbitron'; font-size:20px; color:#ffd740; }
+  .stat span { font-size:10px; letter-spacing:0.12em; color:#7a8db0; }
+</style>
+</head>
+<body>
+<div id="wrap" style="display:none">
+  <div id="board"></div>
+  <div id="roundStrip"><span id="roundLbl">ROUND 1 / 12</span><span id="streakLbl"></span></div>
+  <div id="quiz">
+    <div id="qTerm"><span class="kick">ANSWER TO DIG — WRONG = RIVALS DIG WITHOUT YOU</span><span id="qTermText"></span></div>
+    <div id="qAnswers"></div>
+    <div id="chests">
+      <div class="chest" onclick="GR.pick(0)"><div class="box">🎁</div><div class="lbl">CHEST I</div></div>
+      <div class="chest" onclick="GR.pick(1)"><div class="box">🎁</div><div class="lbl">CHEST II</div></div>
+      <div class="chest" onclick="GR.pick(2)"><div class="box">🎁</div><div class="lbl">CHEST III</div></div>
+    </div>
+    <div id="outcome"><div class="oIcon"></div><div class="oText"></div><div class="oSub"></div></div>
+  </div>
+</div>
+<div class="screen" id="intro">
+  <div class="big" style="color:#ffd740;text-shadow:0 0 20px rgba(255,215,64,0.6)">🪙 GOLD RUSH</div>
+  <div class="sub" id="introSub">Waiting for deck…</div>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="GR.start()">▶ START DIGGING</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DEMO_DECK = {
+    id: 'demo', name: 'PFLX Demo Deck', subject: 'PFLX Lore',
+    cards: [
+      { term: 'X-Coin', definition: 'The digital currency of the PFLX ecosystem' },
+      { term: 'Core Pathways', definition: 'Learning modules mapped as stations in open space' },
+      { term: 'Battle Arena', definition: 'Esports and challenges hub for quick XC' },
+      { term: 'DarkCampus', definition: 'Global professional network for rising creators' },
+      { term: 'Mission Control', definition: 'Project and task management center' },
+      { term: 'Evo Rank', definition: 'The progression rank earned across PFLX' }
+    ]
+  };
+
+  // ═════════════ PURE CORE (Node-testable) ═════════════
+  var OUTCOMES = [
+    { id: 'gold-s',  w: 24, icon: '🪙', label: 'GOLD',       color: '#ffd740' },
+    { id: 'gold-m',  w: 18, icon: '💰', label: 'BIG GOLD',   color: '#ffd740' },
+    { id: 'gold-l',  w: 9,  icon: '👑', label: 'JACKPOT',    color: '#ffd740' },
+    { id: 'double',  w: 8,  icon: '✨', label: 'DOUBLE UP',  color: '#00e676' },
+    { id: 'steal',   w: 13, icon: '🦝', label: 'STEAL',      color: '#00e5ff' },
+    { id: 'swap',    w: 7,  icon: '🔀', label: 'SWAP',       color: '#b388ff' },
+    { id: 'lose',    w: 12, icon: '💸', label: 'CAVE-IN',    color: '#ff4d6d' },
+    { id: 'nothing', w: 9,  icon: '🕸', label: 'EMPTY',      color: '#8a9ab8' }
+  ];
+  var RIVAL_NAMES = ['NOVA-7', 'VEX', 'ORION'];
+  var DIFF = {
+    easy:   { rounds: 12, rivalLo: 30, rivalHi: 110, rivalSteal: 0 },
+    normal: { rounds: 12, rivalLo: 45, rivalHi: 150, rivalSteal: 0.06 },
+    hard:   { rounds: 12, rivalLo: 60, rivalHi: 200, rivalSteal: 0.12 }
+  };
+
+  function newRush(difficulty) {
+    var d = DIFF[difficulty] || DIFF.normal;
+    return { diff: d, round: 0, rounds: d.rounds, me: 0,
+             rivals: RIVAL_NAMES.map(function (n) { return { name: n, gold: 0 }; }),
+             correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false, lastEvent: null };
+  }
+
+  function weightedRoll(rand) {
+    var total = OUTCOMES.reduce(function (a, o) { return a + o.w; }, 0);
+    var r = (rand || Math.random)() * total;
+    for (var i = 0; i < OUTCOMES.length; i++) {
+      r -= OUTCOMES[i].w;
+      if (r <= 0) return OUTCOMES[i].id;
+    }
+    return 'gold-s';
+  }
+  function rollChests(rand) { return [weightedRoll(rand), weightedRoll(rand), weightedRoll(rand)]; }
+
+  // Applies a chest outcome. Returns { icon, text, sub } for the banner.
+  function applyOutcome(s, id, rand) {
+    rand = rand || Math.random;
+    var meta = OUTCOMES.find(function (o) { return o.id === id; }) || OUTCOMES[0];
+    var out = { icon: meta.icon, color: meta.color, text: '', sub: '' };
+    if (id === 'gold-s') { var g1 = 40 + Math.floor(rand() * 60); s.me += g1; out.text = '+' + g1 + ' GOLD'; }
+    else if (id === 'gold-m') { var g2 = 110 + Math.floor(rand() * 90); s.me += g2; out.text = '+' + g2 + ' GOLD'; }
+    else if (id === 'gold-l') { var g3 = 240 + Math.floor(rand() * 160); s.me += g3; out.text = 'JACKPOT! +' + g3; }
+    else if (id === 'double') {
+      var gain = Math.min(1200, s.me); // doubling capped so runaway leads stay beatable
+      s.me += gain;
+      out.text = 'DOUBLE UP! +' + gain;
+      out.sub = 'Your pile doubled.';
+    }
+    else if (id === 'steal') {
+      var rich = s.rivals.reduce(function (a, b) { return b.gold > a.gold ? b : a; }, s.rivals[0]);
+      var take = Math.floor(rich.gold * 0.3);
+      rich.gold -= take; s.me += take;
+      out.text = 'STOLE ' + take + ' FROM ' + rich.name;
+      out.sub = rich.name + ' is furious.';
+    }
+    else if (id === 'swap') {
+      var idx = Math.floor(rand() * s.rivals.length);
+      var r2 = s.rivals[idx];
+      var mine = s.me;
+      s.me = r2.gold; r2.gold = mine;
+      out.text = 'SWAPPED WITH ' + r2.name;
+      out.sub = (s.me >= mine ? 'Trade up!' : 'Ouch — they got the better end.');
+    }
+    else if (id === 'lose') {
+      var loss = Math.floor(s.me * 0.3);
+      s.me -= loss;
+      out.text = '-' + loss + ' GOLD';
+      out.sub = 'A tunnel collapsed on your stash.';
+    }
+    else { out.text = 'EMPTY CHEST'; out.sub = 'Just cobwebs in this one.'; }
+    return out;
+  }
+
+  // rivals dig every round; on hard they occasionally raid you
+  function rivalTurn(s, rand) {
+    rand = rand || Math.random;
+    var stolen = 0;
+    s.rivals.forEach(function (r) {
+      r.gold += s.diff.rivalLo + Math.floor(rand() * (s.diff.rivalHi - s.diff.rivalLo));
+      if (s.diff.rivalSteal && rand() < s.diff.rivalSteal && s.me > 100) {
+        var take = Math.floor(s.me * 0.12);
+        s.me -= take; r.gold += take; stolen += take;
+      }
+    });
+    return stolen;
+  }
+
+  function advanceRound(s) {
+    s.round++;
+    if (s.round >= s.rounds) {
+      s.over = true;
+      s.won = s.rivals.every(function (r) { return s.me >= r.gold; });
+    }
+  }
+  function scoreFor(s) {
+    return Math.floor(s.me / 10) + s.correct * 5 + s.bestStreak * 5 + (s.won ? 50 : 0);
+  }
+
+  function buildQuestions(cards, rand) {
+    rand = rand || shuffle;
+    var usable = (cards || []).filter(function (c) { return c && c.term && c.definition; });
+    if (usable.length < 4) return [];
+    return rand(usable.slice()).map(function (c) {
+      var others = usable.filter(function (x) { return x !== c && x.definition !== c.definition; });
+      var distractors = rand(others.slice()).slice(0, 3).map(function (x) { return x.definition; });
+      while (distractors.length < 3) distractors.push('None of the above');
+      var choices = rand(distractors.concat([c.definition]));
+      return { term: c.term, choices: choices, correctIdx: choices.indexOf(c.definition) };
+    });
+  }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function $(id) { return document.getElementById(id); }
+  function post(msg) { try { if (window.parent !== window) window.parent.postMessage(msg, '*'); } catch (e) {} }
+
+  // ═════════════ config + assets (shared cartridge pattern) ═════════════
+  var BG_CSS = {
+    space:     'radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%)',
+    neon:      'radial-gradient(ellipse at 50% 110%, #2b0a4d 0%, #05010d 60%)',
+    crimson:   'radial-gradient(ellipse at 50% -10%, #3a0a18 0%, #0d0406 60%)',
+    emerald:   'radial-gradient(ellipse at 50% -10%, #06301f 0%, #04100a 60%)',
+    void:      '#020308',
+    sunset:    'linear-gradient(180deg, #3a1a0a 0%, #0d0604 55%)',
+    aurora:    'linear-gradient(180deg, rgba(0,70,80,0.5) 0%, rgba(40,10,80,0.25) 34%, rgba(4,7,13,0) 60%), radial-gradient(ellipse at 30% -10%, #0b3d3a 0%, #071026 45%, #04070d 80%)',
+    ocean:     'radial-gradient(ellipse at 50% 120%, #063a4d 0%, #032030 45%, #02090f 80%)',
+    magma:     'radial-gradient(ellipse at 50% 115%, #4d1a06 0%, #260a04 45%, #0a0403 80%)',
+    cyber:     'linear-gradient(200deg, #2a0a3d 0%, #0a1030 55%, #04070d 90%)',
+    royal:     'radial-gradient(ellipse at 20% -10%, #241356 0%, #0d0a2a 55%, #05040f 85%)',
+    gilded:    'radial-gradient(ellipse at 50% 120%, #3d2e06 0%, #1a1204 50%, #0a0703 85%)',
+    ice:       'linear-gradient(180deg, #10283d 0%, #081420 50%, #04080d 90%)',
+    bloodmoon: 'radial-gradient(circle at 75% 12%, #58101d 0%, #1d060c 40%, #08030a 75%)',
+    forest:    'radial-gradient(ellipse at 50% -10%, #10331a 0%, #071a0e 50%, #030a05 85%)',
+    storm:     'linear-gradient(115deg, #101826 0%, #1b2a44 45%, #0a0f1c 78%)'
+  };
+  var sfx = {
+    enabled: true, ctx: null,
+    beep: function (freq, dur, type, vol) {
+      if (!this.enabled) return;
+      try {
+        this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        var o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type || 'square'; o.frequency.value = freq;
+        g.gain.value = vol || 0.04;
+        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + (dur || 0.12));
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + (dur || 0.12));
+      } catch (e) {}
+    },
+    good: function () { this.beep(660, 0.09); var s2 = this; setTimeout(function () { s2.beep(990, 0.12); }, 70); },
+    bad: function () { this.beep(160, 0.25, 'sawtooth', 0.05); },
+    chest: function () { this.beep(520, 0.08, 'triangle'); var s2 = this; setTimeout(function () { s2.beep(700, 0.08, 'triangle'); }, 70); setTimeout(function () { s2.beep(950, 0.14, 'triangle'); }, 140); }
+  };
+
+  var G = { deck: null, player: { id: 'demo', brand: 'Prospector' },
+            cfg: { title: '', accent: '', emblem: '🪙', difficulty: 'normal', ordered: false, sound: true },
+            s: null, questions: [], qIdx: 0, chestSet: null, reported: false };
+
+  function applyConfig(cfg) {
+    cfg = cfg || {};
+    G.cfg.title = String(cfg.title || '').slice(0, 60);
+    G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
+    G.cfg.background = BG_CSS[cfg.background] ? cfg.background : 'space';
+    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🪙';
+    G.cfg.difficulty = DIFF[cfg.difficulty] ? cfg.difficulty : 'normal';
+    G.cfg.ordered = !!cfg.ordered;
+    G.cfg.sound = cfg.sound !== false;
+    sfx.enabled = G.cfg.sound;
+    if (G.cfg.background !== 'space') document.body.style.background = BG_CSS[G.cfg.background];
+    return G.cfg;
+  }
+
+  // ═════════════ UI ═════════════
+  function board() {
+    var s = G.s;
+    var all = [{ name: G.player.brand.toUpperCase(), gold: s.me, me: true }].concat(s.rivals);
+    var lead = all.reduce(function (a, b) { return b.gold > a.gold ? b : a; }, all[0]);
+    $('board').innerHTML = all.map(function (p) {
+      return '<div class="digger' + (p.me ? ' me' : '') + (p === lead && lead.gold > 0 ? ' leader' : '') + '">' +
+        '<div class="nm">' + (p.me ? '⭐ ' : '🤖 ') + esc(p.name) + '</div>' +
+        '<div class="au">🪙 ' + Math.max(0, Math.floor(p.gold)).toLocaleString() + '</div>' +
+      '</div>';
+    }).join('');
+    $('roundLbl').textContent = 'ROUND ' + Math.min(s.rounds, s.round + 1) + ' / ' + s.rounds;
+    $('streakLbl').textContent = s.streak >= 2 ? '🔥 STREAK ×' + s.streak : '';
+  }
+
+  function phase(which) {
+    $('qAnswers').style.display = which === 'q' ? 'grid' : 'none';
+    $('chests').style.display = which === 'chests' ? 'grid' : 'none';
+    $('outcome').style.display = which === 'outcome' ? 'flex' : 'none';
+    $('qTerm').style.display = which === 'q' ? 'block' : 'none';
+  }
+
+  function showQuestion() {
+    if (G.s.over) return;
+    if (G.qIdx >= G.questions.length) G.qIdx = 0;
+    var q = G.questions[G.qIdx];
+    $('qTermText').textContent = q.term;
+    $('qAnswers').innerHTML = q.choices.map(function (ch, i) {
+      return '<div class="qa" data-i="' + i + '" onclick="GR.answer(' + i + ')">' + esc(ch) + '</div>';
+    }).join('');
+    phase('q');
+    board();
+  }
+
+  function answer(i) {
+    if (!G.s || G.s.over) return;
+    var q = G.questions[G.qIdx];
+    var els = $('qAnswers').querySelectorAll('.qa');
+    if (els[q.correctIdx]) els[q.correctIdx].classList.add('correct');
+    Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
+    G.qIdx++;
+    if (i === q.correctIdx) {
+      G.s.correct++;
+      G.s.streak++;
+      G.s.bestStreak = Math.max(G.s.bestStreak, G.s.streak);
+      sfx.good();
+      G.chestSet = rollChests();
+      setTimeout(function () { phase('chests'); }, 550);
+    } else {
+      if (els[i]) { els[i].classList.remove('dim'); els[i].classList.add('wrong'); }
+      G.s.wrong++;
+      G.s.streak = 0;
+      sfx.bad();
+      // no chest — rivals still dig
+      setTimeout(function () {
+        showOutcome({ icon: '⛏', color: '#8a9ab8', text: 'NO DIG THIS ROUND', sub: 'The rivals kept digging without you…' });
+      }, 750);
+    }
+  }
+
+  function pick(i) {
+    if (!G.chestSet) return;
+    var id = G.chestSet[i];
+    G.chestSet = null;
+    sfx.chest();
+    var out = applyOutcome(G.s, id);
+    showOutcome(out);
+  }
+
+  function showOutcome(out) {
+    phase('outcome');
+    var o = $('outcome');
+    o.querySelector('.oIcon').textContent = out.icon;
+    var t = o.querySelector('.oText');
+    t.textContent = out.text;
+    t.style.color = out.color || '#ffd740';
+    t.style.textShadow = '0 0 16px ' + (out.color || '#ffd740');
+    o.querySelector('.oSub').textContent = out.sub || '';
+    rivalTurn(G.s);
+    advanceRound(G.s);
+    board();
+    setTimeout(function () {
+      if (G.s.over) endScreen();
+      else showQuestion();
+    }, 1500);
+  }
+
+  // ═════════════ flow ═════════════
+  function reportResult() {
+    if (G.reported) return;
+    G.reported = true;
+    var s = G.s;
+    post({
+      type: 'pflx_arena_game_result', game: 'gold-rush',
+      deckId: G.deck ? G.deck.id : 'demo',
+      score: scoreFor(s), correct: s.correct, total: s.correct + s.wrong,
+      bestStreak: s.bestStreak, won: !!s.won
+    });
+  }
+  function endScreen() {
+    reportResult();
+    var s = G.s;
+    var standings = [{ name: G.player.brand.toUpperCase(), gold: s.me, me: true }].concat(s.rivals)
+      .sort(function (a, b) { return b.gold - a.gold; });
+    var el = document.createElement('div');
+    el.className = 'screen';
+    el.innerHTML =
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 RICHEST IN THE RUSH' : '💸 OUT-DUG') + '</div>' +
+      '<div class="sub">' + standings.map(function (p, i) {
+        return (i + 1) + '. ' + (p.me ? '⭐ ' : '') + esc(p.name) + ' — 🪙 ' + Math.floor(p.gold).toLocaleString();
+      }).join('<br>') + '</div>' +
+      '<div class="stat-row">' +
+        '<div class="stat"><b>' + scoreFor(s) + '</b><span>SCORE</span></div>' +
+        '<div class="stat"><b>' + s.correct + '</b><span>CORRECT</span></div>' +
+        '<div class="stat"><b>×' + s.bestStreak + '</b><span>BEST STREAK</span></div>' +
+      '</div>' +
+      '<div><button class="btn gold" onclick="GR.rematch()">⟳ NEW RUSH</button>' +
+      '<button class="btn" onclick="GR.exit()">✕ EXIT</button></div>';
+    document.body.appendChild(el);
+  }
+
+  function initWithDeck(deck, player) {
+    G.deck = deck;
+    if (player && player.brand) G.player = { id: player.id || 'p', brand: player.brand };
+    G.questions = buildQuestions(deck.cards);
+    if (!G.questions.length) { $('introSub').textContent = 'This deck needs at least 4 cards.'; return; }
+    if (G.cfg.title) {
+      document.title = G.cfg.title + ' — PFLX Battle Arena';
+      var big = document.querySelector('#intro .big');
+      if (big) big.textContent = (G.cfg.emblem || '🪙') + ' ' + G.cfg.title.toUpperCase();
+    }
+    $('introSub').innerHTML = 'Deck: <b style="color:#ffd740">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
+      'Answer right → pick a mystery chest: gold, DOUBLE, STEAL, SWAP… or a cave-in.<br>Out-dig three AI rivals across ' + ((DIFF[G.cfg.difficulty] || DIFF.normal).rounds) + ' rounds.';
+    $('startBtn').style.display = 'inline-block';
+  }
+
+  window.GR = {
+    _core: { newRush: newRush, rollChests: rollChests, weightedRoll: weightedRoll, applyOutcome: applyOutcome,
+             rivalTurn: rivalTurn, advanceRound: advanceRound, scoreFor: scoreFor, buildQuestions: buildQuestions,
+             OUTCOMES: OUTCOMES, DIFF: DIFF, applyConfig: applyConfig },
+    start: function () {
+      var intro = $('intro'); if (intro) intro.remove();
+      document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
+      $('wrap').style.display = 'flex';
+      G.s = newRush(G.cfg.difficulty);
+      G.qIdx = 0; G.reported = false; G.chestSet = null;
+      G.questions = buildQuestions(G.deck.cards);
+      if (G.cfg.ordered) {
+        var order = {};
+        G.deck.cards.forEach(function (c, i) { order[c.term + '' + c.definition] = i; });
+        G.questions.sort(function (a, b) {
+          return (order[a.term + '' + a.choices[a.correctIdx]] || 0) - (order[b.term + '' + b.choices[b.correctIdx]] || 0);
+        });
+      }
+      showQuestion();
+    },
+    answer: answer,
+    pick: pick,
+    rematch: function () { window.GR.start(); },
+    exit: function () {
+      post({ type: 'pflx_arena_game_exit' });
+      if (window.parent === window) location.reload();
+    }
+  };
+
+  // handshake
+  var gotDeck = false;
+  window.addEventListener('message', function (e) {
+    var m = e.data;
+    if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+    if (!m || m.type !== 'pflx_arena_deck' || !m.deck) return;
+    gotDeck = true;
+    applyConfig(m.config);
+    initWithDeck(m.deck, m.player);
+  });
+  post({ type: 'pflx_game_ready', game: 'gold-rush' });
+  setTimeout(function () { if (!gotDeck) initWithDeck(DEMO_DECK, null); }, 1600);
+})();
+</script>
+</body>
+</html>

@@ -2651,6 +2651,10 @@ const STUDIO_TEMPLATES = [
     desc: 'HP battle vs a rival AI. Answer fast to hit harder; streaks stack damage.' },
   { id: 'lane-defense', name: 'Lane Defense', icon: '🌱', file: 'games/lane-defense.html', ready: true,
     desc: 'Raiders march down 5 lanes. Answer questions to generate energy, place defenders, survive 3 waves.' },
+  { id: 'knowledge-tycoon', name: 'Knowledge Tycoon', icon: '💰', file: 'games/knowledge-tycoon.html', ready: true,
+    desc: 'Gimkit-style economy: answer to earn cash, reinvest in the upgrade shop, bank the target before the clock.' },
+  { id: 'gold-rush', name: 'Gold Rush', icon: '🪙', file: 'games/gold-rush.html', ready: true,
+    desc: 'Blooket-style luck: answer, then pick a mystery chest — gold, DOUBLE, STEAL, SWAP — vs 3 AI rivals.' },
   { id: 'monster-tamer', name: 'Monster Tamer', icon: '🐉', ready: false, desc: 'Quiz battles to tame and evolve monsters. COMING SOON.' },
   { id: 'rogue-runner', name: 'Rogue Runner', icon: '🏃', ready: false, desc: 'Roguelite dungeon runs fueled by knowledge. COMING SOON.' }
 ];
@@ -2788,6 +2792,7 @@ function studioEditGame(id) {
     set('stDiff', (g.config && g.config.difficulty) || 'normal');
     set('stOrder', (g.config && g.config.ordered) ? 'ordered' : 'shuffled');
     set('stSound', (g.config && g.config.sound === false) ? 'off' : 'on');
+    set('stPowerups', (g.config && g.config.powerups === false) ? 'off' : 'on');
     studioPreview();
   }, 40);
 }
@@ -2812,13 +2817,14 @@ function studioReadConfig() {
     difficulty: ['easy', 'normal', 'hard'].indexOf(val('stDiff', 'normal')) !== -1 ? val('stDiff', 'normal') : 'normal',
     ordered: val('stOrder', 'shuffled') === 'ordered',
     sound: val('stSound', 'on') !== 'off',
+    powerups: val('stPowerups', 'on') !== 'off',
     rivalName: (val('stRival', '') || '').trim() || 'RIVAL AI',
     roundTime: Math.max(8, Math.min(30, parseInt(val('stTime', '15'), 10) || 15))
   };
 }
 function studioConfigOf(c) {
   return { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
-           ordered: c.ordered, sound: c.sound, rivalName: c.rivalName, roundTime: c.roundTime };
+           ordered: c.ordered, sound: c.sound, powerups: c.powerups, rivalName: c.rivalName, roundTime: c.roundTime };
 }
 
 function studioTest() {
@@ -2968,6 +2974,10 @@ function renderStudio() {
         <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">SOUND FX</div>
           <select id="stSound" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="on" selected>On</option><option value="off">Off</option>
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">POWER-UPS</div>
+          <select id="stPowerups" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            <option value="on" selected>On — streaks grant 50/50, Heal, 2× (duel)</option><option value="off">Off</option>
           </select></div>
       </div>
       <div style="margin-bottom:12px"><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">DESCRIPTION (SHOWN ON THE SHELF)</div>

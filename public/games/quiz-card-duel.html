@@ -67,6 +67,15 @@
   .ans.dim { opacity:0.35; pointer-events:none; }
   @keyframes shake { 25%{transform:translateX(-6px)} 50%{transform:translateX(6px)} 75%{transform:translateX(-3px)} }
 
+  /* power-ups */
+  #puBar { display:flex; gap:8px; margin-bottom:10px; min-height:0; }
+  .pu-btn { flex:1; background:rgba(255,215,64,0.08); border:1px solid rgba(255,215,64,0.4); border-radius:10px;
+            padding:7px 6px; cursor:pointer; text-align:center; font-family:'Orbitron'; font-size:8px; letter-spacing:0.08em;
+            color:#ffd740; transition:all 0.15s; animation:dealIn 0.35s cubic-bezier(0.22,1,0.36,1); }
+  .pu-btn:hover { background:rgba(255,215,64,0.2); box-shadow:0 0 12px rgba(255,215,64,0.3); }
+  .pu-btn .pi { font-size:15px; display:block; margin-bottom:2px; }
+  .pu-btn.armed { border-color:#00e676; color:#00e676; background:rgba(0,230,118,0.12); box-shadow:0 0 12px rgba(0,230,118,0.4); }
+
   /* combat floaters + flash */
   .floater { position:fixed; font-family:'Orbitron'; font-weight:900; pointer-events:none; z-index:50;
              animation:floatUp 0.9s ease-out forwards; text-shadow:0 0 12px currentColor; }
@@ -110,6 +119,7 @@
     <div class="timer-wrap"><div id="timerFill"></div></div>
     <span class="streak" id="streakLbl"></span>
   </div>
+  <div id="puBar"></div>
   <div id="qcard"><div class="q-kicker" id="qKicker">WHAT MATCHES…</div><div class="q-term" id="qTerm"></div></div>
   <div id="answers"></div>
 </div>
@@ -198,7 +208,8 @@
       emblem: (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '⚔',
       difficulty: DIFF_MULT[cfg.difficulty] ? cfg.difficulty : 'normal',
       ordered: !!cfg.ordered,
-      sound: cfg.sound !== false
+      sound: cfg.sound !== false,
+      powerups: cfg.powerups !== false
     };
     S.roundTime = S.cfg.roundTime;
     S.dmgMult = DIFF_MULT[S.cfg.difficulty];
@@ -245,6 +256,71 @@
   // rival damage ramps with the round so long duels stay dangerous
   function cpuDamage(roundIdx) { return Math.min(26, 14 + Math.floor(roundIdx / 2) * 2); }
   function scoreFor(correct, bestStreak, won) { return correct * 10 + bestStreak * 5 + (won ? 30 : 0); }
+
+  // ── POWER-UPS (Gimkit-style items) ── streak milestones grant
+  // one-use items: 3 → 50/50 (removes two wrong answers), 5 → HEAL
+  // (+22 HP), 7 → 2× (next hit deals double). Gated by config.powerups.
+  var PU_DEFS = {
+    fifty: { icon: '🔍', name: '50 / 50', at: 3 },
+    heal:  { icon: '💊', name: 'HEAL +22', at: 5 },
+    dbl:   { icon: '⚡', name: '2× NEXT HIT', at: 7 }
+  };
+  var pu = { inv: { fifty: 0, heal: 0, dbl: 0 }, granted: {}, dblArmed: false };
+  function puReset() { pu.inv = { fifty: 0, heal: 0, dbl: 0 }; pu.granted = {}; pu.dblArmed = false; renderPu(); }
+  function puCheckGrant() {
+    if (!S.cfg.powerups) return;
+    Object.keys(PU_DEFS).forEach(function (id) {
+      if (S.streak >= PU_DEFS[id].at && !pu.granted[id]) {
+        pu.granted[id] = true;
+        pu.inv[id]++;
+        floater('🎁 ' + PU_DEFS[id].name, '#ffd740', 'me');
+        if (typeof sfx !== 'undefined') sfx.good();
+        renderPu();
+      }
+    });
+  }
+  function renderPu() {
+    var bar = $('puBar');
+    if (!bar) return;
+    if (!S.cfg.powerups) { bar.innerHTML = ''; return; }
+    bar.innerHTML = Object.keys(PU_DEFS).filter(function (id) { return pu.inv[id] > 0 || (id === 'dbl' && pu.dblArmed); }).map(function (id) {
+      var d = PU_DEFS[id];
+      var armed = id === 'dbl' && pu.dblArmed;
+      return '<div class="pu-btn' + (armed ? ' armed' : '') + '" onclick="QCD.usePu(\'' + id + '\')">' +
+        '<span class="pi">' + d.icon + '</span>' + (armed ? 'ARMED' : d.name) + (pu.inv[id] > 1 ? ' ×' + pu.inv[id] : '') + '</div>';
+    }).join('');
+  }
+  function usePu(id) {
+    if (!S.cfg.powerups || S.over) return;
+    if (id === 'dbl' && pu.dblArmed) return;
+    if (pu.inv[id] <= 0) return;
+    if (id === 'fifty') {
+      var box = $('answers');
+      if (!box || box.querySelector('.correct')) return; // only during a live question
+      var r = S.rounds[S.idx];
+      var wrong = [];
+      box.querySelectorAll('.ans').forEach(function (el, i) { if (i !== r.correctIdx && !el.classList.contains('dim')) wrong.push(el); });
+      if (wrong.length < 2) return;
+      pu.inv.fifty--;
+      // remove two random wrong answers
+      for (var k = 0; k < 2; k++) {
+        var pick2 = wrong.splice((Math.random() * wrong.length) | 0, 1)[0];
+        pick2.classList.add('dim');
+      }
+      floater('🔍 50/50', '#00e5ff', 'me');
+    } else if (id === 'heal') {
+      pu.inv.heal--;
+      S.meHp = Math.min(100, S.meHp + 22);
+      updateBars();
+      floater('+22 HP', '#00e676', 'me');
+    } else if (id === 'dbl') {
+      pu.inv.dbl--;
+      pu.dblArmed = true;
+      floater('⚡ ARMED', '#ffd740', 'me');
+    }
+    if (typeof sfx !== 'undefined') sfx.good();
+    renderPu();
+  }
 
   // ── messaging ──
   function post(msg) {
@@ -316,10 +392,12 @@
       S.bestStreak = Math.max(S.bestStreak, S.streak);
       S.correct++;
       var dmg = damageFor(S.timeLeft, S.roundTime, S.streak);
+      if (pu.dblArmed) { dmg *= 2; pu.dblArmed = false; floater('⚡ ×2!', '#ffd740', 'cpu'); renderPu(); }
       S.cpuHp -= dmg;
       floater('-' + dmg, '#00e5ff', 'cpu');
       flash('flashCpu');
       sfx.good();
+      puCheckGrant();
     } else {
       if (pick >= 0 && cards[pick]) { cards[pick].classList.remove('dim'); cards[pick].classList.add('wrong'); }
       S.streak = 0;
@@ -387,6 +465,7 @@
       var intro = $('intro'); if (intro) intro.remove();
       $('stage').style.display = 'flex';
       S.meHp = 100; S.cpuHp = 100; S.idx = 0; S.correct = 0; S.streak = 0; S.bestStreak = 0; S.over = false; S.reported = false;
+      puReset();
       S.rounds = buildRounds(S.deck.cards);
       if (S.cfg.ordered) {
         var order = {};
@@ -405,6 +484,7 @@
       if (!box || box.querySelector('.correct')) return; // already resolved
       resolve(i);
     },
+    usePu: usePu,
     rematch: function () {
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       window.QCD.start();
