@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mecha Tamer — PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     MECHA TAMER — Arena Game Cartridge #8 (July 2026).
+     Haypi/Dislyte-style sci-fi monster battler: your battle-mech
+     grows through 3 evolution stages as you defeat wild machines.
+     Correct answers CHARGE YOUR ATTACK (streaks hit harder); wrong
+     answers let the wild mech strike. One repair kit revives you.
+     Defeat all four wild mechs to tame the sector.
+     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1. game id:
+     'mecha-tamer'. Config: { title, accent, background, emblem,
+     difficulty, ordered, sound }. Pure core: window.MT._core.
+     ═══════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%); color:#e6f8ff;
+         font-family:'Rajdhani',sans-serif; overflow:hidden; user-select:none; }
+  #wrap { height:100%; display:flex; flex-direction:column; max-width:760px; margin:0 auto; padding:12px; gap:10px; }
+
+  #field { display:flex; gap:14px; align-items:stretch; }
+  .mech { flex:1; background:rgba(10,20,36,0.85); border:1px solid rgba(0,229,255,0.25); border-radius:14px; padding:12px; text-align:center; position:relative; }
+  .mech.enemy { border-color:rgba(255,77,109,0.35); }
+  .mech .mi { font-size:46px; filter:drop-shadow(0 0 12px rgba(0,229,255,0.5)); transition:transform 0.15s; }
+  .mech.enemy .mi { filter:drop-shadow(0 0 12px rgba(255,77,109,0.5)); }
+  .mech.hit .mi { animation:mHit 0.35s; }
+  @keyframes mHit { 30% { transform:translateX(-8px) rotate(-6deg); } 60% { transform:translateX(8px) rotate(6deg); } }
+  .mech .mn { font-family:'Orbitron'; font-size:9px; letter-spacing:0.12em; color:#e6f8ff; margin-top:6px; }
+  .mech .ms { font-size:9px; color:#7a8db0; letter-spacing:0.08em; margin-top:2px; font-family:'Orbitron'; }
+  .hpb { height:10px; border-radius:6px; background:rgba(255,255,255,0.08); overflow:hidden; margin-top:8px; border:1px solid rgba(255,255,255,0.08); }
+  .hpf { height:100%; border-radius:6px; transition:width 0.4s cubic-bezier(0.22,1,0.36,1); }
+  .mine .hpf { background:linear-gradient(90deg,#00e5ff,#00e676); box-shadow:0 0 10px rgba(0,230,118,0.6); }
+  .enemy .hpf { background:linear-gradient(90deg,#ff4d6d,#ff9f40); box-shadow:0 0 10px rgba(255,77,109,0.6); }
+  .vs { align-self:center; font-family:'Orbitron'; font-weight:900; font-size:15px; color:#ffd740; text-shadow:0 0 12px rgba(255,215,64,0.7); }
+  #stageChips { display:flex; justify-content:center; gap:6px; }
+  .sc { font-family:'Orbitron'; font-size:8px; letter-spacing:0.1em; padding:4px 10px; border-radius:8px;
+        border:1px solid rgba(255,255,255,0.12); color:#7a8db0; }
+  .sc.on { border-color:rgba(255,215,64,0.6); color:#ffd740; background:rgba(255,215,64,0.08); }
+
+  #log { font-family:'Orbitron'; font-size:9px; letter-spacing:0.1em; color:#8a9ab8; text-align:center; min-height:14px; }
+
+  #quiz { background:rgba(4,10,20,0.9); border:1px solid rgba(0,229,255,0.3); border-radius:14px; padding:14px; flex:1; }
+  #qTerm { font-family:'Orbitron'; font-size:clamp(13px,3.6vw,18px); font-weight:800; color:#f4feff; margin-bottom:10px; text-align:center; }
+  #qTerm .kick { display:block; font-size:7px; letter-spacing:0.2em; color:#00e5ff; margin-bottom:4px; }
+  #qAnswers { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .qa { background:rgba(10,20,36,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:11px 10px;
+        font-size:13px; font-weight:600; cursor:pointer; color:#cfe3ff; line-height:1.3; transition:all 0.12s; word-break:break-word; }
+  .qa:hover { border-color:rgba(0,229,255,0.6); transform:translateY(-2px); }
+  .qa.correct { border-color:#00e676; background:rgba(0,230,118,0.14); color:#c9ffe2; }
+  .qa.wrong { border-color:#ff4d6d; background:rgba(255,77,109,0.12); color:#ffd3dc; }
+  .qa.dim { opacity:0.35; pointer-events:none; }
+
+  #banner { position:fixed; top:34%; left:50%; transform:translateX(-50%); font-family:'Orbitron'; font-weight:900;
+            font-size:clamp(17px,4.5vw,28px); color:#ffd740; text-shadow:0 0 22px rgba(255,215,64,0.7); z-index:60;
+            pointer-events:none; opacity:0; transition:opacity 0.4s; letter-spacing:0.12em; text-align:center; }
+
+  .screen { position:fixed; inset:0; background:rgba(2,5,10,0.93); backdrop-filter:blur(6px); z-index:100;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .big { font-family:'Orbitron'; font-weight:900; font-size:clamp(24px,6.5vw,42px); letter-spacing:0.1em; margin-bottom:10px; }
+  .btn { font-family:'Orbitron'; font-size:12px; font-weight:800; letter-spacing:0.12em; padding:13px 34px;
+         border-radius:10px; border:1px solid rgba(0,229,255,0.55); background:rgba(0,229,255,0.12); color:#7df9ff;
+         cursor:pointer; transition:all 0.15s; margin:6px; }
+  .btn:hover { background:rgba(0,229,255,0.25); box-shadow:0 0 18px rgba(0,229,255,0.35); }
+  .btn.gold { border-color:rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740; }
+  .sub { font-size:14px; color:#8a9ab8; margin-bottom:20px; max-width:460px; line-height:1.6; }
+  .stat-row { display:flex; gap:24px; margin-bottom:22px; flex-wrap:wrap; justify-content:center; }
+  .stat { text-align:center; }
+  .stat b { display:block; font-family:'Orbitron'; font-size:20px; color:#ffd740; }
+  .stat span { font-size:10px; letter-spacing:0.12em; color:#7a8db0; }
+</style>
+</head>
+<body>
+<div id="wrap" style="display:none">
+  <div id="stageChips"></div>
+  <div id="field">
+    <div class="mech mine" id="myMech">
+      <div class="mi" id="myIcon">🐕</div>
+      <div class="mn" id="myName">SPARK PUP</div>
+      <div class="ms" id="myStats"></div>
+      <div class="hpb"><div class="hpf" id="myHp" style="width:100%"></div></div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="mech enemy" id="foeMech">
+      <div class="mi" id="foeIcon">🦂</div>
+      <div class="mn" id="foeName">RUST CRAWLER</div>
+      <div class="ms" id="foeStats"></div>
+      <div class="hpb"><div class="hpf" id="foeHp" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div id="log">ANSWER TO CHARGE YOUR ATTACK</div>
+  <div id="quiz">
+    <div id="qTerm"><span class="kick">CORRECT = YOU STRIKE · WRONG = IT STRIKES</span><span id="qTermText"></span></div>
+    <div id="qAnswers"></div>
+  </div>
+</div>
+<div id="banner"></div>
+<div class="screen" id="intro">
+  <div class="big" style="color:#7df9ff;text-shadow:0 0 20px rgba(0,229,255,0.6)">🤖 MECHA TAMER</div>
+  <div class="sub" id="introSub">Waiting for deck…</div>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="MT.start()">▶ DEPLOY MECH</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DEMO_DECK = {
+    id: 'demo', name: 'PFLX Demo Deck', subject: 'PFLX Lore',
+    cards: [
+      { term: 'X-Coin', definition: 'The digital currency of the PFLX ecosystem' },
+      { term: 'Core Pathways', definition: 'Learning modules mapped as stations in open space' },
+      { term: 'Battle Arena', definition: 'Esports and challenges hub for quick XC' },
+      { term: 'DarkCampus', definition: 'Global professional network for rising creators' },
+      { term: 'Mission Control', definition: 'Project and task management center' },
+      { term: 'Evo Rank', definition: 'The progression rank earned across PFLX' }
+    ]
+  };
+
+  // ═════════════ PURE CORE (Node-testable) ═════════════
+  var STAGES = [
+    { name: 'SPARK PUP',   icon: '🐕', hpMax: 70,  atk: 12 },
+    { name: 'VOLT HOUND',  icon: '🐺', hpMax: 100, atk: 18 },
+    { name: 'STORM TITAN', icon: '🦾', hpMax: 140, atk: 26 }
+  ];
+  var ENEMIES = [
+    { name: 'RUST CRAWLER',   icon: '🦂', hp: 50,  atk: 9 },
+    { name: 'ION WASP',       icon: '🐝', hp: 75,  atk: 12 },
+    { name: 'PLASMA GOLEM',   icon: '🗿', hp: 100, atk: 16 },
+    { name: 'VOID LEVIATHAN', icon: '🐙', hp: 145, atk: 21 }
+  ];
+  var DIFF_MULT = { easy: 0.8, normal: 1, hard: 1.25 };
+  var BATTLES = ENEMIES.length;
+
+  function enemyFor(n, mult) {
+    var e = ENEMIES[Math.min(n, ENEMIES.length - 1)];
+    return { name: e.name, icon: e.icon, hp: Math.round(e.hp * mult), hpMax: Math.round(e.hp * mult), atk: Math.round(e.atk * mult) };
+  }
+  function newTamer(difficulty) {
+    var mult = DIFF_MULT[difficulty] || 1;
+    return { mult: mult, battle: 0, stage: 0,
+             hp: STAGES[0].hpMax, hpMax: STAGES[0].hpMax, atk: STAGES[0].atk,
+             enemy: enemyFor(0, mult), repair: 1,
+             correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false };
+  }
+  // correct answer → your strike. Returns event info for the UI.
+  function strike(s) {
+    if (s.over) return { defeated: false, evolved: false, won: false, dmg: 0 };
+    s.correct++;
+    s.streak++;
+    s.bestStreak = Math.max(s.bestStreak, s.streak);
+    var dmg = s.atk + Math.min(12, s.streak * 2);
+    s.enemy.hp -= dmg;
+    var out = { dmg: dmg, defeated: false, evolved: false, won: false };
+    if (s.enemy.hp <= 0) {
+      s.enemy.hp = 0;
+      out.defeated = true;
+      s.battle++;
+      if (s.battle >= BATTLES) { s.over = true; s.won = true; out.won = true; return out; }
+      // evolve entering battles 2 and 4 (after defeating #1 and #3)
+      if (s.battle === 1 || s.battle === 3) {
+        s.stage = Math.min(STAGES.length - 1, s.stage + 1);
+        var st = STAGES[s.stage];
+        s.hpMax = st.hpMax; s.hp = st.hpMax; s.atk = st.atk;
+        out.evolved = true;
+      } else {
+        s.hp = Math.min(s.hpMax, s.hp + Math.round(s.hpMax * 0.25)); // field repair between battles
+      }
+      s.enemy = enemyFor(s.battle, s.mult);
+    }
+    return out;
+  }
+  // wrong answer → the wild mech strikes. Returns event info.
+  function enemyStrike(s) {
+    if (s.over) return { dmg: 0, revived: false, lost: false };
+    s.wrong++;
+    s.streak = 0;
+    var dmg = Math.max(3, s.enemy.atk - s.stage * 2);
+    s.hp -= dmg;
+    var out = { dmg: dmg, revived: false, lost: false };
+    if (s.hp <= 0) {
+      if (s.repair > 0) {
+        s.repair--;
+        s.hp = Math.round(s.hpMax * 0.5);
+        out.revived = true;
+      } else {
+        s.hp = 0;
+        s.over = true;
+        s.won = false;
+        out.lost = true;
+      }
+    }
+    return out;
+  }
+  function scoreFor(s) {
+    return s.battle * 25 + s.stage * 15 + s.correct * 8 + s.bestStreak * 5 + (s.won ? 50 : 0);
+  }
+
+  function buildQuestions(cards, rand) {
+    rand = rand || shuffle;
+    var usable = (cards || []).filter(function (c) { return c && c.term && c.definition; });
+    if (usable.length < 4) return [];
+    return rand(usable.slice()).map(function (c) {
+      var others = usable.filter(function (x) { return x !== c && x.definition !== c.definition; });
+      var distractors = rand(others.slice()).slice(0, 3).map(function (x) { return x.definition; });
+      while (distractors.length < 3) distractors.push('None of the above');
+      var choices = rand(distractors.concat([c.definition]));
+      return { term: c.term, choices: choices, correctIdx: choices.indexOf(c.definition) };
+    });
+  }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function $(id) { return document.getElementById(id); }
+  function post(msg) { try { if (window.parent !== window) window.parent.postMessage(msg, '*'); } catch (e) {} }
+
+  // ═════════════ config + assets (shared cartridge pattern) ═════════════
+  var BG_CSS = {
+    space:     'radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%)',
+    neon:      'radial-gradient(ellipse at 50% 110%, #2b0a4d 0%, #05010d 60%)',
+    crimson:   'radial-gradient(ellipse at 50% -10%, #3a0a18 0%, #0d0406 60%)',
+    emerald:   'radial-gradient(ellipse at 50% -10%, #06301f 0%, #04100a 60%)',
+    void:      '#020308',
+    sunset:    'linear-gradient(180deg, #3a1a0a 0%, #0d0604 55%)',
+    aurora:    'linear-gradient(180deg, rgba(0,70,80,0.5) 0%, rgba(40,10,80,0.25) 34%, rgba(4,7,13,0) 60%), radial-gradient(ellipse at 30% -10%, #0b3d3a 0%, #071026 45%, #04070d 80%)',
+    ocean:     'radial-gradient(ellipse at 50% 120%, #063a4d 0%, #032030 45%, #02090f 80%)',
+    magma:     'radial-gradient(ellipse at 50% 115%, #4d1a06 0%, #260a04 45%, #0a0403 80%)',
+    cyber:     'linear-gradient(200deg, #2a0a3d 0%, #0a1030 55%, #04070d 90%)',
+    royal:     'radial-gradient(ellipse at 20% -10%, #241356 0%, #0d0a2a 55%, #05040f 85%)',
+    gilded:    'radial-gradient(ellipse at 50% 120%, #3d2e06 0%, #1a1204 50%, #0a0703 85%)',
+    ice:       'linear-gradient(180deg, #10283d 0%, #081420 50%, #04080d 90%)',
+    bloodmoon: 'radial-gradient(circle at 75% 12%, #58101d 0%, #1d060c 40%, #08030a 75%)',
+    forest:    'radial-gradient(ellipse at 50% -10%, #10331a 0%, #071a0e 50%, #030a05 85%)',
+    storm:     'linear-gradient(115deg, #101826 0%, #1b2a44 45%, #0a0f1c 78%)'
+  };
+  var sfx = {
+    enabled: true, ctx: null,
+    beep: function (freq, dur, type, vol) {
+      if (!this.enabled) return;
+      try {
+        this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        var o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type || 'square'; o.frequency.value = freq;
+        g.gain.value = vol || 0.035;
+        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + (dur || 0.12));
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + (dur || 0.12));
+      } catch (e) {}
+    },
+    good: function () { this.beep(660, 0.09); var s2 = this; setTimeout(function () { s2.beep(990, 0.12); }, 70); },
+    bad: function () { this.beep(160, 0.25, 'sawtooth', 0.05); },
+    evolve: function () { var s2 = this; [392, 523, 659, 784].forEach(function (f, i) { setTimeout(function () { s2.beep(f, 0.14, 'triangle'); }, i * 110); }); }
+  };
+
+  var G = { deck: null, player: { id: 'demo', brand: 'Tamer' },
+            cfg: { title: '', accent: '', emblem: '🤖', difficulty: 'normal', ordered: false, sound: true },
+            s: null, questions: [], qIdx: 0, reported: false };
+
+  function applyConfig(cfg) {
+    cfg = cfg || {};
+    G.cfg.title = String(cfg.title || '').slice(0, 60);
+    G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
+    G.cfg.background = BG_CSS[cfg.background] ? cfg.background : 'space';
+    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🤖';
+    G.cfg.difficulty = DIFF_MULT[cfg.difficulty] ? cfg.difficulty : 'normal';
+    G.cfg.ordered = !!cfg.ordered;
+    G.cfg.sound = cfg.sound !== false;
+    sfx.enabled = G.cfg.sound;
+    if (G.cfg.background !== 'space') document.body.style.background = BG_CSS[G.cfg.background];
+    return G.cfg;
+  }
+
+  // ═════════════ UI ═════════════
+  function hud() {
+    var s = G.s;
+    var st = STAGES[s.stage];
+    $('myIcon').textContent = st.icon;
+    $('myName').textContent = st.name;
+    $('myStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.hp)) + '/' + s.hpMax + ' · ⚔ ' + s.atk + ' · 🔧×' + s.repair;
+    $('myHp').style.width = Math.max(0, (s.hp / s.hpMax) * 100) + '%';
+    $('foeIcon').textContent = s.enemy.icon;
+    $('foeName').textContent = s.enemy.name;
+    $('foeStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.enemy.hp)) + '/' + s.enemy.hpMax + ' · ⚔ ' + s.enemy.atk;
+    $('foeHp').style.width = Math.max(0, (s.enemy.hp / s.enemy.hpMax) * 100) + '%';
+    $('stageChips').innerHTML = STAGES.map(function (x, i) {
+      return '<span class="sc' + (i <= s.stage ? ' on' : '') + '">' + x.icon + ' ' + x.name + '</span>';
+    }).join('');
+  }
+  function banner(text) {
+    var b = $('banner');
+    b.textContent = text;
+    b.style.opacity = '1';
+    clearTimeout(banner._t);
+    banner._t = setTimeout(function () { b.style.opacity = '0'; }, 1600);
+  }
+  function shake(id) { var el = $(id); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
+  function log(t) { $('log').textContent = t; }
+
+  function showQuestion() {
+    if (!G.s || G.s.over) return;
+    if (G.qIdx >= G.questions.length) G.qIdx = 0;
+    var q = G.questions[G.qIdx];
+    $('qTermText').textContent = q.term;
+    $('qAnswers').innerHTML = q.choices.map(function (ch, i) {
+      return '<div class="qa" onclick="MT.answer(' + i + ')">' + esc(ch) + '</div>';
+    }).join('');
+    hud();
+  }
+  function answer(i) {
+    var s = G.s;
+    if (!s || s.over) return;
+    var q = G.questions[G.qIdx];
+    var els = $('qAnswers').querySelectorAll('.qa');
+    if (els[q.correctIdx]) els[q.correctIdx].classList.add('correct');
+    Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
+    G.qIdx++;
+    if (i === q.correctIdx) {
+      var r = strike(s);
+      shake('foeMech');
+      sfx.good();
+      log('⚔ ' + STAGES[s.stage].name + ' hits for ' + r.dmg + (s.streak >= 2 ? ' (STREAK ×' + s.streak + ')' : ''));
+      hud();
+      if (r.won) { setTimeout(endScreen, 900); return; }
+      if (r.defeated) {
+        if (r.evolved) { sfx.evolve(); banner('✨ EVOLVED → ' + STAGES[s.stage].name); }
+        else banner('🏆 ' + '(TAMED) — NEXT CHALLENGER');
+        setTimeout(showQuestion, 1500);
+      } else {
+        setTimeout(showQuestion, 650);
+      }
+    } else {
+      if (els[i]) { els[i].classList.remove('dim'); els[i].classList.add('wrong'); }
+      var e = enemyStrike(s);
+      shake('myMech');
+      sfx.bad();
+      log('💥 ' + s.enemy.name + ' counters for ' + e.dmg);
+      hud();
+      if (e.lost) { setTimeout(endScreen, 900); return; }
+      if (e.revived) banner('🔧 REPAIR KIT — BACK ONLINE');
+      setTimeout(showQuestion, e.revived ? 1500 : 900);
+    }
+  }
+
+  // ═════════════ flow ═════════════
+  function reportResult() {
+    if (G.reported) return;
+    G.reported = true;
+    var s = G.s;
+    post({
+      type: 'pflx_arena_game_result', game: 'mecha-tamer',
+      deckId: G.deck ? G.deck.id : 'demo',
+      score: scoreFor(s), correct: s.correct, total: s.correct + s.wrong,
+      bestStreak: s.bestStreak, won: !!s.won
+    });
+  }
+  function endScreen() {
+    reportResult();
+    var s = G.s;
+    var el = document.createElement('div');
+    el.className = 'screen';
+    el.innerHTML =
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 SECTOR TAMED' : '💀 MECH DESTROYED') + '</div>' +
+      '<div class="sub">' + (s.won ? 'All four wild machines bow to ' + STAGES[s.stage].name + '.' : 'Your mech fell in battle ' + (s.battle + 1) + '. Rebuild and requalify.') + '</div>' +
+      '<div class="stat-row">' +
+        '<div class="stat"><b>' + scoreFor(s) + '</b><span>SCORE</span></div>' +
+        '<div class="stat"><b>' + s.battle + '/' + BATTLES + '</b><span>TAMED</span></div>' +
+        '<div class="stat"><b>' + STAGES[s.stage].icon + '</b><span>' + STAGES[s.stage].name + '</span></div>' +
+        '<div class="stat"><b>' + s.correct + '</b><span>CORRECT</span></div>' +
+      '</div>' +
+      '<div><button class="btn gold" onclick="MT.rematch()">⟳ REBUILD MECH</button>' +
+      '<button class="btn" onclick="MT.exit()">✕ EXIT</button></div>';
+    document.body.appendChild(el);
+  }
+
+  function initWithDeck(deck, player) {
+    G.deck = deck;
+    if (player && player.brand) G.player = { id: player.id || 'p', brand: player.brand };
+    G.questions = buildQuestions(deck.cards);
+    if (!G.questions.length) { $('introSub').textContent = 'This deck needs at least 4 cards.'; return; }
+    if (G.cfg.title) {
+      document.title = G.cfg.title + ' — PFLX Battle Arena';
+      var big = document.querySelector('#intro .big');
+      if (big) big.textContent = (G.cfg.emblem || '🤖') + ' ' + G.cfg.title.toUpperCase();
+    }
+    $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
+      'Four wild machines guard the sector. Correct answers power your strikes;<br>streaks hit harder. Defeat them all — your mech EVOLVES along the way.<br>🐕 → 🐺 → 🦾 · one 🔧 repair kit.';
+    $('startBtn').style.display = 'inline-block';
+  }
+
+  window.MT = {
+    _core: { newTamer: newTamer, strike: strike, enemyStrike: enemyStrike, enemyFor: enemyFor,
+             scoreFor: scoreFor, buildQuestions: buildQuestions, STAGES: STAGES, ENEMIES: ENEMIES,
+             BATTLES: BATTLES, DIFF_MULT: DIFF_MULT, applyConfig: applyConfig },
+    start: function () {
+      var intro = $('intro'); if (intro) intro.remove();
+      document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
+      $('wrap').style.display = 'flex';
+      G.s = newTamer(G.cfg.difficulty);
+      G.qIdx = 0; G.reported = false;
+      G.questions = buildQuestions(G.deck.cards);
+      if (G.cfg.ordered) {
+        var order = {};
+        G.deck.cards.forEach(function (c, i) { order[c.term + '' + c.definition] = i; });
+        G.questions.sort(function (a, b) {
+          return (order[a.term + '' + a.choices[a.correctIdx]] || 0) - (order[b.term + '' + b.choices[b.correctIdx]] || 0);
+        });
+      }
+      log('ANSWER TO CHARGE YOUR ATTACK');
+      showQuestion();
+    },
+    answer: answer,
+    rematch: function () { window.MT.start(); },
+    exit: function () {
+      post({ type: 'pflx_arena_game_exit' });
+      if (window.parent === window) location.reload();
+    }
+  };
+
+  // handshake
+  var gotDeck = false;
+  window.addEventListener('message', function (e) {
+    var m = e.data;
+    if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+    if (!m || m.type !== 'pflx_arena_deck' || !m.deck) return;
+    gotDeck = true;
+    applyConfig(m.config);
+    initWithDeck(m.deck, m.player);
+  });
+  post({ type: 'pflx_game_ready', game: 'mecha-tamer' });
+  setTimeout(function () { if (!gotDeck) initWithDeck(DEMO_DECK, null); }, 1600);
+})();
+</script>
+</body>
+</html>

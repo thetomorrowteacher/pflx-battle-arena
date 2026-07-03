@@ -2657,11 +2657,14 @@ const STUDIO_TEMPLATES = [
     desc: 'CryptoHack-style luck: answer, then crack an encrypted cache — crypto, OVERCLOCK, HACK a rival wallet, SWAP — vs 3 rival AIs.' },
   { id: 'escape-protocol', name: 'Escape Protocol', icon: '🔓', file: 'games/escape-protocol.html', ready: true,
     desc: 'Sci-fi escape room: hack 5 sealed bulkheads before life support runs dry. Wrong codes freeze the terminal. 3 hint chips.' },
-  { id: 'monster-tamer', name: 'Mecha Tamer', icon: '🤖', ready: false, desc: 'Tame and evolve battle mechs through quiz duels (Haypi/Dislyte-style). COMING SOON.' },
+  { id: 'mecha-tamer', name: 'Mecha Tamer', icon: '🤖', file: 'games/mecha-tamer.html', ready: true,
+    desc: 'Haypi-style battler: correct answers power your strikes; defeat 4 wild machines and EVOLVE 🐕→🐺→🦾.' },
   { id: 'void-ranger', name: 'Void Ranger', icon: '🎯', file: 'games/void-ranger.html', ready: true,
     desc: 'Archero-style roguelite (Phaser 3): drones hunt you — stand still to auto-fire, move to dodge. Decode questions between waves to draft upgrades.' },
-  { id: 'pulse-runner', name: 'Pulse Runner', icon: '⚡', ready: false, desc: 'Geometry-Dash-style rhythm run: knowledge checkpoints keep the run alive. COMING SOON.' },
-  { id: 'star-saga', name: 'Star Saga', icon: '🎲', ready: false, desc: 'Sci-fi D&D campaign: party quests where deck knowledge powers the dice. COMING SOON.' }
+  { id: 'pulse-runner', name: 'Pulse Runner', icon: '⚡', file: 'games/pulse-runner.html', ready: true,
+    desc: 'Geometry-Dash-style auto-runner: jump the firewalls, speed always climbing. Crash = knowledge checkpoint.' },
+  { id: 'star-saga', name: 'Star Saga', icon: '🎲', file: 'games/star-saga.html', ready: true,
+    desc: 'Sci-fi D&D campaign: 8 chapters aboard a derelict megaship. Correct answers give ADVANTAGE on the d20.' }
 ];
 const STUDIO_BACKGROUNDS = [
   { id: 'space',     label: 'Deep Space' },
@@ -2749,6 +2752,131 @@ const baGames = {
     this.upsert(g); // best-effort, not awaited by callers
   }
 };
+
+// ═══ LIVE SESSIONS (July 2026) — the Gimkit/Blooket classroom model.
+// The HOST binds a deck + config to a game and LAUNCHES it to Side
+// Quests for a set time window. Players play it while it's live; it
+// disappears when the window closes. Supabase row `pflx_ba_sessions`.
+const baSessions = {
+  KEY: 'pflx_ba_sessions', MAX: 40,
+  list: [], loaded: false,
+  async load() {
+    const d = await supabaseLoad(this.KEY);
+    if (d && Array.isArray(d.sessions)) { this.list = d.sessions; try { localStorage.setItem(this.KEY, JSON.stringify({ sessions: d.sessions })); } catch (e) {} }
+    else { try { const raw = localStorage.getItem(this.KEY); if (raw) this.list = JSON.parse(raw).sessions || []; } catch (e) {} }
+    this.loaded = true;
+    if (state.screen === 'side_quests' || state.screen === 'studio') render();
+  },
+  async persist() {
+    await supabaseSave(this.KEY, { sessions: this.list, updatedAt: Date.now() });
+    try { localStorage.setItem(this.KEY, JSON.stringify({ sessions: this.list })); } catch (e) {}
+  },
+  async upsert(sess) {
+    const fresh = await supabaseLoad(this.KEY);
+    const arr = (fresh && Array.isArray(fresh.sessions)) ? fresh.sessions : this.list;
+    const i = arr.findIndex(function (x) { return x.id === sess.id; });
+    if (i >= 0) arr[i] = sess; else arr.unshift(sess);
+    // prune long-expired sessions (>2 days old) to keep the row lean
+    const cutoff = Date.now() - 2 * 86400000;
+    this.list = arr.filter(function (x) { return (x.endsAt || 0) > cutoff; }).slice(0, this.MAX);
+    await this.persist();
+  },
+  async remove(id) {
+    const fresh = await supabaseLoad(this.KEY);
+    const arr = (fresh && Array.isArray(fresh.sessions)) ? fresh.sessions : this.list;
+    this.list = arr.filter(function (x) { return x.id !== id; });
+    await this.persist();
+  },
+  byId(id) { return this.list.find(function (x) { return x.id === id; }); },
+  active() {
+    const now = Date.now();
+    return this.list.filter(function (x) { return x.startsAt <= now && x.endsAt > now; });
+  }
+};
+const SESSION_DURATIONS = [
+  { m: 15, label: '15 minutes' }, { m: 30, label: '30 minutes' }, { m: 60, label: '1 hour' },
+  { m: 120, label: '2 hours' }, { m: 360, label: '6 hours' }, { m: 1440, label: '24 hours' }, { m: 10080, label: '1 week' }
+];
+function sessionTimeLeft(sess) {
+  const ms = sess.endsAt - Date.now();
+  if (ms <= 0) return 'ended';
+  const m = Math.ceil(ms / 60000);
+  if (m < 60) return m + 'm left';
+  if (m < 1440) return Math.floor(m / 60) + 'h ' + (m % 60) + 'm left';
+  return Math.floor(m / 1440) + 'd left';
+}
+
+async function studioLaunchLive() {
+  if (!isHostUser(state.player)) { alert('Only hosts can launch live sessions.'); return; }
+  const c = studioReadConfig();
+  const errEl = document.getElementById('stErr');
+  function fail(m) { if (errEl) { errEl.textContent = m; errEl.style.display = 'block'; } }
+  if (!c.deckId || !baDecks.byId(c.deckId)) { fail('Pick a Knowledge Deck before launching.'); return; }
+  const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === c.template && t.ready; });
+  if (!tpl) { fail('That template is not available.'); return; }
+  const durEl = document.getElementById('stDuration');
+  const mins = Math.max(5, parseInt(durEl ? durEl.value : '60', 10) || 60);
+  const now = Date.now();
+  const btn = document.getElementById('stLaunchBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'LAUNCHING…'; }
+  try {
+    await baSessions.upsert({
+      id: dkUid('sess'),
+      title: c.title || (tpl.name + ' LIVE'),
+      template: tpl.id, deckId: c.deckId,
+      config: studioConfigOf(c),
+      launchedBy: (state.player && state.player.id) || 'host',
+      launchedByName: (state.player && state.player.brand) || 'Host',
+      startsAt: now, endsAt: now + mins * 60000, createdAt: now
+    });
+    SFX.click();
+    render();
+  } catch (e) {
+    fail('Launch failed — check your connection.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔴 LAUNCH LIVE'; }
+  }
+}
+async function studioEndSession(id) {
+  const sess = baSessions.byId(id);
+  if (!sess) return;
+  if (!confirm('End the live session "' + sess.title + '" now?')) return;
+  sess.endsAt = Date.now() - 1000;
+  await baSessions.upsert(sess);
+  render();
+}
+function arenaSessionPlay(id) {
+  const sess = baSessions.byId(id);
+  if (!sess) return;
+  if (sess.endsAt <= Date.now()) { alert('This session has ended.'); render(); return; }
+  const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === sess.template; });
+  const d = baDecks.byId(sess.deckId);
+  if (!tpl || !tpl.ready) { alert('This session\'s game template is unavailable.'); return; }
+  if (!d) { alert('The Knowledge Deck behind this session was deleted.'); return; }
+  arenaGameLaunch(sess.deckId, tpl.file, { title: sess.title, config: Object.assign({ title: sess.title }, sess.config || {}) });
+}
+// Side Quests LIVE NOW shelf — active host sessions, player-facing.
+function arenaLiveSessionsHtml() {
+  const act = baSessions.active();
+  if (!act.length) return '';
+  return '<div style="margin:26px auto 8px;max-width:600px;font-family:Orbitron,monospace;font-size:0.6rem;letter-spacing:0.16em;color:#ff4d6d">🔴 LIVE NOW — HOST SESSIONS</div>' +
+    '<div style="max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:16px">' +
+    act.map(function (sess) {
+      const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === sess.template; }) || { icon: '🎮', name: 'Arena Game' };
+      const d = baDecks.byId(sess.deckId);
+      return '<div class="mode-card glass-panel glass-panel-hover" style="cursor:pointer;border:1px solid rgba(255,77,109,0.55);box-shadow:0 0 18px rgba(255,77,109,0.15)" onclick="arenaSessionPlay(\'' + sess.id + '\')">' +
+        '<div class="mode-content">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+          '<div class="mode-head" style="margin:0"><div class="mode-icon">' + dkEsc((sess.config && sess.config.emblem) || tpl.icon) + '</div>' +
+          '<div><div class="mode-name">' + dkEsc(sess.title) + '</div>' +
+          '<div class="mode-meta">by ' + dkEsc(sess.launchedByName || 'Host') + ' · ⏳ ' + sessionTimeLeft(sess) + '</div></div></div>' +
+          '<span class="cipher-status-badge active" style="font-size:0.5rem;border-color:rgba(255,77,109,0.6);color:#ff8fa3">● LIVE</span>' +
+        '</div>' +
+        '<div class="mode-desc">' + tpl.icon + ' ' + tpl.name + ' on "' + dkEsc(d ? d.name : 'deck deleted') + '"' + (d && d.subject ? ' · ' + dkEsc(d.subject) : '') + '</div>' +
+        '<div class="mode-tags" style="margin-top:12px"><span class="mode-tag ranked">Live Session</span><span class="mode-tag team">All Players</span></div>' +
+        '</div></div>';
+    }).join('') + '</div>';
+}
 
 let studioSelTemplate = 'quiz-card-duel';
 let studioSelEmblem = '⚔';
@@ -2992,10 +3120,27 @@ function renderStudio() {
           ${STUDIO_EMBLEMS.map(function (e) { return '<button data-e="' + e + '" onclick="studioPickEmblem(\'' + e + '\')" style="font-size:1.15rem;width:42px;height:42px;border-radius:8px;cursor:pointer;background:rgba(10,20,36,0.85);border:1px solid ' + (e === studioSelEmblem ? 'rgba(255,215,64,0.8)' : 'rgba(255,255,255,0.12)') + ';' + (e === studioSelEmblem ? 'box-shadow:0 0 12px rgba(255,215,64,0.35)' : '') + '">' + e + '</button>'; }).join('')}
         </div></div>
       <div id="stErr" style="display:none;font-size:0.6rem;color:#ff5252;margin-bottom:10px"></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <button class="btn-arena" style="font-size:0.6rem;padding:10px 22px" onclick="studioTest()">🎮 TEST RUN</button>
         <button id="stPublishBtn" class="btn-arena btn-arena-gold" style="font-size:0.6rem;padding:10px 26px" onclick="studioPublish()">${studioEditId ? '💾 SAVE CHANGES' : '🚀 PUBLISH TO SIDE QUESTS'}</button>
+        ${isHostUser(state.player) ? `<span style="display:inline-flex;align-items:center;gap:8px;border-left:1px solid rgba(255,255,255,0.12);padding-left:12px">
+          <select id="stDuration" style="background:rgba(0,0,0,0.6);border:1px solid rgba(255,77,109,0.35);border-radius:6px;padding:9px 8px;font-size:0.62rem;color:#e6f8ff">
+            ${SESSION_DURATIONS.map(function (o) { return '<option value="' + o.m + '"' + (o.m === 60 ? ' selected' : '') + '>' + o.label + '</option>'; }).join('')}
+          </select>
+          <button id="stLaunchBtn" class="btn-arena btn-arena-red" style="font-size:0.6rem;padding:10px 22px" onclick="studioLaunchLive()">🔴 LAUNCH LIVE</button>
+        </span>` : ''}
       </div>
+      ${isHostUser(state.player) && baSessions.active().length ? `<div style="margin-top:14px">
+        <div style="font-family:Orbitron,monospace;font-size:0.55rem;letter-spacing:0.14em;color:#ff8fa3;margin-bottom:8px">🔴 ACTIVE SESSIONS · ${baSessions.active().length}</div>
+        ${baSessions.active().map(function (sess) {
+          const tpl2 = STUDIO_TEMPLATES.find(function (t) { return t.id === sess.template; }) || { icon: '🎮', name: 'Game' };
+          const d2 = baDecks.byId(sess.deckId);
+          return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(255,77,109,0.05);border:1px solid rgba(255,77,109,0.25);border-radius:8px;padding:8px 12px;margin-bottom:6px">' +
+            '<span style="font-size:0.62rem;color:#e6f8ff">' + tpl2.icon + ' <b>' + dkEsc(sess.title) + '</b> · ' + dkEsc(d2 ? d2.name : 'deck?') + ' · ⏳ ' + sessionTimeLeft(sess) + '</span>' +
+            '<button class="btn-arena btn-arena-red" style="font-size:0.5rem;padding:5px 12px" onclick="studioEndSession(\'' + sess.id + '\')">✕ END</button>' +
+          '</div>';
+        }).join('')}
+      </div>` : ''}
       ${decks.length === 0 ? '<div style="margin-top:10px;font-size:0.55rem;color:#ffd740">No decks yet — <a href="#" onclick="goScreen(\'decks\')" style="color:#00e5ff">import one on the DECKS screen</a> first.</div>' : ''}
     </div>
 
@@ -3437,6 +3582,7 @@ function renderSideQuests() {
     <div style="max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
       ${modeCards}
     </div>
+    ${arenaLiveSessionsHtml()}
     ${arenaStudioCardsHtml()}
     ${isHostUser(state.player) ? `<button class="admin-add-btn" onclick="state.adminPreCategory='side_quests';goScreen('mode_admin')" title="Add Side Quest">+</button>` : ''}
   </div>`;
@@ -5256,6 +5402,11 @@ function goScreen(s) { SFX.navigate(); state.screen = s; render(); }
 // Knowledge Decks + Studio games boot — pull the shared rows once at startup.
 setTimeout(function () { try { baDecks.load(); } catch (e) {} }, 900);
 setTimeout(function () { try { baGames.load(); } catch (e) {} }, 1100);
+setTimeout(function () { try { baSessions.load(); } catch (e) {} }, 1300);
+// keep LIVE session countdowns fresh + drop expired cards
+setInterval(function () {
+  try { if (state.screen === 'side_quests' || state.screen === 'studio') render(); } catch (e) {}
+}, 45000);
 
 function showCipherJoin() {
   const code = prompt("Enter 6-digit Room Code:");

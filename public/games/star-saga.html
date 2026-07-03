@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Star Saga — PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     STAR SAGA — Arena Game Cartridge #9 (July 2026).
+     Sci-fi D&D-style campaign: 8 narrative encounters across a
+     derelict megaship. Pick your approach, then a deck question sets
+     your dice: correct = roll 2d20 keep highest +4 (ADVANTAGE);
+     wrong = 1d20 −2. Beat the DC to advance; fail and take damage.
+     The final boss needs TWO successful strikes. Survive the saga.
+     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1. game id: 'star-saga'.
+     Config: { title, accent, background, emblem, difficulty, ordered,
+     sound }. Pure core: window.SS._core.
+     ═══════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%); color:#e6f8ff;
+         font-family:'Rajdhani',sans-serif; overflow:hidden; user-select:none; }
+  #wrap { height:100%; display:flex; flex-direction:column; max-width:720px; margin:0 auto; padding:12px; gap:10px; }
+
+  #hud { display:flex; justify-content:space-between; align-items:center; font-family:'Orbitron'; font-size:10px; letter-spacing:0.12em; }
+  #hud .pill { background:rgba(0,0,0,0.4); border:1px solid rgba(0,229,255,0.25); border-radius:8px; padding:5px 12px; }
+  #hpPill { color:#00e676; border-color:rgba(0,230,118,0.4) !important; }
+  #xpPill { color:#ffd740; border-color:rgba(255,215,64,0.4) !important; }
+  #encPill { color:#b388ff; border-color:rgba(179,136,255,0.4) !important; }
+
+  #story { background:rgba(4,10,20,0.92); border:1px solid rgba(179,136,255,0.35); border-radius:14px; padding:16px; flex:1;
+           display:flex; flex-direction:column; overflow-y:auto; }
+  #encTitle { font-family:'Orbitron'; font-size:clamp(13px,3.8vw,18px); font-weight:900; letter-spacing:0.1em; color:#c4b5fd; margin-bottom:8px; }
+  #encText { font-size:14px; color:#cfd8ee; line-height:1.65; margin-bottom:14px; }
+  #options { display:flex; flex-direction:column; gap:8px; }
+  .opt { background:rgba(20,14,40,0.85); border:1px solid rgba(179,136,255,0.3); border-radius:10px; padding:12px;
+         cursor:pointer; transition:all 0.12s; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .opt:hover { border-color:#b388ff; transform:translateX(4px); box-shadow:0 0 14px rgba(179,136,255,0.2); }
+  .opt .ol { font-size:13.5px; font-weight:600; color:#e6e0ff; }
+  .opt .dc { font-family:'Orbitron'; font-size:9px; color:#ffd740; white-space:nowrap; letter-spacing:0.08em; }
+
+  #quiz { display:none; }
+  #qTerm { font-family:'Orbitron'; font-size:clamp(13px,3.6vw,17px); font-weight:800; color:#f4feff; margin-bottom:10px; text-align:center; }
+  #qTerm .kick { display:block; font-size:7px; letter-spacing:0.2em; color:#b388ff; margin-bottom:4px; }
+  #qAnswers { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .qa { background:rgba(10,20,36,0.9); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:11px 10px;
+        font-size:13px; font-weight:600; cursor:pointer; color:#cfe3ff; line-height:1.3; transition:all 0.12s; word-break:break-word; }
+  .qa:hover { border-color:rgba(179,136,255,0.6); }
+  .qa.correct { border-color:#00e676; background:rgba(0,230,118,0.14); color:#c9ffe2; }
+  .qa.wrong { border-color:#ff4d6d; background:rgba(255,77,109,0.12); color:#ffd3dc; }
+  .qa.dim { opacity:0.35; pointer-events:none; }
+
+  #dice { display:none; flex-direction:column; align-items:center; justify-content:center; flex:1; text-align:center; }
+  #die { font-family:'Orbitron'; font-size:64px; font-weight:900; color:#ffd740; text-shadow:0 0 26px rgba(255,215,64,0.7);
+         animation:dieRoll 0.1s infinite; }
+  #die.done { animation:none; }
+  @keyframes dieRoll { 50% { transform:rotate(8deg) scale(1.06); } }
+  #dieNote { font-family:'Orbitron'; font-size:10px; letter-spacing:0.14em; color:#8a9ab8; margin-top:10px; }
+  #dieResult { font-family:'Orbitron'; font-size:15px; font-weight:900; letter-spacing:0.1em; margin-top:12px; }
+
+  .screen { position:fixed; inset:0; background:rgba(2,5,10,0.93); backdrop-filter:blur(6px); z-index:100;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .big { font-family:'Orbitron'; font-weight:900; font-size:clamp(24px,6.5vw,42px); letter-spacing:0.1em; margin-bottom:10px; }
+  .btn { font-family:'Orbitron'; font-size:12px; font-weight:800; letter-spacing:0.12em; padding:13px 34px;
+         border-radius:10px; border:1px solid rgba(0,229,255,0.55); background:rgba(0,229,255,0.12); color:#7df9ff;
+         cursor:pointer; transition:all 0.15s; margin:6px; }
+  .btn:hover { background:rgba(0,229,255,0.25); box-shadow:0 0 18px rgba(0,229,255,0.35); }
+  .btn.gold { border-color:rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740; }
+  .sub { font-size:14px; color:#8a9ab8; margin-bottom:20px; max-width:470px; line-height:1.6; }
+  .stat-row { display:flex; gap:24px; margin-bottom:22px; flex-wrap:wrap; justify-content:center; }
+  .stat { text-align:center; }
+  .stat b { display:block; font-family:'Orbitron'; font-size:20px; color:#ffd740; }
+  .stat span { font-size:10px; letter-spacing:0.12em; color:#7a8db0; }
+</style>
+</head>
+<body>
+<div id="wrap" style="display:none">
+  <div id="hud">
+    <span class="pill" id="encPill">CHAPTER 1 / 8</span>
+    <span class="pill" id="hpPill">♥ 30</span>
+    <span class="pill" id="xpPill">✦ 0 XP</span>
+  </div>
+  <div id="story">
+    <div id="encTitle"></div>
+    <div id="encText"></div>
+    <div id="options"></div>
+    <div id="quiz">
+      <div id="qTerm"><span class="kick">DECODE TO GAIN ADVANTAGE ON THE ROLL</span><span id="qTermText"></span></div>
+      <div id="qAnswers"></div>
+    </div>
+    <div id="dice">
+      <div id="die">?</div>
+      <div id="dieNote"></div>
+      <div id="dieResult"></div>
+    </div>
+  </div>
+</div>
+<div class="screen" id="intro">
+  <div class="big" style="color:#c4b5fd;text-shadow:0 0 20px rgba(179,136,255,0.6)">🎲 STAR SAGA</div>
+  <div class="sub" id="introSub">Waiting for deck…</div>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="SS.start()">▶ BEGIN THE SAGA</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DEMO_DECK = {
+    id: 'demo', name: 'PFLX Demo Deck', subject: 'PFLX Lore',
+    cards: [
+      { term: 'X-Coin', definition: 'The digital currency of the PFLX ecosystem' },
+      { term: 'Core Pathways', definition: 'Learning modules mapped as stations in open space' },
+      { term: 'Battle Arena', definition: 'Esports and challenges hub for quick XC' },
+      { term: 'DarkCampus', definition: 'Global professional network for rising creators' },
+      { term: 'Mission Control', definition: 'Project and task management center' },
+      { term: 'Evo Rank', definition: 'The progression rank earned across PFLX' }
+    ]
+  };
+
+  // ═════════════ PURE CORE (Node-testable) ═════════════
+  var ENCOUNTERS = [
+    { title: '🛰 THE DERELICT', text: 'The megaship VANTA hangs dead in the void. Your shuttle docks with a hiss. Two ways in.',
+      options: [ { label: 'Cut through the cargo airlock', dc: 8, fail: 4, xp: 10 },
+                 { label: 'Hack the maintenance hatch codes', dc: 11, fail: 3, xp: 16 } ] },
+    { title: '🤖 SENTRY LINE', text: 'Dormant security drones line the corridor. One optic flickers on as you pass.',
+      options: [ { label: 'Sprint the corridor before they boot', dc: 10, fail: 5, xp: 12 },
+                 { label: 'Spoof their friend-or-foe signal', dc: 13, fail: 4, xp: 20 } ] },
+    { title: '⚡ REACTOR ARC', text: 'The reactor bridge is out. Plasma arcs snap across the gap on a rhythm you can almost read.',
+      options: [ { label: 'Time the arcs and jump', dc: 11, fail: 6, xp: 14 },
+                 { label: 'Reroute power to kill the arcs', dc: 14, fail: 4, xp: 22 } ] },
+    { title: '🧊 CRYO DECK', text: 'A thousand cryopods, one still humming. Its occupant whispers coordinates through the glass — or is it a trap?',
+      options: [ { label: 'Trust the whisper, follow the coords', dc: 12, fail: 5, xp: 18 },
+                 { label: 'Scan the pod before acting', dc: 9, fail: 4, xp: 12 } ] },
+    { title: '👾 HULL BREACH', text: 'Something skitters in the vents. The lights die deck by deck, closing toward you.',
+      options: [ { label: 'Stand and fight in the dark', dc: 13, fail: 7, xp: 22 },
+                 { label: 'Vent the section and run', dc: 10, fail: 5, xp: 14 } ] },
+    { title: '🗄 THE ARCHIVE', text: 'The ship’s AI core is fragmented but alive. It offers the bridge codes — for a price paid in memory.',
+      options: [ { label: 'Trade a memory for the codes', dc: 9, fail: 6, xp: 14 },
+                 { label: 'Extract the codes by force-query', dc: 14, fail: 5, xp: 24 } ] },
+    { title: '🌀 GRAVITY WELL', text: 'The drive section spins wild — the deck is a centrifuge. The bridge door is fifty meters "up."',
+      options: [ { label: 'Climb the rotating deck plates', dc: 12, fail: 6, xp: 18 },
+                 { label: 'Kill the spin from an aux console', dc: 15, fail: 4, xp: 26 } ] },
+    { title: '👑 THE HELMSMAN', text: 'On the bridge waits what the crew became — a fused mass of chrome and hunger wearing the captain’s coat. It needs TWO decisive strikes.',
+      options: [ { label: 'Strike at the core matrix', dc: 13, fail: 8, xp: 30 },
+                 { label: 'Sever its neural tethers first', dc: 11, fail: 6, xp: 24 } ], boss: true }
+  ];
+  var DIFF_ADJ = { easy: { dc: -2, fail: -1, hp: 34 }, normal: { dc: 0, fail: 0, hp: 30 }, hard: { dc: 2, fail: 1, hp: 26 } };
+
+  function newSaga(difficulty) {
+    var a = DIFF_ADJ[difficulty] || DIFF_ADJ.normal;
+    return { adj: a, enc: 0, hp: a.hp, hpMax: a.hp, xp: 0, bossHits: 0,
+             correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false };
+  }
+  function encounterAt(n) { return ENCOUNTERS[Math.min(n, ENCOUNTERS.length - 1)]; }
+  function d20(rand) { return 1 + Math.floor((rand || Math.random)() * 20); }
+  // correct answer = ADVANTAGE (2d20 keep highest, +4); wrong = 1d20 − 2
+  function rollFor(wasCorrect, rand) {
+    if (wasCorrect) {
+      var a = d20(rand), b = d20(rand);
+      return { roll: Math.max(a, b) + 4, detail: 'ADV(' + a + ',' + b + ')+4' };
+    }
+    var r = d20(rand);
+    return { roll: r - 2, detail: '1d20(' + r + ')−2' };
+  }
+  function resolve(s, optIdx, wasCorrect, rand) {
+    if (s.over) return null;
+    if (wasCorrect) { s.correct++; s.streak++; s.bestStreak = Math.max(s.bestStreak, s.streak); }
+    else { s.wrong++; s.streak = 0; }
+    var enc = encounterAt(s.enc);
+    var opt = enc.options[optIdx] || enc.options[0];
+    var need = opt.dc + s.adj.dc;
+    var r = rollFor(wasCorrect, rand);
+    var success = r.roll >= need;
+    var out = { roll: r.roll, detail: r.detail, need: need, success: success, boss: !!enc.boss, advanced: false, dmg: 0 };
+    if (success) {
+      s.xp += opt.xp;
+      if (enc.boss) {
+        s.bossHits++;
+        if (s.bossHits >= 2) { s.over = true; s.won = true; out.advanced = true; }
+      } else {
+        s.enc++;
+        out.advanced = true;
+      }
+    } else {
+      out.dmg = Math.max(1, opt.fail + s.adj.fail);
+      s.hp -= out.dmg;
+      if (s.hp <= 0) { s.hp = 0; s.over = true; s.won = false; }
+    }
+    return out;
+  }
+  function scoreFor(s) {
+    return s.xp + s.enc * 10 + s.correct * 8 + s.bestStreak * 5 + Math.max(0, s.hp) + (s.won ? 50 : 0);
+  }
+
+  function buildQuestions(cards, rand) {
+    rand = rand || shuffle;
+    var usable = (cards || []).filter(function (c) { return c && c.term && c.definition; });
+    if (usable.length < 4) return [];
+    return rand(usable.slice()).map(function (c) {
+      var others = usable.filter(function (x) { return x !== c && x.definition !== c.definition; });
+      var distractors = rand(others.slice()).slice(0, 3).map(function (x) { return x.definition; });
+      while (distractors.length < 3) distractors.push('None of the above');
+      var choices = rand(distractors.concat([c.definition]));
+      return { term: c.term, choices: choices, correctIdx: choices.indexOf(c.definition) };
+    });
+  }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function $(id) { return document.getElementById(id); }
+  function post(msg) { try { if (window.parent !== window) window.parent.postMessage(msg, '*'); } catch (e) {} }
+
+  // ═════════════ config + assets (shared cartridge pattern) ═════════════
+  var BG_CSS = {
+    space:     'radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%)',
+    neon:      'radial-gradient(ellipse at 50% 110%, #2b0a4d 0%, #05010d 60%)',
+    crimson:   'radial-gradient(ellipse at 50% -10%, #3a0a18 0%, #0d0406 60%)',
+    emerald:   'radial-gradient(ellipse at 50% -10%, #06301f 0%, #04100a 60%)',
+    void:      '#020308',
+    sunset:    'linear-gradient(180deg, #3a1a0a 0%, #0d0604 55%)',
+    aurora:    'linear-gradient(180deg, rgba(0,70,80,0.5) 0%, rgba(40,10,80,0.25) 34%, rgba(4,7,13,0) 60%), radial-gradient(ellipse at 30% -10%, #0b3d3a 0%, #071026 45%, #04070d 80%)',
+    ocean:     'radial-gradient(ellipse at 50% 120%, #063a4d 0%, #032030 45%, #02090f 80%)',
+    magma:     'radial-gradient(ellipse at 50% 115%, #4d1a06 0%, #260a04 45%, #0a0403 80%)',
+    cyber:     'linear-gradient(200deg, #2a0a3d 0%, #0a1030 55%, #04070d 90%)',
+    royal:     'radial-gradient(ellipse at 20% -10%, #241356 0%, #0d0a2a 55%, #05040f 85%)',
+    gilded:    'radial-gradient(ellipse at 50% 120%, #3d2e06 0%, #1a1204 50%, #0a0703 85%)',
+    ice:       'linear-gradient(180deg, #10283d 0%, #081420 50%, #04080d 90%)',
+    bloodmoon: 'radial-gradient(circle at 75% 12%, #58101d 0%, #1d060c 40%, #08030a 75%)',
+    forest:    'radial-gradient(ellipse at 50% -10%, #10331a 0%, #071a0e 50%, #030a05 85%)',
+    storm:     'linear-gradient(115deg, #101826 0%, #1b2a44 45%, #0a0f1c 78%)'
+  };
+  var sfx = {
+    enabled: true, ctx: null,
+    beep: function (freq, dur, type, vol) {
+      if (!this.enabled) return;
+      try {
+        this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        var o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type || 'square'; o.frequency.value = freq;
+        g.gain.value = vol || 0.035;
+        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + (dur || 0.12));
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + (dur || 0.12));
+      } catch (e) {}
+    },
+    good: function () { this.beep(660, 0.09); var s2 = this; setTimeout(function () { s2.beep(990, 0.12); }, 70); },
+    bad: function () { this.beep(160, 0.25, 'sawtooth', 0.05); },
+    dice: function () { var s2 = this; for (var i = 0; i < 5; i++) setTimeout(function () { s2.beep(300 + Math.random() * 300, 0.04, 'triangle', 0.02); }, i * 90); }
+  };
+
+  var G = { deck: null, player: { id: 'demo', brand: 'Voyager' },
+            cfg: { title: '', accent: '', emblem: '🎲', difficulty: 'normal', ordered: false, sound: true },
+            s: null, questions: [], qIdx: 0, pendingOpt: null, reported: false };
+
+  function applyConfig(cfg) {
+    cfg = cfg || {};
+    G.cfg.title = String(cfg.title || '').slice(0, 60);
+    G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
+    G.cfg.background = BG_CSS[cfg.background] ? cfg.background : 'space';
+    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🎲';
+    G.cfg.difficulty = DIFF_ADJ[cfg.difficulty] ? cfg.difficulty : 'normal';
+    G.cfg.ordered = !!cfg.ordered;
+    G.cfg.sound = cfg.sound !== false;
+    sfx.enabled = G.cfg.sound;
+    if (G.cfg.background !== 'space') document.body.style.background = BG_CSS[G.cfg.background];
+    return G.cfg;
+  }
+
+  // ═════════════ UI ═════════════
+  function hud() {
+    var s = G.s;
+    $('encPill').textContent = 'CHAPTER ' + Math.min(8, s.enc + 1) + ' / 8' + (s.bossHits ? ' · BOSS ' + s.bossHits + '/2' : '');
+    $('hpPill').textContent = '♥ ' + Math.max(0, s.hp) + ' / ' + s.hpMax;
+    $('xpPill').textContent = '✦ ' + s.xp + ' XP';
+  }
+  function phase(which) {
+    $('options').style.display = which === 'opts' ? 'flex' : 'none';
+    $('quiz').style.display = which === 'quiz' ? 'block' : 'none';
+    $('dice').style.display = which === 'dice' ? 'flex' : 'none';
+    $('encText').style.display = which === 'dice' ? 'none' : 'block';
+  }
+  function showEncounter() {
+    var s = G.s;
+    if (s.over) return;
+    var enc = encounterAt(s.enc);
+    $('encTitle').textContent = enc.title + (enc.boss ? ' — FINAL BOSS' : '');
+    $('encText').textContent = enc.text;
+    $('options').innerHTML = enc.options.map(function (o, i) {
+      return '<div class="opt" onclick="SS.choose(' + i + ')">' +
+        '<span class="ol">' + esc(o.label) + '</span>' +
+        '<span class="dc">DC ' + (o.dc + s.adj.dc) + ' · FAIL −' + Math.max(1, o.fail + s.adj.fail) + '♥ · +' + o.xp + '✦</span>' +
+      '</div>';
+    }).join('');
+    phase('opts');
+    hud();
+  }
+  function choose(i) {
+    if (!G.s || G.s.over) return;
+    G.pendingOpt = i;
+    if (G.qIdx >= G.questions.length) G.qIdx = 0;
+    var q = G.questions[G.qIdx];
+    $('qTermText').textContent = q.term;
+    $('qAnswers').innerHTML = q.choices.map(function (ch, k) {
+      return '<div class="qa" onclick="SS.answer(' + k + ')">' + esc(ch) + '</div>';
+    }).join('');
+    phase('quiz');
+  }
+  function answer(i) {
+    var s = G.s;
+    if (!s || s.over || G.pendingOpt == null) return;
+    var q = G.questions[G.qIdx];
+    var els = $('qAnswers').querySelectorAll('.qa');
+    if (els[q.correctIdx]) els[q.correctIdx].classList.add('correct');
+    Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
+    G.qIdx++;
+    var wasCorrect = i === q.correctIdx;
+    if (!wasCorrect && els[i]) { els[i].classList.remove('dim'); els[i].classList.add('wrong'); }
+    (wasCorrect ? sfx.good : sfx.bad).call(sfx);
+    var opt = G.pendingOpt;
+    G.pendingOpt = null;
+    setTimeout(function () { rollDice(opt, wasCorrect); }, 650);
+  }
+  function rollDice(optIdx, wasCorrect) {
+    var s = G.s;
+    phase('dice');
+    sfx.dice();
+    $('dieNote').textContent = wasCorrect ? '✨ ADVANTAGE — 2d20 KEEP HIGHEST +4' : '⚠ NO ADVANTAGE — 1d20 −2';
+    $('dieResult').textContent = '';
+    var die = $('die');
+    die.classList.remove('done');
+    var spins = 0;
+    var iv = setInterval(function () {
+      die.textContent = 1 + Math.floor(Math.random() * 20);
+      if (++spins >= 12) {
+        clearInterval(iv);
+        var r = resolve(s, optIdx, wasCorrect);
+        die.textContent = r.roll;
+        die.classList.add('done');
+        var res = $('dieResult');
+        if (r.success) {
+          res.style.color = '#00e676';
+          res.textContent = '✓ ' + r.detail + ' = ' + r.roll + ' vs DC ' + r.need + (r.boss && !s.won ? ' — BOSS STAGGERED (' + s.bossHits + '/2)' : ' — SUCCESS');
+        } else {
+          res.style.color = '#ff4d6d';
+          res.textContent = '✕ ' + r.detail + ' = ' + r.roll + ' vs DC ' + r.need + ' — HIT FOR ' + r.dmg + '♥';
+        }
+        hud();
+        setTimeout(function () {
+          if (s.over) endScreen();
+          else showEncounter();
+        }, 1700);
+      }
+    }, 85);
+  }
+
+  // ═════════════ flow ═════════════
+  function reportResult() {
+    if (G.reported) return;
+    G.reported = true;
+    var s = G.s;
+    post({
+      type: 'pflx_arena_game_result', game: 'star-saga',
+      deckId: G.deck ? G.deck.id : 'demo',
+      score: scoreFor(s), correct: s.correct, total: s.correct + s.wrong,
+      bestStreak: s.bestStreak, won: !!s.won
+    });
+  }
+  function endScreen() {
+    reportResult();
+    var s = G.s;
+    var el = document.createElement('div');
+    el.className = 'screen';
+    el.innerHTML =
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '👑 THE VANTA IS YOURS' : '☠ THE SAGA ENDS') + '</div>' +
+      '<div class="sub">' + (s.won ? 'The Helmsman falls. The megaship’s log will remember your name.' : 'You fell in chapter ' + (s.enc + 1) + '. The VANTA keeps its secrets — for now.') + '</div>' +
+      '<div class="stat-row">' +
+        '<div class="stat"><b>' + scoreFor(s) + '</b><span>SCORE</span></div>' +
+        '<div class="stat"><b>' + s.xp + '</b><span>XP</span></div>' +
+        '<div class="stat"><b>' + Math.min(8, s.enc + (s.won ? 1 : 0)) + '/8</b><span>CHAPTERS</span></div>' +
+        '<div class="stat"><b>' + s.correct + '</b><span>DECODES</span></div>' +
+      '</div>' +
+      '<div><button class="btn gold" onclick="SS.rematch()">⟳ NEW SAGA</button>' +
+      '<button class="btn" onclick="SS.exit()">✕ EXIT</button></div>';
+    document.body.appendChild(el);
+  }
+
+  function initWithDeck(deck, player) {
+    G.deck = deck;
+    if (player && player.brand) G.player = { id: player.id || 'p', brand: player.brand };
+    G.questions = buildQuestions(deck.cards);
+    if (!G.questions.length) { $('introSub').textContent = 'This deck needs at least 4 cards.'; return; }
+    if (G.cfg.title) {
+      document.title = G.cfg.title + ' — PFLX Battle Arena';
+      var big = document.querySelector('#intro .big');
+      if (big) big.textContent = (G.cfg.emblem || '🎲') + ' ' + G.cfg.title.toUpperCase();
+    }
+    $('introSub').innerHTML = 'Deck: <b style="color:#c4b5fd">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
+      'Eight chapters aboard the derelict megaship VANTA.<br>Pick your approach, then decode: correct = <b style="color:#00e676">ADVANTAGE</b> on the d20.<br>The Helmsman waits at the end. It takes two strikes.';
+    $('startBtn').style.display = 'inline-block';
+  }
+
+  window.SS = {
+    _core: { newSaga: newSaga, encounterAt: encounterAt, rollFor: rollFor, resolve: resolve, d20: d20,
+             scoreFor: scoreFor, buildQuestions: buildQuestions, ENCOUNTERS: ENCOUNTERS, DIFF_ADJ: DIFF_ADJ, applyConfig: applyConfig },
+    start: function () {
+      var intro = $('intro'); if (intro) intro.remove();
+      document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
+      $('wrap').style.display = 'flex';
+      G.s = newSaga(G.cfg.difficulty);
+      G.qIdx = 0; G.reported = false; G.pendingOpt = null;
+      G.questions = buildQuestions(G.deck.cards);
+      if (G.cfg.ordered) {
+        var order = {};
+        G.deck.cards.forEach(function (c, i) { order[c.term + '' + c.definition] = i; });
+        G.questions.sort(function (a, b) {
+          return (order[a.term + '' + a.choices[a.correctIdx]] || 0) - (order[b.term + '' + b.choices[b.correctIdx]] || 0);
+        });
+      }
+      showEncounter();
+    },
+    choose: choose,
+    answer: answer,
+    rematch: function () { window.SS.start(); },
+    exit: function () {
+      post({ type: 'pflx_arena_game_exit' });
+      if (window.parent === window) location.reload();
+    }
+  };
+
+  // handshake
+  var gotDeck = false;
+  window.addEventListener('message', function (e) {
+    var m = e.data;
+    if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+    if (!m || m.type !== 'pflx_arena_deck' || !m.deck) return;
+    gotDeck = true;
+    applyConfig(m.config);
+    initWithDeck(m.deck, m.player);
+  });
+  post({ type: 'pflx_game_ready', game: 'star-saga' });
+  setTimeout(function () { if (!gotDeck) initWithDeck(DEMO_DECK, null); }, 1600);
+})();
+</script>
+</body>
+</html>
