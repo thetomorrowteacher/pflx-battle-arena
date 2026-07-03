@@ -2533,6 +2533,10 @@ window.addEventListener('message', function (e) {
       config: (arenaGame.opts && arenaGame.opts.config) || null
     }, '*');
   } else if (m.type === 'pflx_arena_game_result' && arenaGame.open) {
+    // Season sessions: a WIN advances this player's level for that session
+    if (m.won && arenaGame.opts && arenaGame.opts.seasonMode && arenaGame.opts.sessionId) {
+      sessionLevelUp(arenaGame.opts.sessionId);
+    }
     const xc = arenaGameXcFor(m.score);
     const note = document.getElementById('arenaGameXcNote');
     if (window.parent !== window && state.player) {
@@ -2664,7 +2668,13 @@ const STUDIO_TEMPLATES = [
   { id: 'pulse-runner', name: 'Pulse Runner', icon: '⚡', file: 'games/pulse-runner.html', ready: true,
     desc: 'Geometry-Dash-style auto-runner: jump the firewalls, speed always climbing. Crash = knowledge checkpoint.' },
   { id: 'star-saga', name: 'Star Saga', icon: '🎲', file: 'games/star-saga.html', ready: true,
-    desc: 'Sci-fi D&D campaign: 8 chapters aboard a derelict megaship. Correct answers give ADVANTAGE on the d20.' }
+    desc: 'Sci-fi D&D campaign: 8 chapters aboard a derelict megaship. Correct answers give ADVANTAGE on the d20.' },
+  { id: 'sky-climb', name: 'Sky Climb', icon: '🧗', ready: false, desc: "Don't-Look-Down-style vertical ascent: answers generate jump energy. COMING SOON." },
+  { id: 'stick-circuit', name: 'Stick Circuit', icon: '🥷', ready: false, desc: 'Stickman-style cyber-dojo fighter — combos charged by knowledge. COMING SOON.' },
+  { id: 'nexus-legends', name: 'Nexus Legends', icon: '🏟', ready: false, desc: 'MOBA-style lane battle (Mobile Legends): push the enemy core. COMING SOON.' },
+  { id: 'shell-strike', name: 'Shell Strike', icon: '🐢', ready: false, desc: 'TMNT-style co-op beat-em-up through neon sewers. COMING SOON.' },
+  { id: 'neo-city', name: 'Neo City', icon: '🏙', ready: false, desc: 'SimCity-style builder: knowledge funds districts of your megacity. COMING SOON.' },
+  { id: 'circuit-brawl', name: 'Circuit Brawl', icon: '🤼', ready: false, desc: 'Brawlhalla-style platform fighter — knockouts off the grid. COMING SOON.' }
 ];
 const STUDIO_BACKGROUNDS = [
   { id: 'space',     label: 'Deep Space' },
@@ -2795,8 +2805,27 @@ const baSessions = {
 };
 const SESSION_DURATIONS = [
   { m: 15, label: '15 minutes' }, { m: 30, label: '30 minutes' }, { m: 60, label: '1 hour' },
-  { m: 120, label: '2 hours' }, { m: 360, label: '6 hours' }, { m: 1440, label: '24 hours' }, { m: 10080, label: '1 week' }
+  { m: 120, label: '2 hours' }, { m: 360, label: '6 hours' }, { m: 1440, label: '24 hours' },
+  { m: 10080, label: '1 week' }, { m: 129600, label: 'Full Season (90 days)' }
 ];
+// ── Season level-up replays (Ennis): a season session is replayable at
+// escalating difficulty — each WIN advances that player's level for
+// that session: LVL 1 easy → LVL 2 normal → LVL 3 hard (stays hard).
+const SESSION_LEVELS = ['easy', 'normal', 'hard'];
+function sessionLevelFor(sessId) {
+  try { return Math.max(0, Math.min(SESSION_LEVELS.length - 1, parseInt(localStorage.getItem('pflx_sess_lvl_' + sessId) || '0', 10) || 0)); }
+  catch (e) { return 0; }
+}
+function sessionLevelUp(sessId) {
+  try {
+    const cur = sessionLevelFor(sessId);
+    if (cur < SESSION_LEVELS.length - 1) localStorage.setItem('pflx_sess_lvl_' + sessId, String(cur + 1));
+  } catch (e) {}
+}
+function sessionDifficultyFor(sess) {
+  if (!sess.seasonMode) return (sess.config && sess.config.difficulty) || 'normal';
+  return SESSION_LEVELS[sessionLevelFor(sess.id)];
+}
 function sessionTimeLeft(sess) {
   const ms = sess.endsAt - Date.now();
   if (ms <= 0) return 'ended';
@@ -2853,7 +2882,9 @@ function arenaSessionPlay(id) {
   const d = baDecks.byId(sess.deckId);
   if (!tpl || !tpl.ready) { alert('This session\'s game template is unavailable.'); return; }
   if (!d) { alert('The Knowledge Deck behind this session was deleted.'); return; }
-  arenaGameLaunch(sess.deckId, tpl.file, { title: sess.title, config: Object.assign({ title: sess.title }, sess.config || {}) });
+  const cfg = Object.assign({ title: sess.title }, sess.config || {});
+  cfg.difficulty = sessionDifficultyFor(sess);
+  arenaGameLaunch(sess.deckId, tpl.file, { title: sess.title, sessionId: sess.id, seasonMode: !!sess.seasonMode, config: cfg });
 }
 // Side Quests LIVE NOW shelf — active host sessions, player-facing.
 function arenaLiveSessionsHtml() {
@@ -2869,7 +2900,8 @@ function arenaLiveSessionsHtml() {
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
           '<div class="mode-head" style="margin:0"><div class="mode-icon">' + dkEsc((sess.config && sess.config.emblem) || tpl.icon) + '</div>' +
           '<div><div class="mode-name">' + dkEsc(sess.title) + '</div>' +
-          '<div class="mode-meta">by ' + dkEsc(sess.launchedByName || 'Host') + ' · ⏳ ' + sessionTimeLeft(sess) + '</div></div></div>' +
+          '<div class="mode-meta">by ' + dkEsc(sess.launchedByName || 'Host') + ' · ⏳ ' + sessionTimeLeft(sess) +
+            (sess.seasonMode ? ' · 🎚 YOUR LVL ' + (sessionLevelFor(sess.id) + 1) + '/' + SESSION_LEVELS.length : '') + '</div></div></div>' +
           '<span class="cipher-status-badge active" style="font-size:0.5rem;border-color:rgba(255,77,109,0.6);color:#ff8fa3">● LIVE</span>' +
         '</div>' +
         '<div class="mode-desc">' + tpl.icon + ' ' + tpl.name + ' on "' + dkEsc(d ? d.name : 'deck deleted') + '"' + (d && d.subject ? ' · ' + dkEsc(d.subject) : '') + '</div>' +
@@ -3045,6 +3077,90 @@ function arenaStudioCardsHtml() {
     '<div style="max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:16px">' + cards + create + '</div>';
 }
 
+// ═══ HOST LAUNCHPAD — the host dashboard of ALL game modes. Players
+// can't play a mode until the host launches it (deck + time window,
+// optionally Full Season with level-up replays).
+async function hostLaunchMode(tplId) {
+  if (!isHostUser(state.player)) return;
+  const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === tplId && t.ready; });
+  if (!tpl) return;
+  const val = function (id, fb) { const el = document.getElementById(id); return el ? el.value : fb; };
+  const deckId = val('hm-deck-' + tplId, '');
+  if (!deckId || !baDecks.byId(deckId)) { alert('Attach a Knowledge Deck first (import one on the DECKS screen).'); return; }
+  const mins = Math.max(5, parseInt(val('hm-dur-' + tplId, '60'), 10) || 60);
+  const season = val('hm-season-' + tplId, 'off') === 'on';
+  const diff = ['easy', 'normal', 'hard'].indexOf(val('hm-diff-' + tplId, 'normal')) !== -1 ? val('hm-diff-' + tplId, 'normal') : 'normal';
+  const title = (val('hm-title-' + tplId, '') || '').trim() || (tpl.name + ' LIVE');
+  const now = Date.now();
+  const btn = document.getElementById('hm-btn-' + tplId);
+  if (btn) { btn.disabled = true; btn.textContent = 'LAUNCHING…'; }
+  try {
+    await baSessions.upsert({
+      id: dkUid('sess'), title: title, template: tpl.id, deckId: deckId,
+      config: { difficulty: diff, sound: true, powerups: true },
+      seasonMode: season,
+      launchedBy: (state.player && state.player.id) || 'host',
+      launchedByName: (state.player && state.player.brand) || 'Host',
+      startsAt: now, endsAt: now + (season ? 129600 : mins) * 60000, createdAt: now
+    });
+    SFX.click();
+    render();
+  } catch (e) {
+    alert('Launch failed — check your connection.');
+    if (btn) { btn.disabled = false; btn.textContent = '🔴 LAUNCH'; }
+  }
+}
+function renderHostModes() {
+  const decks = baDecks.list.filter(function (d) { return (d.cards || []).length >= 4; });
+  const act = baSessions.active();
+  const inp = 'background:rgba(0,0,0,0.5);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:7px 8px;font-size:0.6rem;color:#e6f8ff;width:100%;box-sizing:border-box';
+  return `<main class="wrap" style="max-width:1080px;margin:0 auto;padding:24px">
+    <div style="margin-bottom:16px">
+      <h2 class="text-glow-cyan" style="font-family:Orbitron,monospace;font-size:1.1rem;letter-spacing:0.15em;margin:0 0 6px">🎛 HOST LAUNCHPAD</h2>
+      <div style="font-size:0.6rem;color:#8a9ab8;max-width:640px;line-height:1.6">Every game mode, launch-gated. Attach a flash-card deck, set the window, and go live — players see it in Side Quests until time runs out. <b style="color:#ffd740">Full Season</b> launches are replayable: each win levels the player up (easy → normal → hard).</div>
+    </div>
+    ${act.length ? `<div style="margin-bottom:18px">
+      <div style="font-family:Orbitron,monospace;font-size:0.6rem;letter-spacing:0.14em;color:#ff8fa3;margin-bottom:8px">🔴 ACTIVE SESSIONS · ${act.length}</div>
+      ${act.map(function (sess) {
+        const tpl2 = STUDIO_TEMPLATES.find(function (t) { return t.id === sess.template; }) || { icon: '🎮' };
+        const d2 = baDecks.byId(sess.deckId);
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(255,77,109,0.05);border:1px solid rgba(255,77,109,0.25);border-radius:8px;padding:8px 12px;margin-bottom:6px">' +
+          '<span style="font-size:0.62rem;color:#e6f8ff">' + tpl2.icon + ' <b>' + dkEsc(sess.title) + '</b> · ' + dkEsc(d2 ? d2.name : 'deck?') + ' · ⏳ ' + sessionTimeLeft(sess) + (sess.seasonMode ? ' · 🎚 SEASON MODE' : '') + '</span>' +
+          '<button class="btn-arena btn-arena-red" style="font-size:0.5rem;padding:5px 12px" onclick="studioEndSession(\'' + sess.id + '\')">✕ END</button>' +
+        '</div>';
+      }).join('')}
+    </div>` : ''}
+    ${decks.length === 0 ? '<div class="glass-panel" style="border-radius:12px;padding:20px;margin-bottom:16px;font-size:0.65rem;color:#ffd740">No decks yet — <a href="#" onclick="goScreen(\'decks\')" style="color:#00e5ff">import a Quizlet deck</a> first, then come back to launch.</div>' : ''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+      ${STUDIO_TEMPLATES.filter(function (t) { return t.ready; }).map(function (t) {
+        return '<div class="glass-panel" style="border-radius:14px;padding:16px;border:1px solid rgba(0,229,255,0.25);display:flex;flex-direction:column;gap:8px">' +
+          '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.5rem">' + t.icon + '</span>' +
+          '<span style="font-family:Orbitron,monospace;font-size:0.68rem;font-weight:800;color:#e6f8ff;letter-spacing:0.06em">' + t.name + '</span></div>' +
+          '<div style="font-size:0.55rem;color:#8a9ab8;line-height:1.5;min-height:32px">' + t.desc + '</div>' +
+          '<input id="hm-title-' + t.id + '" placeholder="Session title (optional)" style="' + inp + '" />' +
+          '<select id="hm-deck-' + t.id + '" style="' + inp + '">' +
+            '<option value="">— attach a deck * —</option>' +
+            decks.map(function (d) { return '<option value="' + d.id + '">' + dkEsc(d.name) + ' (' + d.cards.length + ')</option>'; }).join('') +
+          '</select>' +
+          '<div style="display:flex;gap:6px">' +
+            '<select id="hm-dur-' + t.id + '" style="' + inp + '">' +
+              SESSION_DURATIONS.map(function (o) { return '<option value="' + o.m + '"' + (o.m === 60 ? ' selected' : '') + '>' + o.label + '</option>'; }).join('') +
+            '</select>' +
+            '<select id="hm-diff-' + t.id + '" style="' + inp + '">' +
+              '<option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option>' +
+            '</select>' +
+          '</div>' +
+          '<select id="hm-season-' + t.id + '" style="' + inp + '">' +
+            '<option value="off" selected>One-shot session</option>' +
+            '<option value="on">🎚 Season mode — level-up replays</option>' +
+          '</select>' +
+          '<button id="hm-btn-' + t.id + '" class="btn-arena btn-arena-red" style="font-size:0.58rem;padding:9px 14px" onclick="hostLaunchMode(\'' + t.id + '\')">🔴 LAUNCH</button>' +
+        '</div>';
+      }).join('')}
+    </div>
+  </main>`;
+}
+
 function renderStudio() {
   const decks = baDecks.list.filter(function (d) { return (d.cards || []).length >= 4; });
   const mine = baGames.list;
@@ -3179,6 +3295,7 @@ function render() {
   else if (state.screen === "side_quests") { app.innerHTML = bg + panel + renderNav() + renderSideQuests(); }
   else if (state.screen === "decks") { app.innerHTML = bg + panel + renderNav() + renderDecks(); }
   else if (state.screen === "studio") { app.innerHTML = bg + panel + renderNav() + renderStudio(); setTimeout(function () { try { studioPreview(); } catch (e) {} }, 30); }
+  else if (state.screen === "host_modes") { app.innerHTML = bg + panel + renderNav() + renderHostModes(); }
   else if (state.screen === "mode_admin") { app.innerHTML = bg + panel + renderNav() + renderModeAdmin(); }
   else if (state.screen === "live_play") { app.innerHTML = bg + panel + renderNav() + renderLivePlay(); }
   else if (state.screen === "cipher_select") { app.innerHTML = bg + panel + renderNav() + renderCipherSelect(); }
@@ -3578,6 +3695,7 @@ function renderSideQuests() {
     <div class="sq-header">
       <button class="sq-back" onclick="goHome()">← Back</button>
       <div class="sq-title">🗡️ Side Quests <span class="mode-tag beta" style="vertical-align:middle;margin-left:8px">Beta</span></div>
+      ${isHostUser(state.player) ? '<button class="btn-arena btn-arena-red" style="font-size:0.55rem;padding:8px 16px;margin-left:auto" onclick="goScreen(\'host_modes\')">🎛 HOST LAUNCHPAD</button>' : ''}
     </div>
     <div style="max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
       ${modeCards}
