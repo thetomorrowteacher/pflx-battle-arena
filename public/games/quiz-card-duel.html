@@ -142,8 +142,32 @@
     deck: null, player: { id: 'demo', brand: 'Challenger' },
     rounds: [], idx: 0, meHp: 100, cpuHp: 100,
     correct: 0, streak: 0, bestStreak: 0,
-    timer: null, timeLeft: 0, roundTime: 15, over: false, reported: false
+    timer: null, timeLeft: 0, roundTime: 15, over: false, reported: false,
+    cfg: { title: '', accent: '', rivalName: 'RIVAL AI', roundTime: 15 }
   };
+
+  // Studio config (cartridge contract: host may send `config` with the deck)
+  function applyConfig(cfg) {
+    cfg = cfg || {};
+    S.cfg = {
+      title: String(cfg.title || '').slice(0, 60),
+      accent: /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '',
+      rivalName: String(cfg.rivalName || 'RIVAL AI').slice(0, 24) || 'RIVAL AI',
+      roundTime: Math.max(8, Math.min(30, parseInt(cfg.roundTime, 10) || 15))
+    };
+    S.roundTime = S.cfg.roundTime;
+    if (S.cfg.accent) {
+      var st = document.createElement('style');
+      st.textContent =
+        '#qcard{border-color:' + S.cfg.accent + '73;box-shadow:0 0 28px ' + S.cfg.accent + '26,inset 0 0 30px ' + S.cfg.accent + '0a}' +
+        '.q-kicker{color:' + S.cfg.accent + '}' +
+        '.q-term{text-shadow:0 0 16px ' + S.cfg.accent + '66}' +
+        '.ans:hover{border-color:' + S.cfg.accent + '99;box-shadow:0 6px 18px ' + S.cfg.accent + '2e}' +
+        '.me .hp-fill{background:linear-gradient(90deg,' + S.cfg.accent + ',#ffffff88);box-shadow:0 0 12px ' + S.cfg.accent + '99}';
+      document.head.appendChild(st);
+    }
+    return S.cfg;
+  }
 
   function shuffle(a) {
     for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; }
@@ -293,14 +317,19 @@
       return;
     }
     $('meName').textContent = (S.player.brand || 'YOU').toUpperCase();
-    $('cpuName').textContent = 'RIVAL AI';
+    $('cpuName').textContent = S.cfg.rivalName;
+    if (S.cfg.title) {
+      document.title = S.cfg.title + ' — PFLX Battle Arena';
+      var big = document.querySelector('#intro .big');
+      if (big) big.textContent = '⚔ ' + S.cfg.title.toUpperCase();
+    }
     $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
       'Answer fast to hit harder. Streaks stack bonus damage.<br>Wrong answers and timeouts let the rival strike back.';
     $('startBtn').style.display = 'inline-block';
   }
 
   window.QCD = {
-    _core: { buildRounds: buildRounds, damageFor: damageFor, cpuDamage: cpuDamage, scoreFor: scoreFor },
+    _core: { buildRounds: buildRounds, damageFor: damageFor, cpuDamage: cpuDamage, scoreFor: scoreFor, applyConfig: applyConfig },
     start: function () {
       var intro = $('intro'); if (intro) intro.remove();
       $('stage').style.display = 'flex';
@@ -332,6 +361,7 @@
     if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
     if (!m || m.type !== 'pflx_arena_deck' || !m.deck) return;
     gotDeck = true;
+    applyConfig(m.config);
     initWithDeck(m.deck, m.player);
   });
   post({ type: 'pflx_game_ready', game: 'quiz-card-duel' });
