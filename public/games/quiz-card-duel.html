@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Quiz Card Duel — PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     QUIZ CARD DUEL — the first Arena Game Cartridge (July 2026).
+     A knowledge duel: answer cards fast to attack the rival; wrong
+     answers and timeouts let the rival strike back.
+
+     ARENA GAME CARTRIDGE CONTRACT v0.1 (postMessage, JSON objects):
+       game → host:  { type:'pflx_game_ready',  game:'quiz-card-duel' }
+       host → game:  { type:'pflx_arena_deck',
+                       deck:{ id,name,subject?,cards:[{term,definition}] },
+                       player:{ id, brand } }        // brand only — never real names
+       game → host:  { type:'pflx_arena_game_result',
+                       game, deckId, score, correct, total, bestStreak, won }
+       game → host:  { type:'pflx_arena_game_exit' }
+     Standalone (no parent / no deck within 1600ms): built-in demo deck.
+     ═══════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%); color:#e6f8ff;
+         font-family:'Rajdhani',sans-serif; overflow:hidden; user-select:none; }
+  #stage { height:100%; display:flex; flex-direction:column; max-width:760px; margin:0 auto; padding:14px; }
+
+  /* HP header */
+  .hp-row { display:flex; gap:14px; align-items:center; margin-bottom:10px; }
+  .fighter { flex:1; }
+  .f-name { font-family:'Orbitron'; font-size:10px; letter-spacing:0.14em; margin-bottom:4px; display:flex; justify-content:space-between; }
+  .hp-bar { height:14px; border-radius:8px; background:rgba(255,255,255,0.07); overflow:hidden; border:1px solid rgba(255,255,255,0.1); }
+  .hp-fill { height:100%; border-radius:8px; transition:width 0.45s cubic-bezier(0.22,1,0.36,1); }
+  .me .hp-fill { background:linear-gradient(90deg,#00e5ff,#4dffdb); box-shadow:0 0 12px rgba(0,229,255,0.6); }
+  .cpu .hp-fill { background:linear-gradient(90deg,#ff4d6d,#ff9f40); box-shadow:0 0 12px rgba(255,77,109,0.6); }
+  .vs { font-family:'Orbitron'; font-size:16px; font-weight:900; color:#ffd740; text-shadow:0 0 14px rgba(255,215,64,0.7); }
+
+  /* status strip */
+  .strip { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-family:'Orbitron'; font-size:9px; letter-spacing:0.12em; color:#7a8db0; }
+  .streak { color:#ff9f40; }
+  .timer-wrap { flex:1; margin:0 12px; height:8px; border-radius:4px; background:rgba(255,255,255,0.07); overflow:hidden; }
+  #timerFill { height:100%; width:100%; background:linear-gradient(90deg,#00e676,#ffd740,#ff4d6d); transition:width 0.1s linear; }
+
+  /* question card */
+  #qcard { background:linear-gradient(160deg,rgba(0,229,255,0.10),rgba(4,10,20,0.9));
+           border:1px solid rgba(0,229,255,0.45); border-radius:16px; padding:22px 18px; text-align:center;
+           box-shadow:0 0 28px rgba(0,229,255,0.15), inset 0 0 30px rgba(0,229,255,0.04);
+           margin-bottom:14px; min-height:110px; display:flex; flex-direction:column; justify-content:center;
+           animation:dealIn 0.4s cubic-bezier(0.22,1,0.36,1); }
+  @keyframes dealIn { from { transform:translateY(-26px) scale(0.92); opacity:0; } }
+  .q-kicker { font-family:'Orbitron'; font-size:8px; letter-spacing:0.2em; color:#00e5ff; margin-bottom:8px; }
+  .q-term { font-family:'Orbitron'; font-size:clamp(15px,4.5vw,24px); font-weight:800; color:#f4feff; line-height:1.3;
+            text-shadow:0 0 16px rgba(0,229,255,0.4); word-break:break-word; }
+
+  /* answer cards */
+  #answers { display:grid; grid-template-columns:1fr 1fr; gap:10px; flex:1; align-content:start; }
+  .ans { background:rgba(10,20,36,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:12px;
+         padding:14px 12px; font-size:14px; font-weight:600; line-height:1.35; cursor:pointer;
+         transition:transform 0.12s, border-color 0.12s, box-shadow 0.12s; position:relative; overflow:hidden;
+         animation:dealIn 0.4s cubic-bezier(0.22,1,0.36,1) backwards; word-break:break-word; color:#cfe3ff; }
+  .ans:nth-child(2){animation-delay:0.05s} .ans:nth-child(3){animation-delay:0.1s} .ans:nth-child(4){animation-delay:0.15s}
+  .ans:hover { transform:translateY(-3px); border-color:rgba(0,229,255,0.6); box-shadow:0 6px 18px rgba(0,229,255,0.18); }
+  .ans.correct { border-color:#00e676; background:rgba(0,230,118,0.14); color:#c9ffe2; box-shadow:0 0 18px rgba(0,230,118,0.4); }
+  .ans.wrong { border-color:#ff4d6d; background:rgba(255,77,109,0.12); color:#ffd3dc; animation:shake 0.35s; }
+  .ans.dim { opacity:0.35; pointer-events:none; }
+  @keyframes shake { 25%{transform:translateX(-6px)} 50%{transform:translateX(6px)} 75%{transform:translateX(-3px)} }
+
+  /* combat floaters + flash */
+  .floater { position:fixed; font-family:'Orbitron'; font-weight:900; pointer-events:none; z-index:50;
+             animation:floatUp 0.9s ease-out forwards; text-shadow:0 0 12px currentColor; }
+  @keyframes floatUp { to { transform:translateY(-70px); opacity:0; } }
+  .hitflash { position:fixed; inset:0; pointer-events:none; z-index:40; opacity:0; }
+  .hitflash.go { animation:hf 0.35s; }
+  @keyframes hf { 20% { opacity:0.55; } 100% { opacity:0; } }
+
+  /* screens */
+  .screen { position:fixed; inset:0; background:rgba(2,5,10,0.92); backdrop-filter:blur(6px); z-index:100;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .big { font-family:'Orbitron'; font-weight:900; font-size:clamp(26px,7vw,44px); letter-spacing:0.1em; margin-bottom:10px; }
+  .btn { font-family:'Orbitron'; font-size:12px; font-weight:800; letter-spacing:0.12em; padding:13px 34px;
+         border-radius:10px; border:1px solid rgba(0,229,255,0.55); background:rgba(0,229,255,0.12); color:#7df9ff;
+         cursor:pointer; transition:all 0.15s; margin:6px; }
+  .btn:hover { background:rgba(0,229,255,0.25); box-shadow:0 0 18px rgba(0,229,255,0.35); }
+  .btn.gold { border-color:rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740; }
+  .btn.gold:hover { background:rgba(255,215,64,0.25); box-shadow:0 0 18px rgba(255,215,64,0.35); }
+  .sub { font-size:14px; color:#8a9ab8; margin-bottom:22px; max-width:420px; line-height:1.6; }
+  .stat-row { display:flex; gap:26px; margin-bottom:24px; }
+  .stat { text-align:center; }
+  .stat b { display:block; font-family:'Orbitron'; font-size:22px; color:#ffd740; }
+  .stat span { font-size:10px; letter-spacing:0.12em; color:#7a8db0; }
+</style>
+</head>
+<body>
+<div id="stage" style="display:none">
+  <div class="hp-row">
+    <div class="fighter me">
+      <div class="f-name"><span id="meName">YOU</span><span id="meHp">100</span></div>
+      <div class="hp-bar"><div class="hp-fill" id="meFill" style="width:100%"></div></div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="fighter cpu">
+      <div class="f-name"><span id="cpuName">RIVAL</span><span id="cpuHp">100</span></div>
+      <div class="hp-bar"><div class="hp-fill" id="cpuFill" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div class="strip">
+    <span id="roundLbl">ROUND 1</span>
+    <div class="timer-wrap"><div id="timerFill"></div></div>
+    <span class="streak" id="streakLbl"></span>
+  </div>
+  <div id="qcard"><div class="q-kicker" id="qKicker">WHAT MATCHES…</div><div class="q-term" id="qTerm"></div></div>
+  <div id="answers"></div>
+</div>
+<div class="hitflash" id="flashMe" style="background:radial-gradient(circle,rgba(255,77,109,0.5),transparent 70%)"></div>
+<div class="hitflash" id="flashCpu" style="background:radial-gradient(circle,rgba(0,229,255,0.4),transparent 70%)"></div>
+<div class="screen" id="intro">
+  <div class="big" style="color:#7df9ff;text-shadow:0 0 20px rgba(0,229,255,0.6)">⚔ QUIZ CARD DUEL</div>
+  <div class="sub" id="introSub">Waiting for deck…</div>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="QCD.start()">▶ START DUEL</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── demo fallback deck (standalone play) ──
+  var DEMO_DECK = {
+    id: 'demo', name: 'PFLX Demo Deck', subject: 'PFLX Lore',
+    cards: [
+      { term: 'X-Coin', definition: 'The digital currency of the PFLX ecosystem' },
+      { term: 'Core Pathways', definition: 'Learning modules mapped as stations in open space' },
+      { term: 'Battle Arena', definition: 'Esports and challenges hub for quick XC' },
+      { term: 'DarkCampus', definition: 'Global professional network for rising creators' },
+      { term: 'Mission Control', definition: 'Project and task management center' },
+      { term: 'Evo Rank', definition: 'The progression rank earned across PFLX' }
+    ]
+  };
+
+  var S = {
+    deck: null, player: { id: 'demo', brand: 'Challenger' },
+    rounds: [], idx: 0, meHp: 100, cpuHp: 100,
+    correct: 0, streak: 0, bestStreak: 0,
+    timer: null, timeLeft: 0, roundTime: 15, over: false, reported: false
+  };
+
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function $(id) { return document.getElementById(id); }
+
+  // ── pure core (testable) ──
+  function buildRounds(cards, rand) {
+    rand = rand || shuffle;
+    var usable = (cards || []).filter(function (c) { return c && c.term && c.definition; });
+    if (usable.length < 4) return [];
+    return rand(usable.slice()).map(function (c) {
+      var others = usable.filter(function (x) { return x !== c && x.definition !== c.definition; });
+      var distractors = rand(others.slice()).slice(0, 3).map(function (x) { return x.definition; });
+      while (distractors.length < 3) distractors.push('None of the above');
+      var choices = rand(distractors.concat([c.definition]));
+      return { term: c.term, choices: choices, correctIdx: choices.indexOf(c.definition) };
+    });
+  }
+  // player damage: base 12 + speed bonus (up to 8) + streak bonus (2/streak, cap 30 total)
+  function damageFor(timeLeft, roundTime, streak) {
+    var speed = Math.round((Math.max(0, timeLeft) / Math.max(1, roundTime)) * 8);
+    return Math.min(30, 12 + speed + Math.min(8, streak * 2));
+  }
+  // rival damage ramps with the round so long duels stay dangerous
+  function cpuDamage(roundIdx) { return Math.min(26, 14 + Math.floor(roundIdx / 2) * 2); }
+  function scoreFor(correct, bestStreak, won) { return correct * 10 + bestStreak * 5 + (won ? 30 : 0); }
+
+  // ── messaging ──
+  function post(msg) {
+    try { if (window.parent !== window) window.parent.postMessage(msg, '*'); } catch (e) {}
+  }
+  function reportResult(won) {
+    if (S.reported) return;
+    S.reported = true;
+    post({
+      type: 'pflx_arena_game_result', game: 'quiz-card-duel',
+      deckId: S.deck ? S.deck.id : 'demo',
+      score: scoreFor(S.correct, S.bestStreak, won),
+      correct: S.correct, total: S.rounds.length,
+      bestStreak: S.bestStreak, won: !!won
+    });
+  }
+
+  // ── UI ──
+  function updateBars() {
+    $('meFill').style.width = Math.max(0, S.meHp) + '%';
+    $('cpuFill').style.width = Math.max(0, S.cpuHp) + '%';
+    $('meHp').textContent = Math.max(0, S.meHp);
+    $('cpuHp').textContent = Math.max(0, S.cpuHp);
+    $('streakLbl').textContent = S.streak >= 2 ? '🔥 STREAK ×' + S.streak : '';
+  }
+  function floater(text, color, side) {
+    var f = document.createElement('div');
+    f.className = 'floater';
+    f.textContent = text;
+    f.style.color = color;
+    f.style.fontSize = '22px';
+    f.style.left = (side === 'cpu' ? 72 : 22) + '%';
+    f.style.top = '16%';
+    document.body.appendChild(f);
+    setTimeout(function () { f.remove(); }, 950);
+  }
+  function flash(id) { var el = $(id); el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); }
+
+  function showRound() {
+    if (S.over) return;
+    if (S.idx >= S.rounds.length) S.idx = 0; // loop the deck until someone drops
+    var r = S.rounds[S.idx];
+    $('roundLbl').textContent = 'ROUND ' + (S.idx + 1);
+    $('qTerm').textContent = r.term;
+    var box = $('answers');
+    box.innerHTML = r.choices.map(function (ch, i) {
+      return '<div class="ans" data-i="' + i + '" onclick="QCD.answer(' + i + ')">' + esc(ch) + '</div>';
+    }).join('');
+    S.timeLeft = S.roundTime;
+    clearInterval(S.timer);
+    S.timer = setInterval(function () {
+      S.timeLeft -= 0.1;
+      $('timerFill').style.width = Math.max(0, (S.timeLeft / S.roundTime) * 100) + '%';
+      if (S.timeLeft <= 0) { clearInterval(S.timer); resolve(-1); }
+    }, 100);
+  }
+
+  function resolve(pick) {
+    if (S.over) return;
+    clearInterval(S.timer);
+    var r = S.rounds[S.idx];
+    var box = $('answers');
+    var cards = box.querySelectorAll('.ans');
+    cards.forEach(function (el) { el.classList.add('dim'); });
+    if (cards[r.correctIdx]) { cards[r.correctIdx].classList.remove('dim'); cards[r.correctIdx].classList.add('correct'); }
+
+    if (pick === r.correctIdx) {
+      S.streak++;
+      S.bestStreak = Math.max(S.bestStreak, S.streak);
+      S.correct++;
+      var dmg = damageFor(S.timeLeft, S.roundTime, S.streak);
+      S.cpuHp -= dmg;
+      floater('-' + dmg, '#00e5ff', 'cpu');
+      flash('flashCpu');
+    } else {
+      if (pick >= 0 && cards[pick]) { cards[pick].classList.remove('dim'); cards[pick].classList.add('wrong'); }
+      S.streak = 0;
+      var cd = cpuDamage(S.idx);
+      S.meHp -= cd;
+      floater('-' + cd, '#ff4d6d', 'me');
+      flash('flashMe');
+    }
+    updateBars();
+
+    if (S.cpuHp <= 0 || S.meHp <= 0) {
+      S.over = true;
+      setTimeout(function () { endScreen(S.cpuHp <= 0); }, 800);
+      return;
+    }
+    S.idx++;
+    setTimeout(showRound, 1100);
+  }
+
+  function endScreen(won) {
+    reportResult(won);
+    var sc = scoreFor(S.correct, S.bestStreak, won);
+    var el = document.createElement('div');
+    el.className = 'screen';
+    el.innerHTML =
+      '<div class="big" style="color:' + (won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (won ? '🏆 VICTORY' : '💥 DEFEATED') + '</div>' +
+      '<div class="sub">' + (won ? 'Your knowledge cut the rival down.' : 'The rival wore you down — study the deck and rematch.') + '</div>' +
+      '<div class="stat-row">' +
+        '<div class="stat"><b>' + sc + '</b><span>SCORE</span></div>' +
+        '<div class="stat"><b>' + S.correct + '</b><span>CORRECT</span></div>' +
+        '<div class="stat"><b>×' + S.bestStreak + '</b><span>BEST STREAK</span></div>' +
+      '</div>' +
+      '<div><button class="btn gold" onclick="QCD.rematch()">⟳ REMATCH</button>' +
+      '<button class="btn" onclick="QCD.exit()">✕ EXIT</button></div>';
+    document.body.appendChild(el);
+  }
+
+  function initWithDeck(deck, player) {
+    S.deck = deck;
+    if (player && player.brand) S.player = { id: player.id || 'p', brand: player.brand };
+    S.rounds = buildRounds(deck.cards);
+    if (!S.rounds.length) {
+      $('introSub').textContent = 'This deck needs at least 4 cards for a duel.';
+      return;
+    }
+    $('meName').textContent = (S.player.brand || 'YOU').toUpperCase();
+    $('cpuName').textContent = 'RIVAL AI';
+    $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
+      'Answer fast to hit harder. Streaks stack bonus damage.<br>Wrong answers and timeouts let the rival strike back.';
+    $('startBtn').style.display = 'inline-block';
+  }
+
+  window.QCD = {
+    _core: { buildRounds: buildRounds, damageFor: damageFor, cpuDamage: cpuDamage, scoreFor: scoreFor },
+    start: function () {
+      var intro = $('intro'); if (intro) intro.remove();
+      $('stage').style.display = 'flex';
+      S.meHp = 100; S.cpuHp = 100; S.idx = 0; S.correct = 0; S.streak = 0; S.bestStreak = 0; S.over = false; S.reported = false;
+      S.rounds = buildRounds(S.deck.cards);
+      updateBars();
+      showRound();
+    },
+    answer: function (i) {
+      var box = $('answers');
+      if (!box || box.querySelector('.correct')) return; // already resolved
+      resolve(i);
+    },
+    rematch: function () {
+      document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
+      window.QCD.start();
+    },
+    exit: function () {
+      post({ type: 'pflx_arena_game_exit' });
+      // standalone fallback: back to intro state
+      if (window.parent === window) location.reload();
+    }
+  };
+
+  // ── handshake ──
+  var gotDeck = false;
+  window.addEventListener('message', function (e) {
+    var m = e.data;
+    if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+    if (!m || m.type !== 'pflx_arena_deck' || !m.deck) return;
+    gotDeck = true;
+    initWithDeck(m.deck, m.player);
+  });
+  post({ type: 'pflx_game_ready', game: 'quiz-card-duel' });
+  setTimeout(function () { if (!gotDeck) initWithDeck(DEMO_DECK, null); }, 1600);
+})();
+</script>
+</body>
+</html>

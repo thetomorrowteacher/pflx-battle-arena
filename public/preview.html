@@ -2477,6 +2477,75 @@ function deckBindCipher(id) {
   SFX.click();
   render();
 }
+// ═══ ARENA GAME CARTRIDGE LAUNCHER (contract v0.1) ═══
+// Opens a game in a fullscreen iframe overlay, hands it the bound
+// deck via postMessage, receives the result, proposes XC through
+// arenaPostAward (the Console stays the economy authority).
+const arenaGame = { open: false, deckId: null, frame: null, xcPerScore: 0.25, xcMin: 5, xcMax: 40 };
+
+function arenaGameXcFor(score) {
+  return Math.max(arenaGame.xcMin, Math.min(arenaGame.xcMax, Math.round((score || 0) * arenaGame.xcPerScore)));
+}
+
+function arenaGameLaunch(deckId, gameFile) {
+  const d = baDecks.byId(deckId);
+  if (!d) return;
+  if ((d.cards || []).length < 4) { alert('This game needs at least 4 cards in the deck.'); return; }
+  arenaGame.deckId = deckId;
+  arenaGame.open = true;
+  let ov = document.getElementById('arenaGameOverlay');
+  if (ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'arenaGameOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(2,5,10,0.96);display:flex;flex-direction:column';
+  ov.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(0,229,255,0.25)">' +
+      '<span style="font-family:Orbitron,monospace;font-size:0.65rem;letter-spacing:0.14em;color:#00e5ff">⚔ QUIZ CARD DUEL — ' + dkEsc(d.name) + '</span>' +
+      '<span id="arenaGameXcNote" style="font-family:Orbitron,monospace;font-size:0.55rem;color:#ffd740"></span>' +
+      '<button class="btn-arena btn-arena-red" style="font-size:0.55rem;padding:6px 14px" onclick="arenaGameClose()">✕ CLOSE</button>' +
+    '</div>' +
+    '<iframe id="arenaGameFrame" src="' + (gameFile || 'games/quiz-card-duel.html') + '" style="flex:1;border:none;width:100%"></iframe>';
+  document.body.appendChild(ov);
+  arenaGame.frame = document.getElementById('arenaGameFrame');
+  SFX.click();
+}
+
+function arenaGameClose() {
+  const ov = document.getElementById('arenaGameOverlay');
+  if (ov) ov.remove();
+  arenaGame.open = false;
+  arenaGame.frame = null;
+}
+
+// Cartridge contract messages from the game iframe
+window.addEventListener('message', function (e) {
+  let m = e.data;
+  if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+  if (!m || !m.type) return;
+  if (m.type === 'pflx_game_ready' && arenaGame.open && arenaGame.frame) {
+    const d = baDecks.byId(arenaGame.deckId);
+    if (!d) return;
+    arenaGame.frame.contentWindow.postMessage({
+      type: 'pflx_arena_deck',
+      deck: { id: d.id, name: d.name, subject: d.subject || '', cards: d.cards.map(function (c) { return { term: c.term, definition: c.definition }; }) },
+      player: { id: (state.player && state.player.id) || 'p', brand: (state.player && state.player.brand) || 'Challenger' }
+    }, '*');
+  } else if (m.type === 'pflx_arena_game_result' && arenaGame.open) {
+    const xc = arenaGameXcFor(m.score);
+    const note = document.getElementById('arenaGameXcNote');
+    if (window.parent !== window && state.player) {
+      arenaPostAward(state.player.id, { xc: xc, reason: 'arena.duel.' + (m.deckId || 'deck') + (m.won ? '.win' : '.loss') });
+      if (note) note.textContent = '⚡ +' + xc + ' XC PROPOSED — SCORE ' + (m.score || 0);
+    } else {
+      if (state.player) state.player.xc += xc;
+      if (note) note.textContent = '⚡ +' + xc + ' XC — SCORE ' + (m.score || 0);
+    }
+    try { SFX.click(); } catch (er) {}
+  } else if (m.type === 'pflx_arena_game_exit') {
+    arenaGameClose();
+  }
+});
+
 function deckGridHtml() {
   const q = (baDecks.ui.search || '').toLowerCase();
   const list = baDecks.list.filter(function (d) { return !q || d.name.toLowerCase().indexOf(q) !== -1 || (d.subject || '').toLowerCase().indexOf(q) !== -1; });
@@ -2497,6 +2566,7 @@ function deckGridHtml() {
       '<div style="font-size:0.6rem;color:#5a6a8a;margin-bottom:12px"><span style="color:#ffd740;font-weight:700">' + d.cards.length + '</span> cards' + (d.createdByName ? ' · by ' + dkEsc(d.createdByName) : '') + (bound ? ' · <span style="color:#00e676">BOUND TO CIPHER</span>' : '') + '</div>' +
       '<div style="margin-top:auto;display:flex;gap:6px;flex-wrap:wrap">' +
         '<button class="btn-arena" style="font-size:0.5rem;padding:6px 12px;flex:1" onclick="deckView(\'' + d.id + '\')">VIEW</button>' +
+        '<button class="btn-arena btn-arena-gold" style="font-size:0.5rem;padding:6px 12px;flex:1" onclick="arenaGameLaunch(\'' + d.id + '\')">⚔ DUEL</button>' +
         '<button class="btn-arena" style="font-size:0.5rem;padding:6px 12px;flex:1;border-color:rgba(0,230,118,0.4);color:#00e676" onclick="deckBindCipher(\'' + d.id + '\')">' + (bound ? '✓ CIPHER' : 'USE IN CIPHER') + '</button>' +
         (canDelete ? '<button class="btn-arena btn-arena-red" style="font-size:0.5rem;padding:6px 10px" onclick="deckDelete(\'' + d.id + '\')">✕</button>' : '') +
       '</div>' +
