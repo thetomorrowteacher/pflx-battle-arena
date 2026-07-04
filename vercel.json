@@ -3,14 +3,31 @@
   "outputDirectory": ".",
   "framework": null,
   "rewrites": [
-    { "source": "/", "destination": "/public/preview.html" }
+    {
+      "source": "/",
+      "destination": "/public/preview.html"
+    },
+    {
+      "source": "/creator.html",
+      "destination": "/public/creator.html"
+    },
+    {
+      "source": "/games/:path*",
+      "destination": "/public/games/:path*"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Frame-Options", "value": "ALLOWALL" },
-        { "key": "Content-Security-Policy", "value": "frame-ancestors *" }
+        {
+          "key": "X-Frame-Options",
+          "value": "ALLOWALL"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors *"
+        }
       ]
     }
   ]
