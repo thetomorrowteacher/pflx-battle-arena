@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Scouter Break — PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     SCOUTER BREAK — Arena Game Cartridge #10 (July 2026).
+     Power-level combat: correct answers CHARGE your power (streaks
+     multiply). UNLEASH a beam anytime — damage scales with power vs
+     the foe's rated level; past 150% the foe's scouter SHATTERS
+     (crit). Wrong answers = foe blast + charge drain. Five rated
+     fighters, the last rated 9001. One nano-repair revive.
+     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1. game id:
+     'scouter-break'. Config: { title, accent, background, emblem,
+     difficulty, ordered, sound, music }. Pure core: window.SB._core.
+     ═══════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/pflx-stage3d.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%); color:#e6f8ff;
+         font-family:'Rajdhani',sans-serif; overflow:hidden; user-select:none; }
+  #wrap { height:100%; display:flex; flex-direction:column; max-width:760px; margin:0 auto; padding:12px; gap:10px; }
+
+  #field { display:flex; gap:14px; align-items:stretch; }
+  .mech { flex:1; background:rgba(10,20,36,0.85); border:1px solid rgba(0,229,255,0.25); border-radius:14px; padding:12px; text-align:center; position:relative; }
+  .mech.enemy { border-color:rgba(255,77,109,0.35); }
+  .mech .mi { font-size:46px; filter:drop-shadow(0 0 12px rgba(0,229,255,0.5)); transition:transform 0.15s; }
+  .mech.enemy .mi { filter:drop-shadow(0 0 12px rgba(255,77,109,0.5)); }
+  .mech.hit .mi { animation:mHit 0.35s; }
+  @keyframes mHit { 30% { transform:translateX(-8px) rotate(-6deg); } 60% { transform:translateX(8px) rotate(6deg); } }
+  .mech .mn { font-family:'Orbitron'; font-size:9px; letter-spacing:0.12em; color:#e6f8ff; margin-top:6px; }
+  .mech .ms { font-size:9px; color:#7a8db0; letter-spacing:0.08em; margin-top:2px; font-family:'Orbitron'; }
+  .hpb { height:10px; border-radius:6px; background:rgba(255,255,255,0.08); overflow:hidden; margin-top:8px; border:1px solid rgba(255,255,255,0.08); }
+  .hpf { height:100%; border-radius:6px; transition:width 0.4s cubic-bezier(0.22,1,0.36,1); }
+  .mine .hpf { background:linear-gradient(90deg,#00e5ff,#00e676); box-shadow:0 0 10px rgba(0,230,118,0.6); }
+  .enemy .hpf { background:linear-gradient(90deg,#ff4d6d,#ff9f40); box-shadow:0 0 10px rgba(255,77,109,0.6); }
+  .vs { align-self:center; font-family:'Orbitron'; font-weight:900; font-size:15px; color:#ffd740; text-shadow:0 0 12px rgba(255,215,64,0.7); }
+  #stageChips { display:flex; justify-content:center; gap:6px; }
+  .sc { font-family:'Orbitron'; font-size:8px; letter-spacing:0.1em; padding:4px 10px; border-radius:8px;
+        border:1px solid rgba(255,255,255,0.12); color:#7a8db0; }
+  .sc.on { border-color:rgba(255,215,64,0.6); color:#ffd740; background:rgba(255,215,64,0.08); }
+
+  #log { font-family:'Orbitron'; font-size:9px; letter-spacing:0.1em; color:#8a9ab8; text-align:center; min-height:14px; }
+
+  #quiz { background:rgba(4,10,20,0.9); border:1px solid rgba(0,229,255,0.3); border-radius:14px; padding:14px; flex:1; }
+  #qTerm { font-family:'Orbitron'; font-size:clamp(13px,3.6vw,18px); font-weight:800; color:#f4feff; margin-bottom:10px; text-align:center; }
+  #qTerm .kick { display:block; font-size:7px; letter-spacing:0.2em; color:#00e5ff; margin-bottom:4px; }
+  #qAnswers { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .qa { background:rgba(10,20,36,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:11px 10px;
+        font-size:13px; font-weight:600; cursor:pointer; color:#cfe3ff; line-height:1.3; transition:all 0.12s; word-break:break-word; }
+  .qa:hover { border-color:rgba(0,229,255,0.6); transform:translateY(-2px); }
+  .qa.correct { border-color:#00e676; background:rgba(0,230,118,0.14); color:#c9ffe2; }
+  .qa.wrong { border-color:#ff4d6d; background:rgba(255,77,109,0.12); color:#ffd3dc; }
+  .qa.dim { opacity:0.35; pointer-events:none; }
+
+  #banner { position:fixed; top:34%; left:50%; transform:translateX(-50%); font-family:'Orbitron'; font-weight:900;
+            font-size:clamp(17px,4.5vw,28px); color:#ffd740; text-shadow:0 0 22px rgba(255,215,64,0.7); z-index:60;
+            pointer-events:none; opacity:0; transition:opacity 0.4s; letter-spacing:0.12em; text-align:center; }
+
+  .screen { position:fixed; inset:0; overflow-y:auto; background:rgba(2,5,10,0.93); backdrop-filter:blur(6px); z-index:100;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .big { font-family:'Orbitron'; font-weight:900; font-size:clamp(24px,6.5vw,42px); letter-spacing:0.1em; margin-bottom:10px; }
+  .btn { font-family:'Orbitron'; font-size:12px; font-weight:800; letter-spacing:0.12em; padding:13px 34px;
+         border-radius:10px; border:1px solid rgba(0,229,255,0.55); background:rgba(0,229,255,0.12); color:#7df9ff;
+         cursor:pointer; transition:all 0.15s; margin:6px; }
+  .btn:hover { background:rgba(0,229,255,0.25); box-shadow:0 0 18px rgba(0,229,255,0.35); }
+  .btn.gold { border-color:rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740; }
+  .sub { font-size:14px; color:#8a9ab8; margin-bottom:20px; max-width:460px; line-height:1.6; }
+  .stat-row { display:flex; gap:24px; margin-bottom:22px; flex-wrap:wrap; justify-content:center; }
+  .stat { text-align:center; }
+  .stat b { display:block; font-family:'Orbitron'; font-size:20px; color:#ffd740; }
+  .stat span { font-size:10px; letter-spacing:0.12em; color:#7a8db0; }
+
+  /* ── mission briefing + bgfx layer ── */
+  #bgfx { position:fixed; inset:0; z-index:0; pointer-events:none; }
+  #wrap, #stage { position:relative; z-index:1; }
+  .brief { max-width:620px; width:100%; text-align:left; margin-bottom:18px; }
+  .lore { background:rgba(4,10,20,0.6); border-left:3px solid #b388ff; border-radius:0 12px 12px 0;
+          padding:14px 16px; font-size:14.5px; line-height:1.75; color:#cfd8ee; font-style:italic; min-height:74px; }
+  .lore .cursor { display:inline-block; width:8px; background:#b388ff; animation:blink 0.7s infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+  .howto { margin-top:12px; background:rgba(4,10,20,0.6); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px 16px; }
+  .howto h3 { font-family:'Orbitron'; font-size:9px; letter-spacing:0.18em; color:#b388ff; margin-bottom:8px; }
+  .howto li { font-size:12.5px; color:#aebad2; line-height:1.6; margin:4px 0 4px 16px; }
+  .howto li::marker { color:#b388ff; }
+
+  #unleashBtn { font-family:'Orbitron'; font-size:11px; font-weight:900; letter-spacing:0.12em; padding:11px;
+                border-radius:10px; border:1px solid rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740;
+                cursor:pointer; transition:all 0.15s; }
+  #unleashBtn:hover { background:rgba(255,215,64,0.25); box-shadow:0 0 18px rgba(255,215,64,0.4); }
+  #unleashBtn.hot { border-color:#00e676; color:#00e676; background:rgba(0,230,118,0.12); animation:hotPulse 0.8s infinite; }
+  @keyframes hotPulse { 50% { box-shadow:0 0 22px rgba(0,230,118,0.55); } }
+
+  /* ── 3D battle arena ── */
+  #arena3d { display:none; height:220px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,229,255,0.25);
+             background:radial-gradient(ellipse at 50% 120%, rgba(0,229,255,0.08), transparent 70%); }
+  body.has3d #arena3d { display:block; }
+  body.has3d .mech .mi { display:none; }
+  body.has3d .mech { padding:8px 12px; }
+</style>
+</head>
+<body>
+<canvas id="bgfx"></canvas>
+<div id="wrap" style="display:none">
+  <div id="stageChips"></div>
+  <div id="arena3d"></div>
+  <div id="field">
+    <div class="mech mine" id="myMech">
+      <div class="mi" id="myIcon">🥋</div>
+      <div class="mn" id="myName">YOU — UNRANKED</div>
+      <div class="ms" id="myStats"></div>
+      <div class="hpb"><div class="hpf" id="myHp" style="width:100%"></div></div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="mech enemy" id="foeMech">
+      <div class="mi" id="foeIcon">🛸</div>
+      <div class="mn" id="foeName">DRONE K-9</div>
+      <div class="ms" id="foeStats"></div>
+      <div class="hpb"><div class="hpf" id="foeHp" style="width:100%"></div></div>
+    </div>
+  </div>
+  <div id="log">ANSWER TO CHARGE YOUR POWER</div>
+  <button id="unleashBtn" onclick="SB.unleash()" style="display:none"></button>
+  <div id="quiz">
+    <div id="qTerm"><span class="kick">CORRECT = YOU STRIKE · WRONG = IT STRIKES</span><span id="qTermText"></span></div>
+    <div id="qAnswers"></div>
+  </div>
+</div>
+<div id="banner"></div>
+<div class="screen" id="intro">
+  <div class="big" style="color:#00e676;text-shadow:0 0 20px rgba(0,230,118,0.6)">🥽 SCOUTER BREAK</div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="The orbital fight rings of Sector 9 rank every fighter by POWER LEVEL — read through the green lens of a combat scouter. The scanners have never been wrong. Tonight an unranked challenger steps onto the ring: you. Five rated fighters stand between you and the belt. Make the scouters lie."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Every CORRECT answer charges your ⚡ POWER LEVEL — streaks multiply the gain</li><li>UNLEASH your beam anytime: damage scales with your power vs the foe's rating, then spends most of your charge</li><li>Push past 150% of the foe's rating before unleashing → SCOUTER SHATTERED, critical hit</li><li>Wrong answers = the foe blasts you AND drains your charge. One 🔧 nano-repair. Defeat all 5</li></ul></div></div>
+  <div class="sub" id="introSub">Waiting for deck…</div>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="SB.start()">▶ ENTER THE RING</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DEMO_DECK = {
+    id: 'demo', name: 'PFLX Demo Deck', subject: 'PFLX Lore',
+    cards: [
+      { term: 'X-Coin', definition: 'The digital currency of the PFLX ecosystem' },
+      { term: 'Core Pathways', definition: 'Learning modules mapped as stations in open space' },
+      { term: 'Battle Arena', definition: 'Esports and challenges hub for quick XC' },
+      { term: 'DarkCampus', definition: 'Global professional network for rising creators' },
+      { term: 'Mission Control', definition: 'Project and task management center' },
+      { term: 'Evo Rank', definition: 'The progression rank earned across PFLX' }
+    ]
+  };
+
+  // ═════════════ PURE CORE (Node-testable) ═════════════
+  var FOES = [
+    { name: 'DRONE K-9',    icon: '🛸', power: 1200, hp: 60,  atk: 8  },
+    { name: 'SYNTH RAIDER', icon: '🤖', power: 2400, hp: 85,  atk: 10 },
+    { name: 'WAR GOLEM',    icon: '🗿', power: 4200, hp: 110, atk: 13 },
+    { name: 'VOID ANDROID', icon: '👁', power: 6400, hp: 145, atk: 16 },
+    { name: 'OMEGA PRIME',  icon: '👑', power: 9001, hp: 185, atk: 20 }
+  ];
+  var DIFF_MULT = { easy: 0.8, normal: 1, hard: 1.25 };
+  var BATTLES = FOES.length;
+  var BREAK_RATIO = 1.5;  // power past 150% of the foe's rating = scouter shatters (crit)
+
+  function foeFor(n, mult) {
+    var f = FOES[Math.min(n, FOES.length - 1)];
+    return { name: f.name, icon: f.icon, power: Math.round(f.power * mult),
+             hp: Math.round(f.hp * mult), hpMax: Math.round(f.hp * mult), atk: Math.round(f.atk * mult) };
+  }
+  function newClash(difficulty) {
+    var mult = DIFF_MULT[difficulty] || 1;
+    return { mult: mult, battle: 0, power: 500, hp: 130, hpMax: 130,
+             foe: foeFor(0, mult), repair: 1, breaks: 0,
+             correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false };
+  }
+  // correct answer → charge. Returns { gained, ratio }.
+  function charge(s) {
+    if (s.over) return { gained: 0, ratio: 0 };
+    s.correct++;
+    s.streak++;
+    s.bestStreak = Math.max(s.bestStreak, s.streak);
+    var gained = 600 + Math.min(8, s.streak) * 250;
+    s.power += gained;
+    return { gained: gained, ratio: s.power / s.foe.power };
+  }
+  // player fires the beam. Returns { dmg, broken, defeated, won }.
+  function unleash(s) {
+    if (s.over) return { dmg: 0, broken: false, defeated: false, won: false };
+    var ratio = s.power / s.foe.power;
+    var broken = ratio >= BREAK_RATIO;
+    var dmg = Math.round(Math.max(10, Math.min(120, 34 * ratio * (broken ? 1.5 : 1))));
+    s.power = Math.max(500, Math.round(s.power * 0.4));
+    s.foe.hp -= dmg;
+    if (broken) s.breaks++;
+    var out = { dmg: dmg, broken: broken, defeated: false, won: false };
+    if (s.foe.hp <= 0) {
+      s.foe.hp = 0;
+      out.defeated = true;
+      s.battle++;
+      if (s.battle >= BATTLES) { s.over = true; s.won = true; out.won = true; return out; }
+      s.hp = Math.min(s.hpMax, s.hp + 35);   // corner recovery between bouts
+      s.foe = foeFor(s.battle, s.mult);
+    }
+    return out;
+  }
+  // wrong answer → the foe blasts you and drains your charge.
+  function foeBlast(s) {
+    if (s.over) return { dmg: 0, drained: 0, revived: false, lost: false };
+    s.wrong++;
+    s.streak = 0;
+    var dmg = s.foe.atk;
+    var drained = Math.min(400, Math.max(0, s.power - 500));
+    s.hp -= dmg;
+    s.power -= drained;
+    var out = { dmg: dmg, drained: drained, revived: false, lost: false };
+    if (s.hp <= 0) {
+      if (s.repair > 0) {
+        s.repair--;
+        s.hp = Math.round(s.hpMax * 0.5);
+        out.revived = true;
+      } else {
+        s.hp = 0; s.over = true; s.won = false; out.lost = true;
+      }
+    }
+    return out;
+  }
+  function scoreFor(s) {
+    return s.battle * 30 + s.correct * 8 + s.bestStreak * 5 + s.breaks * 12 + (s.won ? 60 : 0);
+  }
+
+  function buildQuestions(cards, rand) {
+    rand = rand || shuffle;
+    var usable = (cards || []).filter(function (c) { return c && c.term && c.definition; });
+    if (usable.length < 4) return [];
+    return rand(usable.slice()).map(function (c) {
+      var others = usable.filter(function (x) { return x !== c && x.definition !== c.definition; });
+      var distractors = rand(others.slice()).slice(0, 3).map(function (x) { return x.definition; });
+      while (distractors.length < 3) distractors.push('None of the above');
+      var choices = rand(distractors.concat([c.definition]));
+      return { term: c.term, choices: choices, correctIdx: choices.indexOf(c.definition) };
+    });
+  }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function $(id) { return document.getElementById(id); }
+  function post(msg) { try { if (window.parent !== window) window.parent.postMessage(msg, '*'); } catch (e) {} }
+
+  // ═════════════ config + assets (shared cartridge pattern) ═════════════
+  var BG_CSS = {
+    space:     'radial-gradient(ellipse at 50% -10%, #0a1a2f 0%, #04070d 60%)',
+    neon:      'radial-gradient(ellipse at 50% 110%, #2b0a4d 0%, #05010d 60%)',
+    crimson:   'radial-gradient(ellipse at 50% -10%, #3a0a18 0%, #0d0406 60%)',
+    emerald:   'radial-gradient(ellipse at 50% -10%, #06301f 0%, #04100a 60%)',
+    void:      '#020308',
+    sunset:    'linear-gradient(180deg, #3a1a0a 0%, #0d0604 55%)',
+    aurora:    'linear-gradient(180deg, rgba(0,70,80,0.5) 0%, rgba(40,10,80,0.25) 34%, rgba(4,7,13,0) 60%), radial-gradient(ellipse at 30% -10%, #0b3d3a 0%, #071026 45%, #04070d 80%)',
+    ocean:     'radial-gradient(ellipse at 50% 120%, #063a4d 0%, #032030 45%, #02090f 80%)',
+    magma:     'radial-gradient(ellipse at 50% 115%, #4d1a06 0%, #260a04 45%, #0a0403 80%)',
+    cyber:     'linear-gradient(200deg, #2a0a3d 0%, #0a1030 55%, #04070d 90%)',
+    royal:     'radial-gradient(ellipse at 20% -10%, #241356 0%, #0d0a2a 55%, #05040f 85%)',
+    gilded:    'radial-gradient(ellipse at 50% 120%, #3d2e06 0%, #1a1204 50%, #0a0703 85%)',
+    ice:       'linear-gradient(180deg, #10283d 0%, #081420 50%, #04080d 90%)',
+    bloodmoon: 'radial-gradient(circle at 75% 12%, #58101d 0%, #1d060c 40%, #08030a 75%)',
+    forest:    'radial-gradient(ellipse at 50% -10%, #10331a 0%, #071a0e 50%, #030a05 85%)',
+    storm:     'linear-gradient(115deg, #101826 0%, #1b2a44 45%, #0a0f1c 78%)'
+  };
+  var sfx = {
+    enabled: true, ctx: null,
+    beep: function (freq, dur, type, vol) {
+      if (!this.enabled) return;
+      try {
+        this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        var o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type || 'square'; o.frequency.value = freq;
+        g.gain.value = vol || 0.035;
+        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + (dur || 0.12));
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + (dur || 0.12));
+      } catch (e) {}
+    },
+    good: function () { this.beep(660, 0.09); var s2 = this; setTimeout(function () { s2.beep(990, 0.12); }, 70); },
+    bad: function () { this.beep(160, 0.25, 'sawtooth', 0.05); },
+    evolve: function () { var s2 = this; [392, 523, 659, 784].forEach(function (f, i) { setTimeout(function () { s2.beep(f, 0.14, 'triangle'); }, i * 110); }); }
+  };
+
+  var G = { deck: null, player: { id: 'demo', brand: 'Challenger' },
+            cfg: { title: '', accent: '', emblem: '🥽', difficulty: 'normal', ordered: false, sound: true },
+            s: null, questions: [], qIdx: 0, reported: false };
+
+  function applyConfig(cfg) {
+    cfg = cfg || {};
+    G.cfg.title = String(cfg.title || '').slice(0, 60);
+    G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
+    G.cfg.background = BG_CSS[cfg.background] ? cfg.background : 'space';
+    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🥽';
+    G.cfg.difficulty = DIFF_MULT[cfg.difficulty] ? cfg.difficulty : 'normal';
+    G.cfg.ordered = !!cfg.ordered;
+    G.cfg.sound = cfg.sound !== false;
+    sfx.enabled = G.cfg.sound;
+    if (G.cfg.background !== 'space') document.body.style.background = BG_CSS[G.cfg.background];
+    return G.cfg;
+  }
+
+  // ═════════════ 3D FIGHT RING (GLB models — CC0 Kenney packs) ═════════════
+  var A3 = { st: null, my: null, foe: null, foeBattle: -1, beamOn: false };
+  var FOE_MODELS = [
+    { path: 'units/enemy-flying.glb',   scale: 2.3, fly: true },
+    { path: 'space/astronautB.glb',     scale: 2.6 },
+    { path: 'space/turret_double.glb',  scale: 2.9 },
+    { path: 'space/rover.glb',          scale: 2.6 },
+    { path: 'space/alien.glb',          scale: 3.6 }
+  ];
+  function arenaInit() {
+    if (A3.st || !window.PFLXStage || !PFLXStage.has3D) return;
+    var el = $('arena3d');
+    document.body.classList.add('has3d');
+    A3.st = PFLXStage.create(el, { ground: true, groundR: 6.5, accent: 0x00e676, cam: { y: 3.6, z: 9.5, lookY: 1.3 } });
+    if (!A3.st) { document.body.classList.remove('has3d'); return; }
+    A3.my = A3.st.load('units/character.glb', { x: -3.2, scale: 2.8, rotY: Math.PI / 2 }, function (h) {
+      A3.st.bob(h, 0.08, 1.4);
+    });
+  }
+  function arenaSetFoe(battle) {
+    if (!A3.st || A3.foeBattle === battle) return;
+    A3.foeBattle = battle;
+    if (A3.foe) A3.st.remove(A3.foe);
+    var m = FOE_MODELS[Math.min(battle, FOE_MODELS.length - 1)];
+    A3.foe = A3.st.load(m.path, { x: 3.2, y: m.fly ? 1.2 : 0, scale: m.scale, rotY: -Math.PI / 2 }, function (h) {
+      A3.st.bob(h, m.fly ? 0.3 : 0.06, m.fly ? 2.2 : 1.1);
+    });
+  }
+  function arenaSync() {
+    if (!A3.st || !G.s) return;
+    if (!G.s.over) arenaSetFoe(G.s.battle);
+  }
+  function fxCharge(ratio) {  // aura pulse while charging
+    if (!A3.st) return;
+    A3.st.hitFlash(A3.my, ratio >= 1.5 ? 0x00e676 : 0x00e5ff);
+    A3.st.burst(-3.2, 0.6, 0, ratio >= 1.5 ? 0x00e676 : 0x00e5ff);
+  }
+  function fxBeam(broken) {   // the unleashed beam: glowing bar between fighters
+    if (!A3.st) return;
+    var T = A3.st.THREE;
+    var color = broken ? 0x00e676 : 0x7df9ff;
+    var beam = new T.Mesh(new T.CylinderGeometry(broken ? 0.34 : 0.2, broken ? 0.34 : 0.2, 6.4, 10),
+      new T.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.95 }));
+    beam.rotation.z = Math.PI / 2;
+    beam.position.set(0, 1.4, 0);
+    A3.st.scene.add(beam);
+    A3.st.tween(0.5, function (k) { beam.material.opacity = 0.95 * (1 - k); beam.scale.y = 1 - k * 0.4; },
+      function () { A3.st.scene.remove(beam); });
+    A3.st.lunge(A3.my, 1.0);
+    A3.st.hitFlash(A3.foe, color);
+    A3.st.burst(3.2, 1.4, 0, color);
+    if (broken) { A3.st.burst(3.2, 2.0, 0.5, 0xffd740); A3.st.shake(0.35); }
+  }
+  function fxBlast() {        // foe counterattack
+    if (!A3.st) return;
+    A3.st.lunge(A3.foe, -1.6);
+    A3.st.hitFlash(A3.my, 0xff4d6d);
+    A3.st.burst(-3.2, 1.4, 0, 0xff4d6d);
+    A3.st.shake(0.3);
+  }
+  function fxDefeated() { if (A3.st) { A3.st.burst(3.2, 1.6, 0, 0x00e676); A3.st.burst(3.2, 0.8, 0.6, 0xffd740); A3.st.shake(0.35); } }
+  function fxRevive()   { if (A3.st) A3.st.burst(-3.2, 1.4, 0, 0xffd740); }
+
+  // ═════════════ UI ═════════════
+  function fmtPower(v) { return v.toLocaleString('en-US'); }
+  function hud() {
+    var s = G.s;
+    $('myIcon').textContent = '🥋';
+    $('myName').textContent = 'YOU — ' + (s.battle >= BATTLES ? 'CHAMPION' : 'UNRANKED');
+    $('myStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.hp)) + '/' + s.hpMax + ' · ⚡ ' + fmtPower(s.power) + ' · 🔧×' + s.repair;
+    $('myHp').style.width = Math.max(0, (s.hp / s.hpMax) * 100) + '%';
+    $('foeIcon').textContent = s.foe.icon;
+    $('foeName').textContent = s.foe.name;
+    $('foeStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.foe.hp)) + '/' + s.foe.hpMax + ' · 🥽 RATED ' + fmtPower(s.foe.power);
+    $('foeHp').style.width = Math.max(0, (s.foe.hp / s.foe.hpMax) * 100) + '%';
+    $('stageChips').innerHTML = FOES.map(function (x, i) {
+      return '<span class="sc' + (i < s.battle ? ' on' : '') + '">' + x.icon + ' ' + fmtPower(Math.round(x.power * s.mult)) + '</span>';
+    }).join('');
+    var ratio = s.power / s.foe.power;
+    var btn = $('unleashBtn');
+    if (s.over) { btn.style.display = 'none'; }
+    else {
+      btn.style.display = 'block';
+      btn.classList.toggle('hot', ratio >= BREAK_RATIO);
+      btn.textContent = (ratio >= BREAK_RATIO ? '💥 UNLEASH — SCOUTER WILL SHATTER (' : '🔆 UNLEASH BEAM (')
+        + Math.round(ratio * 100) + '% OF FOE RATING)';
+    }
+  }
+  function banner(text) {
+    var b = $('banner');
+    b.textContent = text;
+    b.style.opacity = '1';
+    clearTimeout(banner._t);
+    banner._t = setTimeout(function () { b.style.opacity = '0'; }, 1600);
+  }
+  function shake(id) { var el = $(id); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
+  function log(t) { $('log').textContent = t; }
+
+  function showQuestion() {
+    if (!G.s || G.s.over) return;
+    if (G.qIdx >= G.questions.length) G.qIdx = 0;
+    var q = G.questions[G.qIdx];
+    $('qTermText').textContent = q.term;
+    $('qAnswers').innerHTML = q.choices.map(function (ch, i) {
+      return '<div class="qa" onclick="SB.answer(' + i + ')">' + esc(ch) + '</div>';
+    }).join('');
+    hud();
+  }
+  function answer(i) {
+    var s = G.s;
+    if (!s || s.over) return;
+    var q = G.questions[G.qIdx];
+    var els = $('qAnswers').querySelectorAll('.qa');
+    if (els[q.correctIdx]) els[q.correctIdx].classList.add('correct');
+    Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
+    G.qIdx++;
+    if (i === q.correctIdx) {
+      var r = charge(s);
+      fxCharge(r.ratio);
+      sfx.good();
+      log('⚡ +' + fmtPower(r.gained) + ' POWER' + (s.streak >= 2 ? ' (STREAK ×' + s.streak + ')' : '') + ' — ' + Math.round(r.ratio * 100) + '% of foe rating');
+      hud();
+      setTimeout(showQuestion, 600);
+    } else {
+      if (els[i]) { els[i].classList.remove('dim'); els[i].classList.add('wrong'); }
+      var e = foeBlast(s);
+      shake('myMech');
+      fxBlast();
+      if (e.revived) fxRevive();
+      sfx.bad();
+      log('💥 ' + s.foe.name + ' blasts for ' + e.dmg + (e.drained ? ' — drained ' + fmtPower(e.drained) + ' ⚡' : ''));
+      hud();
+      if (e.lost) { setTimeout(endScreen, 900); return; }
+      if (e.revived) banner('🔧 NANO-REPAIR — BACK IN THE RING');
+      setTimeout(showQuestion, e.revived ? 1500 : 900);
+    }
+  }
+  function doUnleash() {
+    var s = G.s;
+    if (!s || s.over) return;
+    var r = unleash(s);
+    shake('foeMech');
+    fxBeam(r.broken);
+    sfx.evolve();
+    log('🔆 BEAM HITS FOR ' + r.dmg + (r.broken ? ' — CRITICAL!' : ''));
+    if (r.broken) banner('💥 SCOUTER SHATTERED — READING OFF THE SCALE');
+    hud();
+    if (r.won) { setTimeout(endScreen, 900); return; }
+    if (r.defeated) {
+      banner('🏆 ' + FOES[s.battle - 1].name + ' DOWN — NEXT CHALLENGER');
+      setTimeout(arenaSync, 700);
+      setTimeout(function () { hud(); }, 750);
+    }
+  }
+
+    // ═════════════ flow ═════════════
+  function reportResult() {
+    if (G.reported) return;
+    G.reported = true;
+    var s = G.s;
+    post({
+      type: 'pflx_arena_game_result', game: 'scouter-break',
+      deckId: G.deck ? G.deck.id : 'demo',
+      score: scoreFor(s), correct: s.correct, total: s.correct + s.wrong,
+      bestStreak: s.bestStreak, won: !!s.won
+    });
+  }
+  function endScreen() {
+    reportResult();
+    var s = G.s;
+    var el = document.createElement('div');
+    el.className = 'screen';
+    el.innerHTML =
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 BELT CLAIMED' : '💀 KNOCKED OUT') + '</div>' +
+      '<div class="sub">' + (s.won ? 'Five rated fighters, five broken scouters. The rings of Sector 9 have a new champion.' : 'You fell in bout ' + (s.battle + 1) + '. Train and requalify.') + '</div>' +
+      '<div class="stat-row">' +
+        '<div class="stat"><b>' + scoreFor(s) + '</b><span>SCORE</span></div>' +
+        '<div class="stat"><b>' + s.battle + '/' + BATTLES + '</b><span>TAMED</span></div>' +
+        '<div class="stat"><b>' + s.breaks + '</b><span>SCOUTERS BROKEN</span></div>' +
+        '<div class="stat"><b>' + s.correct + '</b><span>CORRECT</span></div>' +
+      '</div>' +
+      '<div><button class="btn gold" onclick="SB.rematch()">⟳ REQUALIFY</button>' +
+      '<button class="btn" onclick="SB.exit()">✕ EXIT</button></div>';
+    document.body.appendChild(el);
+  }
+
+  function initWithDeck(deck, player) {
+    G.deck = deck;
+    if (player && player.brand) G.player = { id: player.id || 'p', brand: player.brand };
+    G.questions = buildQuestions(deck.cards);
+    if (!G.questions.length) { $('introSub').textContent = 'This deck needs at least 4 cards.'; return; }
+    if (G.cfg.title) {
+      document.title = G.cfg.title + ' — PFLX Battle Arena';
+      var big = document.querySelector('#intro .big');
+      if (big) big.textContent = (G.cfg.emblem || '🥽') + ' ' + G.cfg.title.toUpperCase();
+    }
+    $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
+      'Five rated fighters between you and the belt. Correct answers charge your ⚡ power;<br>UNLEASH when ready — past 150% their scouter SHATTERS.<br>The final champion is rated 9,001. One 🔧 nano-repair.';
+    $('startBtn').style.display = 'inline-block';
+  }
+
+  window.SB = {
+    _core: { newClash: newClash, charge: charge, unleash: unleash, foeBlast: foeBlast, foeFor: foeFor,
+             scoreFor: scoreFor, buildQuestions: buildQuestions, FOES: FOES, BREAK_RATIO: BREAK_RATIO,
+             BATTLES: BATTLES, DIFF_MULT: DIFF_MULT, applyConfig: applyConfig },
+    start: function () {
+      var intro = $('intro'); if (intro) intro.remove();
+      document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
+      $('wrap').style.display = 'flex';
+      G.s = newClash(G.cfg.difficulty);
+      arenaInit();
+      A3.foeBattle = -1;
+      arenaSync();
+      G.qIdx = 0; G.reported = false;
+      G.questions = buildQuestions(G.deck.cards);
+      if (G.cfg.ordered) {
+        var order = {};
+        G.deck.cards.forEach(function (c, i) { order[c.term + '' + c.definition] = i; });
+        G.questions.sort(function (a, b) {
+          return (order[a.term + '' + a.choices[a.correctIdx]] || 0) - (order[b.term + '' + b.choices[b.correctIdx]] || 0);
+        });
+      }
+      log('ANSWER TO CHARGE YOUR POWER');
+      showQuestion();
+    },
+    answer: answer,
+    unleash: doUnleash,
+    rematch: function () { window.SB.start(); },
+    exit: function () {
+      post({ type: 'pflx_arena_game_exit' });
+      if (window.parent === window) location.reload();
+    }
+  };
+
+  // handshake
+  var gotDeck = false;
+  window.addEventListener('message', function (e) {
+    var m = e.data;
+    if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+    if (!m || m.type !== 'pflx_arena_deck' || !m.deck) return;
+    gotDeck = true;
+    applyConfig(m.config);
+    initWithDeck(m.deck, m.player);
+  });
+  post({ type: 'pflx_game_ready', game: 'scouter-break' });
+  setTimeout(function () { if (!gotDeck) initWithDeck(DEMO_DECK, null); }, 1600);
+})();
+</script>
+
+<script>
+(function () {
+  // ── animated backdrop: parallax starfield + drifting nebula glows ──
+  try {
+    var cv = document.getElementById('bgfx');
+    if (!cv) return;
+    var ctx = cv.getContext('2d');
+    var stars = [], orbs = [];
+    function fit() { cv.width = innerWidth; cv.height = innerHeight; }
+    fit(); addEventListener('resize', fit);
+    for (var i = 0; i < 110; i++) stars.push({ x: Math.random(), y: Math.random(), z: 0.3 + Math.random() * 0.7, tw: Math.random() * 6.28 });
+    for (var j = 0; j < 3; j++) orbs.push({ x: Math.random(), y: Math.random(), r: 140 + Math.random() * 160, dx: (Math.random() - 0.5) * 0.00012, dy: (Math.random() - 0.5) * 0.00012, hue: j });
+    var AC = '#00e676';
+    function hex2rgb(h) { return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]; }
+    var rgb = hex2rgb(AC);
+    var t = 0;
+    (function loop() {
+      requestAnimationFrame(loop);
+      t += 0.016;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      orbs.forEach(function (o, k) {
+        o.x = (o.x + o.dx + 1) % 1; o.y = (o.y + o.dy + 1) % 1;
+        var g = ctx.createRadialGradient(o.x * cv.width, o.y * cv.height, 0, o.x * cv.width, o.y * cv.height, o.r);
+        var a = 0.05 + 0.02 * Math.sin(t * 0.5 + k * 2);
+        g.addColorStop(0, 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + a + ')');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, cv.width, cv.height);
+      });
+      stars.forEach(function (s) {
+        s.y += 0.00008 * s.z; if (s.y > 1) { s.y = 0; s.x = Math.random(); }
+        var b = 0.35 + 0.3 * Math.sin(t * 1.6 + s.tw);
+        ctx.fillStyle = 'rgba(220,235,255,' + (b * s.z) + ')';
+        ctx.fillRect(s.x * cv.width, s.y * cv.height, s.z < 0.6 ? 1 : 2, s.z < 0.6 ? 1 : 2);
+      });
+    })();
+  } catch (e) {}
+  // ── typewriter for the mission briefing ──
+  try {
+    var el = document.getElementById('loreStory');
+    if (!el) return;
+    var full = el.getAttribute('data-story') || '';
+    el.innerHTML = '<span id="loreTxt"></span><span class="cursor">&nbsp;</span>';
+    var txt = document.getElementById('loreTxt'), i = 0;
+    var iv = setInterval(function () {
+      if (!document.getElementById('loreTxt')) { clearInterval(iv); return; }
+      i += 2;
+      txt.textContent = full.slice(0, i);
+      if (i >= full.length) {
+        clearInterval(iv);
+        var c = el.querySelector('.cursor');
+        if (c) c.style.display = 'none';
+      }
+    }, 24);
+  } catch (e) {}
+})();
+</script>
+
+<script>
+(function () {
+  // ── PFLX BGM — procedural game-mode soundtrack (no audio files) ──
+  // Config: host/Studio can send config.music=false; player 🎵 toggle
+  // persists per browser. Starts on the first user gesture.
+  var BPM = 132, ROOT = 110, MOOD = 'drive';
+  var SCALES = { tense: [0,3,5,7,10], march: [0,2,3,7,8], upbeat: [0,2,4,7,9], dark: [0,1,5,6,10], eerie: [0,2,3,6,7], drive: [0,3,5,7,10] };
+  var scale = SCALES[MOOD] || SCALES.tense;
+  var enabled = true, muted = false, ctx = null, master = null, timer = null, step = 0;
+  try { muted = localStorage.getItem('pflx_bgm_muted') === '1'; } catch (e) {}
+  window.addEventListener('message', function (e) {
+    var m = e.data;
+    if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+    if (m && m.type === 'pflx_arena_deck' && m.config && m.config.music === false) { enabled = false; stop(); sync(); }
+  });
+  function note(semi, oct) { return ROOT * Math.pow(2, ((oct || 0) * 12 + semi) / 12); }
+  function voice(freq, t, dur, type, vol, slide) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function hat(t, vol) {
+    var b = ctx.createBuffer(1, 2205, 44100), d = b.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 6);
+    var s = ctx.createBufferSource(); s.buffer = b;
+    var g = ctx.createGain(); g.gain.value = vol;
+    var f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 6000;
+    s.connect(f); f.connect(g); g.connect(master);
+    s.start(t);
+  }
+  var next = 0;
+  function tick() {
+    if (!ctx) return;
+    var spb = 60 / BPM / 2; // 8th-note grid
+    while (next < ctx.currentTime + 0.25) {
+      var b8 = step % 8, bar = Math.floor(step / 8) % 4;
+      if (b8 === 0 || (MOOD === 'drive' && b8 === 4)) voice(note(scale[0], -1), next, spb * 1.6, 'triangle', 0.11, 0.995);   // bass
+      if (b8 === 4 && MOOD !== 'eerie') voice(note(scale[0], -1) * 1.5, next, spb, 'triangle', 0.06);
+      if (step % 2 === 0 && MOOD !== 'eerie') hat(next, 0.015);
+      var arpOn = MOOD === 'eerie' ? (b8 === 0 || b8 === 3) : (step % (MOOD === 'drive' ? 1 : 2) === 0);
+      if (arpOn) {
+        var idx = [0,2,4,2,1,3,4,3][(step + bar) % 8] % scale.length;
+        voice(note(scale[idx], MOOD === 'upbeat' ? 1 : 0), next, spb * 0.9, MOOD === 'dark' || MOOD === 'eerie' ? 'sine' : 'square', 0.022);
+      }
+      if (step % 32 === 0) { // pad chord every 2 bars
+        voice(note(scale[0], 0), next, spb * 16, 'sine', 0.03);
+        voice(note(scale[2], 0), next, spb * 16, 'sine', 0.024);
+        voice(note(scale[4 % scale.length], 0), next, spb * 16, 'sine', 0.02);
+      }
+      next += spb; step++;
+    }
+  }
+  function start() {
+    if (!enabled || muted || ctx) { sync(); return; }
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+      next = ctx.currentTime + 0.1; step = 0;
+      timer = setInterval(tick, 120);
+    } catch (e) {}
+    sync();
+  }
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    if (ctx) { try { ctx.close(); } catch (e) {} ctx = null; master = null; }
+  }
+  function sync() {
+    var b = document.getElementById('bgmBtn');
+    if (b) { b.textContent = (muted || !enabled) ? '🔇' : '🎵'; b.style.opacity = enabled ? '1' : '0.35'; }
+  }
+  // toggle button
+  var btn = document.createElement('button');
+  btn.id = 'bgmBtn';
+  btn.title = 'Game music on/off';
+  btn.style.cssText = 'position:fixed;top:10px;right:10px;z-index:200;width:38px;height:38px;border-radius:50%;' +
+    'background:rgba(4,10,20,0.85);border:1px solid rgba(0,229,255,0.35);color:#7df9ff;font-size:16px;cursor:pointer;';
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    muted = !muted;
+    try { localStorage.setItem('pflx_bgm_muted', muted ? '1' : '0'); } catch (er) {}
+    if (muted) stop(); else start();
+    sync();
+  });
+  document.body.appendChild(btn);
+  sync();
+  // start on first gesture anywhere (autoplay policy)
+  var kick = function () { start(); document.removeEventListener('pointerdown', kick); document.removeEventListener('keydown', kick); };
+  document.addEventListener('pointerdown', kick);
+  document.addEventListener('keydown', kick);
+})();
+</script>
+<script>
+(function () {
+  try {
+    if (window.PFLXStage && PFLXStage.has3D) {
+      var intro = document.getElementById('intro');
+      if (intro) PFLXStage.hero(intro, 'units/character.glb', { accent: 0x00e676 });
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
