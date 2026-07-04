@@ -2967,6 +2967,7 @@ function studioEditGame(id) {
     set('stOrder', (g.config && g.config.ordered) ? 'ordered' : 'shuffled');
     set('stSound', (g.config && g.config.sound === false) ? 'off' : 'on');
     set('stPowerups', (g.config && g.config.powerups === false) ? 'off' : 'on');
+    set('stMusic', (g.config && g.config.music === false) ? 'off' : 'on');
     studioPreview();
   }, 40);
 }
@@ -2992,13 +2993,14 @@ function studioReadConfig() {
     ordered: val('stOrder', 'shuffled') === 'ordered',
     sound: val('stSound', 'on') !== 'off',
     powerups: val('stPowerups', 'on') !== 'off',
+    music: val('stMusic', 'on') !== 'off',
     rivalName: (val('stRival', '') || '').trim() || 'RIVAL AI',
     roundTime: Math.max(8, Math.min(30, parseInt(val('stTime', '15'), 10) || 15))
   };
 }
 function studioConfigOf(c) {
   return { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
-           ordered: c.ordered, sound: c.sound, powerups: c.powerups, rivalName: c.rivalName, roundTime: c.roundTime };
+           ordered: c.ordered, sound: c.sound, music: c.music, powerups: c.powerups, rivalName: c.rivalName, roundTime: c.roundTime };
 }
 
 function studioTest() {
@@ -3106,7 +3108,7 @@ async function hostLaunchMode(tplId) {
   try {
     await baSessions.upsert({
       id: dkUid('sess'), title: title, template: tpl.id, deckId: deckId,
-      config: { difficulty: diff, sound: true, powerups: true },
+      config: { difficulty: diff, sound: true, music: true, powerups: true },
       seasonMode: season,
       launchedBy: (state.player && state.player.id) || 'host',
       launchedByName: (state.player && state.player.brand) || 'Host',
@@ -3244,6 +3246,10 @@ function renderStudio() {
         <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">SOUND FX</div>
           <select id="stSound" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="on" selected>On</option><option value="off">Off</option>
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">GAME MUSIC</div>
+          <select id="stMusic" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            <option value="on" selected>On — mode soundtrack</option><option value="off">Off</option>
           </select></div>
         <div><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">POWER-UPS</div>
           <select id="stPowerups" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
