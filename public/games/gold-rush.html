@@ -16,6 +16,9 @@
      sound }. Pure core: window.GR._core (chest odds Node-testable).
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/pflx-stage3d.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
@@ -86,11 +89,17 @@
   .howto h3 { font-family:'Orbitron'; font-size:9px; letter-spacing:0.18em; color:#ffd740; margin-bottom:8px; }
   .howto li { font-size:12.5px; color:#aebad2; line-height:1.6; margin:4px 0 4px 16px; }
   .howto li::marker { color:#ffd740; }
+
+  /* ── 3D vault ── */
+  #vault3d { display:none; height:150px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,215,64,0.25);
+             background:radial-gradient(ellipse at 50% 130%, rgba(255,215,64,0.08), transparent 70%); }
+  body.has3d #vault3d { display:block; }
 </style>
 </head>
 <body>
 <canvas id="bgfx"></canvas>
 <div id="wrap" style="display:none">
+  <div id="vault3d"></div>
   <div id="board"></div>
   <div id="roundStrip"><span id="roundLbl">ROUND 1 / 12</span><span id="streakLbl"></span></div>
   <div id="quiz">
@@ -364,12 +373,34 @@
     }
   }
 
+  // ── 3D vault room: the generator core you're draining ──
+  var V3 = { st: null, core: null };
+  function v3Init() {
+    if (V3.st || !window.PFLXStage || !PFLXStage.has3D) return;
+    var el = $('vault3d');
+    if (!el) return;
+    document.body.classList.add('has3d');
+    V3.st = PFLXStage.create(el, { ground: true, groundR: 5, accent: 0xffd740, cam: { y: 2.9, z: 7.6, lookY: 1.2 } });
+    if (!V3.st) { document.body.classList.remove('has3d'); return; }
+    V3.core = V3.st.load('space/machine_generatorLarge.glb', { scale: 3.2 }, function (h) { V3.st.spin(h, 0.35); });
+    V3.st.load('space/machine_barrelLarge.glb', { x: -3, scale: 1.7, rotY: 0.5 });
+    V3.st.load('space/machine_barrel.glb', { x: 3, scale: 1.5, rotY: -0.7 });
+  }
+  function v3Outcome(color) {
+    if (!V3.st) return;
+    var c = parseInt((color || '#ffd740').replace('#', ''), 16);
+    V3.st.burst(0, 2.2, 0.5, c);
+    V3.st.hitFlash(V3.core, c);
+    if (color === '#ff4d6d' || color === '#ff9f40') V3.st.shake(0.3);
+  }
+
   function pick(i) {
     if (!G.chestSet) return;
     var id = G.chestSet[i];
     G.chestSet = null;
     sfx.chest();
     var out = applyOutcome(G.s, id);
+    v3Outcome(out.color);
     showOutcome(out);
   }
 
@@ -448,6 +479,7 @@
       var intro = $('intro'); if (intro) intro.remove();
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       $('wrap').style.display = 'flex';
+      v3Init();
       G.s = newRush(G.cfg.difficulty);
       G.qIdx = 0; G.reported = false; G.chestSet = null;
       G.questions = buildQuestions(G.deck.cards);
@@ -636,6 +668,16 @@
   var kick = function () { start(); document.removeEventListener('pointerdown', kick); document.removeEventListener('keydown', kick); };
   document.addEventListener('pointerdown', kick);
   document.addEventListener('keydown', kick);
+})();
+</script>
+<script>
+(function () {
+  try {
+    if (window.PFLXStage && PFLXStage.has3D) {
+      var intro = document.getElementById('intro');
+      if (intro) PFLXStage.hero(intro, 'space/machine_generatorLarge.glb', { accent: 0xffd740 });
+    }
+  } catch (e) {}
 })();
 </script>
 </body>

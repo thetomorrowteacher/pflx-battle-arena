@@ -16,6 +16,9 @@
      sound }. Pure core: window.SS._core.
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/pflx-stage3d.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
@@ -85,6 +88,11 @@
   .howto h3 { font-family:'Orbitron'; font-size:9px; letter-spacing:0.18em; color:#c4b5fd; margin-bottom:8px; }
   .howto li { font-size:12.5px; color:#aebad2; line-height:1.6; margin:4px 0 4px 16px; }
   .howto li::marker { color:#c4b5fd; }
+
+  /* ── 3D chapter diorama ── */
+  #saga3d { display:none; height:130px; border-radius:14px; overflow:hidden; border:1px solid rgba(179,136,255,0.3);
+            background:radial-gradient(ellipse at 50% 130%, rgba(179,136,255,0.08), transparent 70%); }
+  body.has3d #saga3d { display:block; }
 </style>
 </head>
 <body>
@@ -95,6 +103,7 @@
     <span class="pill" id="hpPill">♥ 30</span>
     <span class="pill" id="xpPill">✦ 0 XP</span>
   </div>
+  <div id="saga3d"></div>
   <div id="story">
     <div id="encTitle"></div>
     <div id="encText"></div>
@@ -298,10 +307,40 @@
     $('dice').style.display = which === 'dice' ? 'flex' : 'none';
     $('encText').style.display = which === 'dice' ? 'none' : 'block';
   }
+  // ── 3D chapter diorama: one scene model per encounter ──
+  var S3 = { st: null, cur: null, idx: -1 };
+  var ENC_MODELS = [
+    { path: 'space/gate_simple.glb', scale: 3.4 },
+    { path: 'space/corridor_cross.glb', scale: 4.2 },
+    { path: 'space/machine_wirelessCable.glb', scale: 3.0 },
+    { path: 'space/hangar_roundGlass.glb', scale: 4.4 },
+    { path: 'space/monorail_trainFront.glb', scale: 3.6 },
+    { path: 'space/rock_crystalsLargeA.glb', scale: 3.2 },
+    { path: 'space/satelliteDish_detailed.glb', scale: 3.2 },
+    { path: 'space/alien.glb', scale: 3.2 }
+  ];
+  function s3Init() {
+    if (S3.st || !window.PFLXStage || !PFLXStage.has3D) return;
+    var el = $('saga3d');
+    if (!el) return;
+    document.body.classList.add('has3d');
+    S3.st = PFLXStage.create(el, { ground: true, groundR: 4.4, accent: 0xb388ff, cam: { y: 2.7, z: 7.2, lookY: 1.1 } });
+    if (!S3.st) { document.body.classList.remove('has3d'); return; }
+  }
+  function s3Chapter(n) {
+    if (!S3.st || S3.idx === n) return;
+    S3.idx = n;
+    if (S3.cur) S3.st.remove(S3.cur);
+    var m = ENC_MODELS[Math.min(n, ENC_MODELS.length - 1)];
+    S3.cur = S3.st.load(m.path, { scale: m.scale }, function (h) { S3.st.spin(h, 0.3); });
+  }
+  function s3Roll(good) { if (S3.st) { S3.st.burst(0, 2, 1.4, good ? 0x00e676 : 0xff4d6d); if (!good) S3.st.shake(0.28); } }
+
   function showEncounter() {
     var s = G.s;
     if (s.over) return;
     var enc = encounterAt(s.enc);
+    s3Chapter(s.enc);
     $('encTitle').textContent = enc.title + (enc.boss ? ' — FINAL BOSS' : '');
     $('encText').textContent = enc.text;
     $('options').innerHTML = enc.options.map(function (o, i) {
@@ -356,6 +395,7 @@
         die.textContent = r.roll;
         die.classList.add('done');
         var res = $('dieResult');
+        s3Roll(r.success);
         if (r.success) {
           res.style.color = '#00e676';
           res.textContent = '✓ ' + r.detail + ' = ' + r.roll + ' vs DC ' + r.need + (r.boss && !s.won ? ' — BOSS STAGGERED (' + s.bossHits + '/2)' : ' — SUCCESS');
@@ -425,6 +465,8 @@
       var intro = $('intro'); if (intro) intro.remove();
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       $('wrap').style.display = 'flex';
+      s3Init();
+      S3.idx = -1;
       G.s = newSaga(G.cfg.difficulty);
       G.qIdx = 0; G.reported = false; G.pendingOpt = null;
       G.questions = buildQuestions(G.deck.cards);
@@ -613,6 +655,16 @@
   var kick = function () { start(); document.removeEventListener('pointerdown', kick); document.removeEventListener('keydown', kick); };
   document.addEventListener('pointerdown', kick);
   document.addEventListener('keydown', kick);
+})();
+</script>
+<script>
+(function () {
+  try {
+    if (window.PFLXStage && PFLXStage.has3D) {
+      var intro = document.getElementById('intro');
+      if (intro) PFLXStage.hero(intro, 'space/alien.glb', { accent: 0xb388ff });
+    }
+  } catch (e) {}
 })();
 </script>
 </body>

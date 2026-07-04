@@ -16,6 +16,9 @@
      difficulty, ordered, sound }. Pure core: window.MT._core.
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/pflx-stage3d.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
@@ -85,12 +88,20 @@
   .howto h3 { font-family:'Orbitron'; font-size:9px; letter-spacing:0.18em; color:#b388ff; margin-bottom:8px; }
   .howto li { font-size:12.5px; color:#aebad2; line-height:1.6; margin:4px 0 4px 16px; }
   .howto li::marker { color:#b388ff; }
+
+  /* ── 3D battle arena ── */
+  #arena3d { display:none; height:220px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,229,255,0.25);
+             background:radial-gradient(ellipse at 50% 120%, rgba(0,229,255,0.08), transparent 70%); }
+  body.has3d #arena3d { display:block; }
+  body.has3d .mech .mi { display:none; }
+  body.has3d .mech { padding:8px 12px; }
 </style>
 </head>
 <body>
 <canvas id="bgfx"></canvas>
 <div id="wrap" style="display:none">
   <div id="stageChips"></div>
+  <div id="arena3d"></div>
   <div id="field">
     <div class="mech mine" id="myMech">
       <div class="mi" id="myIcon">🐕</div>
@@ -292,6 +303,67 @@
     return G.cfg;
   }
 
+  // ═════════════ 3D BATTLE ARENA (GLB models — CC0 Kenney packs) ═════════════
+  var A3 = { st: null, my: null, foe: null, myStage: -1, foeBattle: -1 };
+  var STAGE_MODELS = [
+    { path: 'space/rover.glb',      scale: 2.0 },
+    { path: 'units/character.glb',  scale: 2.7 },
+    { path: 'units/character.glb',  scale: 3.5 }
+  ];
+  var FOE_MODELS = [
+    { path: 'space/machine_barrel.glb', scale: 2.2 },
+    { path: 'units/enemy-flying.glb',   scale: 2.4, fly: true },
+    { path: 'space/turret_double.glb',  scale: 2.8 },
+    { path: 'space/alien.glb',          scale: 3.4 }
+  ];
+  function arenaInit() {
+    if (A3.st || !window.PFLXStage || !PFLXStage.has3D) return;
+    var el = $('arena3d');
+    document.body.classList.add('has3d');
+    A3.st = PFLXStage.create(el, { ground: true, groundR: 6.5, accent: 0x00e5ff, cam: { y: 3.6, z: 9.5, lookY: 1.3 } });
+    if (!A3.st) { document.body.classList.remove('has3d'); return; }
+  }
+  function arenaSetPlayer(stage) {
+    if (!A3.st || A3.myStage === stage) return;
+    A3.myStage = stage;
+    if (A3.my) A3.st.remove(A3.my);
+    var m = STAGE_MODELS[stage];
+    A3.my = A3.st.load(m.path, { x: -3.2, scale: m.scale, rotY: Math.PI / 2 }, function (holder) {
+      A3.st.bob(holder, 0.08, 1.4);
+      if (stage === 2) A3.st.hitFlash(holder, 0x00e5ff);
+    });
+  }
+  function arenaSetFoe(battle) {
+    if (!A3.st || A3.foeBattle === battle) return;
+    A3.foeBattle = battle;
+    if (A3.foe) A3.st.remove(A3.foe);
+    var m = FOE_MODELS[Math.min(battle, FOE_MODELS.length - 1)];
+    A3.foe = A3.st.load(m.path, { x: 3.2, y: m.fly ? 1.2 : 0, scale: m.scale, rotY: -Math.PI / 2 }, function (holder) {
+      A3.st.bob(holder, m.fly ? 0.3 : 0.06, m.fly ? 2.2 : 1.1);
+    });
+  }
+  function arenaSync() {
+    if (!A3.st || !G.s) return;
+    arenaSetPlayer(G.s.stage);
+    if (!G.s.over) arenaSetFoe(G.s.battle);
+  }
+  function fxStrike() {   // player hits foe
+    if (!A3.st) return;
+    A3.st.lunge(A3.my, 1.6);
+    A3.st.hitFlash(A3.foe, 0xff9f40);
+    A3.st.burst(3.0, 1.4, 0, 0xffd740);
+  }
+  function fxCounter() {  // foe hits player
+    if (!A3.st) return;
+    A3.st.lunge(A3.foe, -1.6);
+    A3.st.hitFlash(A3.my, 0xff4d6d);
+    A3.st.burst(-3.0, 1.4, 0, 0xff4d6d);
+    A3.st.shake(0.3);
+  }
+  function fxDefeated() { if (A3.st) { A3.st.burst(3.2, 1.6, 0, 0x00e676); A3.st.burst(3.2, 0.8, 0.6, 0xffd740); A3.st.shake(0.35); } }
+  function fxEvolve()   { if (A3.st) { A3.st.burst(-3.2, 1.8, 0, 0x00e5ff); A3.st.burst(-3.2, 1.0, -0.5, 0x00e676); } }
+  function fxRevive()   { if (A3.st) A3.st.burst(-3.2, 1.4, 0, 0xffd740); }
+
   // ═════════════ UI ═════════════
   function hud() {
     var s = G.s;
@@ -339,6 +411,10 @@
     if (i === q.correctIdx) {
       var r = strike(s);
       shake('foeMech');
+      fxStrike();
+      if (r.defeated) fxDefeated();
+      if (r.evolved) fxEvolve();
+      setTimeout(arenaSync, r.defeated ? 700 : 0);
       sfx.good();
       log('⚔ ' + STAGES[s.stage].name + ' hits for ' + r.dmg + (s.streak >= 2 ? ' (STREAK ×' + s.streak + ')' : ''));
       hud();
@@ -354,6 +430,8 @@
       if (els[i]) { els[i].classList.remove('dim'); els[i].classList.add('wrong'); }
       var e = enemyStrike(s);
       shake('myMech');
+      fxCounter();
+      if (e.revived) fxRevive();
       sfx.bad();
       log('💥 ' + s.enemy.name + ' counters for ' + e.dmg);
       hud();
@@ -418,6 +496,9 @@
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       $('wrap').style.display = 'flex';
       G.s = newTamer(G.cfg.difficulty);
+      arenaInit();
+      A3.myStage = -1; A3.foeBattle = -1;
+      arenaSync();
       G.qIdx = 0; G.reported = false;
       G.questions = buildQuestions(G.deck.cards);
       if (G.cfg.ordered) {
@@ -605,6 +686,16 @@
   var kick = function () { start(); document.removeEventListener('pointerdown', kick); document.removeEventListener('keydown', kick); };
   document.addEventListener('pointerdown', kick);
   document.addEventListener('keydown', kick);
+})();
+</script>
+<script>
+(function () {
+  try {
+    if (window.PFLXStage && PFLXStage.has3D) {
+      var intro = document.getElementById('intro');
+      if (intro) PFLXStage.hero(intro, 'units/character.glb', { accent: 0x00e5ff });
+    }
+  } catch (e) {}
 })();
 </script>
 </body>

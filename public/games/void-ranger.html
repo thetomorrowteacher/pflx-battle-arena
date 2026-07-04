@@ -19,6 +19,9 @@
      (abilities, waves, combat math — Node-testable headlessly).
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/pflx-stage3d.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -746,6 +749,16 @@
   var kick = function () { start(); document.removeEventListener('pointerdown', kick); document.removeEventListener('keydown', kick); };
   document.addEventListener('pointerdown', kick);
   document.addEventListener('keydown', kick);
+})();
+</script>
+<script>
+(function () {
+  try {
+    if (window.PFLXStage && PFLXStage.has3D) {
+      var intro = document.getElementById('intro');
+      if (intro) PFLXStage.hero(intro, 'units/enemy-flying.glb', { accent: 0xb388ff });
+    }
+  } catch (e) {}
 })();
 </script>
 </body>

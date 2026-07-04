@@ -20,6 +20,9 @@
      Standalone (no parent / no deck within 1600ms): built-in demo deck.
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/pflx-stage3d.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
@@ -112,6 +115,11 @@
   .howto h3 { font-family:'Orbitron'; font-size:9px; letter-spacing:0.18em; color:#00e5ff; margin-bottom:8px; }
   .howto li { font-size:12.5px; color:#aebad2; line-height:1.6; margin:4px 0 4px 16px; }
   .howto li::marker { color:#00e5ff; }
+
+  /* ── 3D duel deck ── */
+  #duel3d { display:none; height:170px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,229,255,0.25);
+            background:radial-gradient(ellipse at 50% 130%, rgba(0,229,255,0.08), transparent 70%); margin-bottom:2px; }
+  body.has3d #duel3d { display:block; }
 </style>
 </head>
 <body>
@@ -128,6 +136,7 @@
       <div class="hp-bar"><div class="hp-fill" id="cpuFill" style="width:100%"></div></div>
     </div>
   </div>
+  <div id="duel3d"></div>
   <div class="strip">
     <span id="roundLbl">ROUND 1</span>
     <div class="timer-wrap"><div id="timerFill"></div></div>
@@ -411,6 +420,7 @@
       S.cpuHp -= dmg;
       floater('-' + dmg, '#00e5ff', 'cpu');
       flash('flashCpu');
+      d3Fire(true);
       sfx.good();
       puCheckGrant();
     } else {
@@ -420,6 +430,7 @@
       S.meHp -= cd;
       floater('-' + cd, '#ff4d6d', 'me');
       flash('flashMe');
+      d3Fire(false);
       sfx.bad();
     }
     updateBars();
@@ -431,6 +442,28 @@
     }
     S.idx++;
     setTimeout(showRound, 1100);
+  }
+
+  // ── 3D duel deck: two ships trading plasma over the arena ──
+  var D3 = { st: null, me: null, cpu: null };
+  function d3Init() {
+    if (D3.st || !window.PFLXStage || !PFLXStage.has3D) return;
+    var el = document.getElementById('duel3d');
+    if (!el) return;
+    document.body.classList.add('has3d');
+    D3.st = PFLXStage.create(el, { ground: true, groundR: 6, accent: 0x00e5ff, cam: { y: 3.2, z: 8.6, lookY: 1.1 } });
+    if (!D3.st) { document.body.classList.remove('has3d'); return; }
+    D3.me = D3.st.load('space/craft_speederA.glb', { x: -3, scale: 2.6, rotY: Math.PI / 2 }, function (h) { D3.st.bob(h, 0.16, 1.5); });
+    D3.cpu = D3.st.load('space/craft_speederD.glb', { x: 3, scale: 2.6, rotY: -Math.PI / 2 }, function (h) { D3.st.bob(h, 0.16, 1.9); });
+  }
+  function d3Fire(mineHits) {
+    if (!D3.st) return;
+    var from = mineHits ? D3.me : D3.cpu, to = mineHits ? D3.cpu : D3.me;
+    var tx = mineHits ? 2.8 : -2.8;
+    D3.st.lunge(from, mineHits ? 1.4 : -1.4);
+    D3.st.hitFlash(to, mineHits ? 0x00e5ff : 0xff4d6d);
+    D3.st.burst(tx, 1.3, 0, mineHits ? 0x00e5ff : 0xff4d6d);
+    if (!mineHits) D3.st.shake(0.28);
   }
 
   function endScreen(won) {
@@ -479,6 +512,7 @@
     start: function () {
       var intro = $('intro'); if (intro) intro.remove();
       $('stage').style.display = 'flex';
+      d3Init();
       S.meHp = 100; S.cpuHp = 100; S.idx = 0; S.correct = 0; S.streak = 0; S.bestStreak = 0; S.over = false; S.reported = false;
       puReset();
       S.rounds = buildRounds(S.deck.cards);
@@ -678,6 +712,16 @@
   var kick = function () { start(); document.removeEventListener('pointerdown', kick); document.removeEventListener('keydown', kick); };
   document.addEventListener('pointerdown', kick);
   document.addEventListener('keydown', kick);
+})();
+</script>
+<script>
+(function () {
+  try {
+    if (window.PFLXStage && PFLXStage.has3D) {
+      var intro = document.getElementById('intro');
+      if (intro) PFLXStage.hero(intro, 'space/craft_speederA.glb', { accent: 0x00e5ff });
+    }
+  } catch (e) {}
 })();
 </script>
 </body>

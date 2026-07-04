@@ -17,6 +17,9 @@
      difficulty, ordered, sound }. Pure core: window.EP._core.
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<script src="../vendor/pflx-stage3d.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
@@ -100,6 +103,11 @@
   .howto h3 { font-family:'Orbitron'; font-size:9px; letter-spacing:0.18em; color:#00e676; margin-bottom:8px; }
   .howto li { font-size:12.5px; color:#aebad2; line-height:1.6; margin:4px 0 4px 16px; }
   .howto li::marker { color:#00e676; }
+
+  /* ── 3D corridor ── */
+  #room3d { display:none; height:140px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,159,64,0.25);
+            background:radial-gradient(ellipse at 50% 130%, rgba(255,159,64,0.08), transparent 70%); }
+  body.has3d #room3d { display:block; }
 </style>
 </head>
 <body>
@@ -112,6 +120,7 @@
     </div>
     <button id="hintBtn" onclick="EP.hint()">💡 HINT ×3</button>
   </div>
+  <div id="room3d"></div>
   <div id="doors"></div>
   <div id="term">
     <div id="qTerm"><span class="kick" id="doorKick">HACKING BULKHEAD 1 — 0 / 2 CODES</span><span id="qTermText"></span></div>
@@ -297,8 +306,23 @@
       kick.textContent = 'HACKING ' + DOOR_NAMES[s.doorIdx] + ' — ' + s.got + ' / ' + s.doors[s.doorIdx] + ' CODES';
     }
   }
+  // ── 3D corridor: the section of the station you're escaping ──
+  var R3 = { st: null };
+  function r3Init() {
+    if (R3.st || !window.PFLXStage || !PFLXStage.has3D) return;
+    var el = $('room3d');
+    if (!el) return;
+    document.body.classList.add('has3d');
+    R3.st = PFLXStage.create(el, { ground: false, accent: 0xff9f40, cam: { y: 2.4, z: 7.4, lookY: 1.2 } });
+    if (!R3.st) { document.body.classList.remove('has3d'); return; }
+    R3.corr = R3.st.load('space/corridor_detailed.glb', { scale: 5.4, rotY: Math.PI / 5 }, function (h) { R3.st.spin(h, 0.12); });
+    R3.st.load('space/astronautA.glb', { x: -2.6, scale: 1.5, rotY: 0.9 }, function (h) { R3.st.bob(h, 0.12, 1.4); });
+  }
+  function r3Breach() { if (R3.st) { R3.st.burst(0, 2, 1, 0x00e676); R3.st.burst(1, 1.4, 0, 0xff9f40); R3.st.shake(0.3); } }
+
   function banner(text) {
     var b = $('doorBanner');
+    if (text.indexOf('UNSEALED') !== -1) r3Breach();
     b.textContent = text;
     b.style.opacity = '1';
     clearTimeout(banner._t);
@@ -431,6 +455,7 @@
       var intro = $('intro'); if (intro) intro.remove();
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       $('wrap').style.display = 'flex';
+      r3Init();
       G.s = newEscape(G.cfg.difficulty);
       G.qIdx = 0; G.reported = false;
       G.questions = buildQuestions(G.deck.cards);
@@ -622,6 +647,16 @@
   var kick = function () { start(); document.removeEventListener('pointerdown', kick); document.removeEventListener('keydown', kick); };
   document.addEventListener('pointerdown', kick);
   document.addEventListener('keydown', kick);
+})();
+</script>
+<script>
+(function () {
+  try {
+    if (window.PFLXStage && PFLXStage.has3D) {
+      var intro = document.getElementById('intro');
+      if (intro) PFLXStage.hero(intro, 'space/corridor_detailed.glb', { accent: 0xff9f40 });
+    }
+  } catch (e) {}
 })();
 </script>
 </body>
