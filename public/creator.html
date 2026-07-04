@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battle Arena Creator — PFLX</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     BATTLE ARENA CREATOR v1 (July 2026) — the standalone 3D game
+     creation engine (Gimkit Creative / Delightex / Roblox Studio
+     direction). Opens in its own tab from Side Quests.
+     Engine: three.js r128 (pinned cdnjs — same build Core Pathways
+     uses). Drag-and-drop 3D asset palette, grid-snapped placement,
+     select / move / rotate / delete, orbit camera, save maps to
+     Supabase (`pflx_ba_maps`) + localStorage, import/export JSON.
+     v2 roadmap: device/channel logic (buttons, triggers, zones),
+     play-test mode with a walking character, publish-to-Side-Quests
+     as a playable cartridge.
+     ═══════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; overflow:hidden; }
+  body { background:#04070d; color:#e6f8ff; font-family:'Rajdhani',sans-serif; }
+  #app { display:flex; height:100%; }
+
+  /* left palette */
+  #palette { width:190px; background:rgba(4,10,20,0.96); border-right:1px solid rgba(0,229,255,0.25);
+             display:flex; flex-direction:column; padding:12px; gap:8px; overflow-y:auto; z-index:5; }
+  #palette h1 { font-family:'Orbitron'; font-size:11px; letter-spacing:0.14em; color:#7df9ff; text-shadow:0 0 12px rgba(0,229,255,0.5); }
+  #palette .sub { font-size:9px; color:#7a8db0; letter-spacing:0.08em; margin-bottom:4px; font-family:'Orbitron'; }
+  .asset { display:flex; align-items:center; gap:9px; background:rgba(10,20,36,0.9); border:1px solid rgba(255,255,255,0.12);
+           border-radius:10px; padding:9px 10px; cursor:grab; transition:all 0.13s; user-select:none; }
+  .asset:hover { border-color:rgba(0,229,255,0.6); transform:translateX(3px); }
+  .asset.armed { border-color:#ffd740; box-shadow:0 0 12px rgba(255,215,64,0.35); background:rgba(255,215,64,0.07); }
+  .asset .ai { font-size:18px; }
+  .asset .an { font-family:'Orbitron'; font-size:8px; letter-spacing:0.08em; color:#cfe3ff; }
+
+  /* viewport */
+  #viewport { flex:1; position:relative; min-width:0; }
+  canvas { display:block; }
+  #hudTip { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); font-family:'Orbitron'; font-size:9px;
+            letter-spacing:0.1em; color:#7a8db0; background:rgba(4,10,20,0.85); border:1px solid rgba(0,229,255,0.2);
+            border-radius:8px; padding:6px 14px; white-space:nowrap; pointer-events:none; }
+
+  /* top bar */
+  #topbar { position:absolute; top:0; left:0; right:0; display:flex; align-items:center; gap:8px; padding:10px 12px;
+            background:linear-gradient(180deg, rgba(4,10,20,0.92), rgba(4,10,20,0)); z-index:6; }
+  #mapName { background:rgba(0,0,0,0.5); border:1px solid rgba(0,229,255,0.3); border-radius:8px; padding:8px 12px;
+             color:#e6f8ff; font-family:'Orbitron'; font-size:11px; letter-spacing:0.06em; width:230px; outline:none; }
+  .tb { font-family:'Orbitron'; font-size:9px; font-weight:800; letter-spacing:0.1em; padding:9px 14px; border-radius:8px;
+        border:1px solid rgba(0,229,255,0.45); background:rgba(0,229,255,0.1); color:#7df9ff; cursor:pointer; transition:all 0.15s; }
+  .tb:hover { background:rgba(0,229,255,0.22); }
+  .tb.gold { border-color:rgba(255,215,64,0.5); background:rgba(255,215,64,0.1); color:#ffd740; }
+  .tb.red { border-color:rgba(255,77,109,0.5); background:rgba(255,77,109,0.1); color:#ff8fa3; }
+  #stats { margin-left:auto; font-family:'Orbitron'; font-size:9px; color:#7a8db0; letter-spacing:0.08em; }
+
+  /* selection panel */
+  #selPanel { position:absolute; top:64px; right:12px; width:180px; background:rgba(4,10,20,0.94);
+              border:1px solid rgba(255,215,64,0.4); border-radius:12px; padding:12px; display:none; z-index:6; }
+  #selPanel h2 { font-family:'Orbitron'; font-size:9px; letter-spacing:0.12em; color:#ffd740; margin-bottom:8px; }
+  #selPanel .row { display:flex; gap:6px; margin-bottom:6px; }
+  #selPanel button { flex:1; font-family:'Orbitron'; font-size:8px; padding:7px 4px; border-radius:6px; cursor:pointer;
+                     border:1px solid rgba(0,229,255,0.35); background:rgba(0,229,255,0.08); color:#7df9ff; }
+  #selPanel button.danger { border-color:rgba(255,77,109,0.45); background:rgba(255,77,109,0.08); color:#ff8fa3; }
+
+  /* modal (load picker) */
+  #modal { position:fixed; inset:0; background:rgba(2,5,10,0.85); z-index:20; display:none; align-items:center; justify-content:center; }
+  #modal .box { background:rgba(6,12,24,0.98); border:1px solid rgba(0,229,255,0.4); border-radius:14px; padding:18px; width:min(480px,92vw); max-height:70vh; overflow-y:auto; }
+  #modal h2 { font-family:'Orbitron'; font-size:11px; letter-spacing:0.14em; color:#7df9ff; margin-bottom:12px; }
+  .maprow { display:flex; justify-content:space-between; align-items:center; gap:8px; background:rgba(10,20,36,0.9);
+            border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:9px 12px; margin-bottom:6px; }
+  .maprow b { font-family:'Orbitron'; font-size:10px; color:#e6f8ff; }
+  .maprow span { font-size:10px; color:#7a8db0; }
+  .maprow .acts { display:flex; gap:6px; }
+  .maprow button { font-family:'Orbitron'; font-size:8px; padding:6px 10px; border-radius:6px; cursor:pointer;
+                   border:1px solid rgba(0,229,255,0.35); background:rgba(0,229,255,0.08); color:#7df9ff; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="palette">
+    <h1>🧊 ARENA CREATOR</h1>
+    <div class="sub">CLICK AN ASSET, THEN CLICK THE MAP</div>
+    <div id="assetList"></div>
+    <div class="sub" style="margin-top:8px">CAMERA</div>
+    <div style="font-size:10px;color:#7a8db0;line-height:1.6">Drag empty space — orbit<br>Wheel — zoom<br>Shift+drag — pan</div>
+    <div class="sub" style="margin-top:8px">OBJECT</div>
+    <div style="font-size:10px;color:#7a8db0;line-height:1.6">Click — select<br>Drag — move<br>R — rotate · Del — delete<br>Esc — deselect</div>
+  </div>
+  <div id="viewport">
+    <div id="topbar">
+      <input id="mapName" placeholder="Untitled Arena Map" maxlength="48" />
+      <button class="tb gold" onclick="AC.save()">💾 SAVE</button>
+      <button class="tb" onclick="AC.openLoad()">📂 LOAD</button>
+      <button class="tb" onclick="AC.exportJson()">⬇ EXPORT</button>
+      <button class="tb" onclick="document.getElementById('importFile').click()">⬆ IMPORT</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="AC.importJson(this)" />
+      <button class="tb red" onclick="AC.clearMap()">🗑 CLEAR</button>
+      <span id="stats">0 OBJECTS</span>
+    </div>
+    <div id="selPanel">
+      <h2 id="selName">OBJECT</h2>
+      <div class="row"><button onclick="AC.rotateSel()">⟳ ROTATE</button><button onclick="AC.raiseSel(1)">▲ RAISE</button></div>
+      <div class="row"><button onclick="AC.dupSel()">⧉ DUPLICATE</button><button onclick="AC.raiseSel(-1)">▼ LOWER</button></div>
+      <div class="row"><button class="danger" onclick="AC.deleteSel()">✕ DELETE</button></div>
+    </div>
+    <div id="hudTip">BUILD MODE — pick an asset on the left</div>
+  </div>
+</div>
+<div id="modal"><div class="box"><h2>📂 YOUR ARENA MAPS</h2><div id="mapList"></div>
+  <div style="text-align:right;margin-top:10px"><button class="tb" onclick="document.getElementById('modal').style.display='none'">CLOSE</button></div>
+</div></div>
+
+<script>
+(function () {
+  'use strict';
+  if (typeof THREE === 'undefined') {
+    document.getElementById('hudTip').textContent = '3D ENGINE FAILED TO LOAD — CHECK CONNECTION AND RELOAD';
+    return;
+  }
+
+  // ── Supabase KV (same pattern as the arena) ──
+  var SB_URL = 'https://hyxiagexyptzvetqjmnj.supabase.co';
+  var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eGlhZ2V4eXB0enZldHFqbW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODM4MTYsImV4cCI6MjA4OTY1OTgxNn0.hqHVlRu775dZfJrKxSFMNEPhANu5EFm7gJpaJ3RnbnY';
+  var MAPS_KEY = 'pflx_ba_maps';
+  function kvLoad(cb) {
+    fetch(SB_URL + '/rest/v1/app_data?key=eq.' + MAPS_KEY + '&select=data', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } })
+      .then(function (r) { return r.json(); }).then(function (rows) { cb((rows && rows[0] && rows[0].data) || null); })
+      .catch(function () { cb(null); });
+  }
+  function kvSave(value, cb) {
+    fetch(SB_URL + '/rest/v1/app_data', {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key: MAPS_KEY, data: value, updated_at: new Date().toISOString() })
+    }).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  }
+  function uid() { return 'map_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36); }
+  function me() {
+    try { var u = JSON.parse(localStorage.getItem('pflx_user') || '{}'); return { id: u.id || 'local', brand: u.brand || u.brandName || 'Creator' }; }
+    catch (e) { return { id: 'local', brand: 'Creator' }; }
+  }
+
+  // ── Asset catalog (procedural sci-fi meshes — no files) ──
+  var ASSETS = {
+    'floor-tile': { icon: '⬜', name: 'FLOOR TILE',  build: function () { return box(4, 0.3, 4, 0x14263f, 0x0a1a2f); } },
+    'wall':       { icon: '🧱', name: 'WALL',        build: function () { return box(4, 3, 0.5, 0x1d3350, 0x00e5ff, 0.25); } },
+    'pillar':     { icon: '🗼', name: 'PILLAR',      build: function () { return cyl(0.6, 5, 0x233a5c, 0x00e5ff, 0.3); } },
+    'block':      { icon: '📦', name: 'CARGO BLOCK', build: function () { return box(2, 2, 2, 0x2a3f2f, 0x00e676, 0.2); } },
+    'spawn':      { icon: '🎯', name: 'SPAWN PAD',   build: function () { return pad(0x00e676); } },
+    'terminal':   { icon: '❓', name: 'QUESTION TERMINAL', build: function () { return terminal(); } },
+    'core':       { icon: '⚡', name: 'ENERGY CORE', build: function () { return core(); } },
+    'gate':       { icon: '🚪', name: 'GATE',        build: function () { return gate(); } },
+    'turret':     { icon: '🔫', name: 'TURRET',      build: function () { return turret(); } },
+    'hazard':     { icon: '☣️', name: 'HAZARD ZONE', build: function () { return pad(0xff4d6d); } },
+    'ramp':       { icon: '📐', name: 'RAMP',        build: function () { return ramp(); } },
+    'light':      { icon: '💡', name: 'GLOW BEACON', build: function () { return beacon(); } }
+  };
+
+  function mat(color, emissive, ei) {
+    return new THREE.MeshStandardMaterial({ color: color, emissive: emissive || 0x000000, emissiveIntensity: ei || 0, roughness: 0.55, metalness: 0.45 });
+  }
+  function box(w, h, d, c, e, ei) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c, e, ei));
+    m.position.y = h / 2; return wrapG(m);
+  }
+  function cyl(r, h, c, e, ei) {
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.15, h, 10), mat(c, e, ei));
+    m.position.y = h / 2; return wrapG(m);
+  }
+  function pad(color) {
+    var g = new THREE.Group();
+    var base = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 0.25, 24), mat(0x14263f));
+    base.position.y = 0.125; g.add(base);
+    var ring = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.09, 8, 32), mat(color, color, 0.9));
+    ring.rotation.x = Math.PI / 2; ring.position.y = 0.3; g.add(ring);
+    return g;
+  }
+  function terminal() {
+    var g = new THREE.Group();
+    var post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.6, 0.4), mat(0x233a5c));
+    post.position.y = 0.8; g.add(post);
+    var scr = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.1, 0.14), mat(0x03140b, 0x00e676, 0.9));
+    scr.position.set(0, 1.9, 0); scr.rotation.x = -0.18; g.add(scr);
+    return g;
+  }
+  function core() {
+    var g = new THREE.Group();
+    var orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), mat(0x073a4d, 0x00e5ff, 1.2));
+    orb.position.y = 1.6; g.add(orb);
+    var base2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 0.7, 8), mat(0x1d3350));
+    base2.position.y = 0.35; g.add(base2);
+    g.userData.spin = orb;
+    return g;
+  }
+  function gate() {
+    var g = new THREE.Group();
+    [-1.7, 1.7].forEach(function (x) {
+      var p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4, 0.5), mat(0x233a5c, 0xb388ff, 0.25));
+      p.position.set(x, 2, 0); g.add(p);
+    });
+    var top = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.5, 0.5), mat(0x233a5c, 0xb388ff, 0.4));
+    top.position.y = 4.1; g.add(top);
+    var field = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.6),
+      new THREE.MeshBasicMaterial({ color: 0xb388ff, transparent: true, opacity: 0.16, side: THREE.DoubleSide }));
+    field.position.y = 2; g.add(field);
+    return g;
+  }
+  function turret() {
+    var g = new THREE.Group();
+    var b = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.6, 10), mat(0x1d3350));
+    b.position.y = 0.3; g.add(b);
+    var head = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), mat(0x233a5c, 0xff4d6d, 0.35));
+    head.position.y = 0.95; g.add(head);
+    var barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.4, 8), mat(0x0a1a2f, 0xff4d6d, 0.5));
+    barrel.rotation.z = Math.PI / 2; barrel.position.set(0.8, 0.95, 0); g.add(barrel);
+    return g;
+  }
+  function ramp() {
+    var shape = new THREE.Shape();
+    shape.moveTo(0, 0); shape.lineTo(4, 0); shape.lineTo(4, 2); shape.lineTo(0, 0);
+    var geo = new THREE.ExtrudeGeometry(shape, { depth: 3, bevelEnabled: false });
+    var m = new THREE.Mesh(geo, mat(0x1d3350, 0x00e5ff, 0.12));
+    m.rotation.y = Math.PI; m.position.set(2, 0, 1.5);
+    return wrapG(m);
+  }
+  function beacon() {
+    var g = new THREE.Group();
+    var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 3, 8), mat(0x233a5c));
+    pole.position.y = 1.5; g.add(pole);
+    var bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 10), mat(0xffd740, 0xffd740, 1.4));
+    bulb.position.y = 3.1; g.add(bulb);
+    var light = new THREE.PointLight(0xffd740, 0.9, 16);
+    light.position.y = 3.1; g.add(light);
+    return g;
+  }
+  function wrapG(mesh) { var g = new THREE.Group(); g.add(mesh); return g; }
+
+  // ── scene ──
+  var vp = document.getElementById('viewport');
+  var renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  vp.appendChild(renderer.domElement);
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x04070d);
+  scene.fog = new THREE.Fog(0x04070d, 60, 160);
+  var camera = new THREE.PerspectiveCamera(55, 1, 0.1, 400);
+
+  scene.add(new THREE.AmbientLight(0x3a5a7a, 0.7));
+  var sun = new THREE.DirectionalLight(0x9fd8ff, 0.9);
+  sun.position.set(30, 50, 20); scene.add(sun);
+  var rim = new THREE.DirectionalLight(0xb388ff, 0.3);
+  rim.position.set(-30, 20, -30); scene.add(rim);
+
+  var grid = new THREE.GridHelper(120, 60, 0x00e5ff, 0x123048);
+  grid.material.transparent = true; grid.material.opacity = 0.35;
+  scene.add(grid);
+  var ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120),
+    new THREE.MeshStandardMaterial({ color: 0x060d18, roughness: 0.9, metalness: 0.1 }));
+  ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+  // orbit camera (custom — no extra deps)
+  var cam = { theta: 0.8, phi: 1.05, dist: 34, target: new THREE.Vector3(0, 0, 0) };
+  function applyCam() {
+    camera.position.set(
+      cam.target.x + cam.dist * Math.sin(cam.phi) * Math.cos(cam.theta),
+      cam.target.y + cam.dist * Math.cos(cam.phi),
+      cam.target.z + cam.dist * Math.sin(cam.phi) * Math.sin(cam.theta));
+    camera.lookAt(cam.target);
+  }
+  function resize() {
+    var w = vp.clientWidth, h = vp.clientHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+
+  // ── editor state ──
+  var objects = [];       // { id, type, group, rotY, y }
+  var armedType = null;   // asset id waiting to be placed
+  var selected = null;
+  var dragging = null;    // object being moved
+  var camDrag = null;
+  var ray = new THREE.Raycaster();
+  var mouse = new THREE.Vector2();
+  var SNAP = 1;
+
+  function tip(t) { document.getElementById('hudTip').textContent = t; }
+  function stats() { document.getElementById('stats').textContent = objects.length + ' OBJECTS'; }
+
+  function addObject(type, x, z, rotY, y, id) {
+    var def = ASSETS[type];
+    if (!def) return null;
+    var g = def.build();
+    g.position.set(x, y || 0, z);
+    g.rotation.y = rotY || 0;
+    scene.add(g);
+    var o = { id: id || uid(), type: type, group: g, rotY: rotY || 0, y: y || 0 };
+    objects.push(o);
+    stats();
+    return o;
+  }
+  function removeObject(o) {
+    scene.remove(o.group);
+    objects = objects.filter(function (x) { return x !== o; });
+    if (selected === o) select(null);
+    stats();
+  }
+  function select(o) {
+    if (selected) setGlow(selected, false);
+    selected = o;
+    var panel = document.getElementById('selPanel');
+    if (o) {
+      setGlow(o, true);
+      panel.style.display = 'block';
+      document.getElementById('selName').textContent = ASSETS[o.type].icon + ' ' + ASSETS[o.type].name;
+      tip('SELECTED — drag to move · R rotate · Del delete · Esc deselect');
+    } else {
+      panel.style.display = 'none';
+      tip(armedType ? 'PLACE MODE — click the map to place ' + ASSETS[armedType].name : 'BUILD MODE — pick an asset on the left');
+    }
+  }
+  function setGlow(o, on) {
+    o.group.traverse(function (n) {
+      if (n.isMesh && n.material && n.material.emissive) {
+        if (on) { n.userData._ei = n.material.emissiveIntensity; n.material.emissiveIntensity = Math.max(0.7, n.userData._ei || 0); }
+        else if (n.userData._ei !== undefined) { n.material.emissiveIntensity = n.userData._ei; }
+      }
+    });
+  }
+  function snap(v) { return Math.round(v / SNAP) * SNAP; }
+
+  function groundPoint(clientX, clientY) {
+    var r = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((clientX - r.left) / r.width) * 2 - 1;
+    mouse.y = -((clientY - r.top) / r.height) * 2 + 1;
+    ray.setFromCamera(mouse, camera);
+    var hit = new THREE.Vector3();
+    ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit);
+    return hit;
+  }
+  function pickObject(clientX, clientY) {
+    var r = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((clientX - r.left) / r.width) * 2 - 1;
+    mouse.y = -((clientY - r.top) / r.height) * 2 + 1;
+    ray.setFromCamera(mouse, camera);
+    var meshes = [];
+    objects.forEach(function (o) { o.group.traverse(function (n) { if (n.isMesh) { n.userData._owner = o; meshes.push(n); } }); });
+    var hits = ray.intersectObjects(meshes, false);
+    return hits.length ? hits[0].object.userData._owner : null;
+  }
+
+  // ── palette ──
+  var list = document.getElementById('assetList');
+  list.innerHTML = Object.keys(ASSETS).map(function (id) {
+    var a = ASSETS[id];
+    return '<div class="asset" data-a="' + id + '"><span class="ai">' + a.icon + '</span><span class="an">' + a.name + '</span></div>';
+  }).join('');
+  list.addEventListener('click', function (e) {
+    var el = e.target.closest('.asset');
+    if (!el) return;
+    var id = el.getAttribute('data-a');
+    armedType = armedType === id ? null : id;
+    Array.prototype.forEach.call(list.children, function (c) { c.classList.toggle('armed', c.getAttribute('data-a') === armedType); });
+    select(null);
+  });
+
+  // ── input ──
+  var cv = renderer.domElement;
+  cv.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return;
+    var hitObj = pickObject(e.clientX, e.clientY);
+    if (armedType && !hitObj) {
+      var p = groundPoint(e.clientX, e.clientY);
+      if (p) { var o = addObject(armedType, snap(p.x), snap(p.z), 0, 0); select(o); }
+      return;
+    }
+    if (hitObj) {
+      select(hitObj);
+      dragging = hitObj;
+      return;
+    }
+    select(null);
+    camDrag = { x: e.clientX, y: e.clientY, theta: cam.theta, phi: cam.phi, tx: cam.target.x, tz: cam.target.z, pan: e.shiftKey };
+  });
+  window.addEventListener('pointermove', function (e) {
+    if (dragging) {
+      var p = groundPoint(e.clientX, e.clientY);
+      if (p) { dragging.group.position.x = snap(p.x); dragging.group.position.z = snap(p.z); }
+      return;
+    }
+    if (camDrag) {
+      var dx = (e.clientX - camDrag.x), dy = (e.clientY - camDrag.y);
+      if (camDrag.pan) {
+        var s = cam.dist * 0.0016;
+        cam.target.x = camDrag.tx - (dx * Math.cos(cam.theta + Math.PI / 2) + dy * Math.cos(cam.theta)) * s;
+        cam.target.z = camDrag.tz - (dx * Math.sin(cam.theta + Math.PI / 2) + dy * Math.sin(cam.theta)) * s;
+      } else {
+        cam.theta = camDrag.theta + dx * 0.006;
+        cam.phi = Math.max(0.25, Math.min(1.45, camDrag.phi - dy * 0.005));
+      }
+    }
+  });
+  window.addEventListener('pointerup', function () { dragging = null; camDrag = null; });
+  cv.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    cam.dist = Math.max(8, Math.min(110, cam.dist + e.deltaY * 0.04));
+  }, { passive: false });
+  window.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'Escape') { armedType = null; Array.prototype.forEach.call(list.children, function (c) { c.classList.remove('armed'); }); select(null); }
+    if (!selected) return;
+    if (e.key === 'r' || e.key === 'R') AC.rotateSel();
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); AC.deleteSel(); }
+  });
+
+  // ── serialize / persist ──
+  function toJson() {
+    return {
+      id: window._mapId || uid(),
+      name: document.getElementById('mapName').value.trim() || 'Untitled Arena Map',
+      createdBy: me().id, createdByName: me().brand,
+      updatedAt: new Date().toISOString(),
+      objects: objects.map(function (o) {
+        return { type: o.type, x: o.group.position.x, y: o.group.position.y, z: o.group.position.z, rotY: o.group.rotation.y };
+      })
+    };
+  }
+  function loadJson(map) {
+    objects.slice().forEach(removeObject);
+    window._mapId = map.id || uid();
+    document.getElementById('mapName').value = map.name || 'Untitled Arena Map';
+    (map.objects || []).forEach(function (od) {
+      var o = addObject(od.type, od.x, od.z, od.rotY, od.y);
+      if (o && od.y) o.group.position.y = od.y;
+    });
+    select(null);
+  }
+
+  window.AC = {
+    rotateSel: function () { if (selected) { selected.group.rotation.y += Math.PI / 4; } },
+    raiseSel: function (dir) { if (selected) { selected.group.position.y = Math.max(0, selected.group.position.y + dir * 0.5); } },
+    dupSel: function () {
+      if (!selected) return;
+      var g = selected.group;
+      var o = addObject(selected.type, g.position.x + 2, g.position.z + 2, g.rotation.y, g.position.y);
+      select(o);
+    },
+    deleteSel: function () { if (selected) removeObject(selected); },
+    clearMap: function () {
+      if (!objects.length || confirm('Clear all ' + objects.length + ' objects?')) {
+        objects.slice().forEach(removeObject);
+        window._mapId = null;
+      }
+    },
+    save: function () {
+      var map = toJson();
+      window._mapId = map.id;
+      tip('SAVING…');
+      kvLoad(function (d) {
+        var maps = (d && Array.isArray(d.maps)) ? d.maps : [];
+        var i = maps.findIndex(function (m) { return m.id === map.id; });
+        if (i >= 0) maps[i] = map; else maps.unshift(map);
+        kvSave({ maps: maps.slice(0, 60), updatedAt: Date.now() }, function (okd) {
+          try { localStorage.setItem(MAPS_KEY, JSON.stringify({ maps: maps.slice(0, 60) })); } catch (e) {}
+          tip(okd ? '💾 SAVED — "' + map.name + '" (' + map.objects.length + ' objects)' : 'SAVE FAILED — exported locally only');
+        });
+      });
+    },
+    openLoad: function () {
+      var modal = document.getElementById('modal');
+      var listEl = document.getElementById('mapList');
+      listEl.innerHTML = '<span style="font-size:11px;color:#7a8db0">Loading…</span>';
+      modal.style.display = 'flex';
+      kvLoad(function (d) {
+        var maps = (d && Array.isArray(d.maps)) ? d.maps : [];
+        if (!maps.length) { listEl.innerHTML = '<span style="font-size:11px;color:#7a8db0">No saved maps yet.</span>'; return; }
+        listEl.innerHTML = maps.map(function (m, i) {
+          return '<div class="maprow"><div><b>' + String(m.name || 'Map').replace(/</g, '&lt;') + '</b><br><span>' +
+            (m.objects || []).length + ' objects · by ' + String(m.createdByName || '?').replace(/</g, '&lt;') + '</span></div>' +
+            '<div class="acts"><button data-load="' + i + '">OPEN</button><button data-del="' + i + '">✕</button></div></div>';
+        }).join('');
+        listEl.onclick = function (e) {
+          var L = e.target.getAttribute('data-load'), D = e.target.getAttribute('data-del');
+          if (L != null) { loadJson(maps[parseInt(L, 10)]); modal.style.display = 'none'; }
+          if (D != null && confirm('Delete this map?')) {
+            maps.splice(parseInt(D, 10), 1);
+            kvSave({ maps: maps, updatedAt: Date.now() }, function () { AC.openLoad(); });
+          }
+        };
+      });
+    },
+    exportJson: function () {
+      var map = toJson();
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(map, null, 2)], { type: 'application/json' }));
+      a.download = (map.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'arena-map') + '.json';
+      a.click();
+    },
+    importJson: function (input) {
+      var f = input.files && input.files[0];
+      if (!f) return;
+      f.text().then(function (t) {
+        try { loadJson(JSON.parse(t)); tip('⬆ IMPORTED'); } catch (e) { tip('IMPORT FAILED — invalid JSON'); }
+      });
+      input.value = '';
+    }
+  };
+
+  // ── render loop ──
+  var clock = new THREE.Clock();
+  function loop() {
+    requestAnimationFrame(loop);
+    var t = clock.getElapsedTime();
+    objects.forEach(function (o) {
+      if (o.group.userData.spin) o.group.userData.spin.rotation.y = t * 1.2;
+    });
+    applyCam();
+    renderer.render(scene, camera);
+  }
+  resize();
+  applyCam();
+  loop();
+
+  // starter platform so the canvas never opens empty
+  addObject('floor-tile', 0, 0, 0, 0);
+  addObject('spawn', 0, 0, 0, 0);
+  addObject('terminal', 6, 0, 0, 0);
+  select(null);
+  stats();
+})();
+</script>
+</body>
+</html>

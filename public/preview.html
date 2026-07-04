@@ -2652,22 +2652,31 @@ function renderDecks() {
 // ═══════════════════════════════════════════════════════════════════
 const STUDIO_TEMPLATES = [
   { id: 'quiz-card-duel', name: 'Quiz Card Duel', icon: '⚔', file: 'games/quiz-card-duel.html', ready: true,
+    img: 'games/covers/quiz-card-duel.png',
     desc: 'HP battle vs a rival AI. Answer fast to hit harder; streaks stack damage.' },
   { id: 'lane-defense', name: 'Lane Defense', icon: '🌱', file: 'games/lane-defense.html', ready: true,
+    img: 'games/covers/lane-defense.png',
     desc: 'Raiders march down 5 lanes. Answer questions to generate energy, place defenders, survive 3 waves.' },
   { id: 'knowledge-tycoon', name: 'Knowledge Tycoon', icon: '💰', file: 'games/knowledge-tycoon.html', ready: true,
+    img: 'games/covers/knowledge-tycoon.png',
     desc: 'Gimkit-style economy: answer to earn cash, reinvest in the upgrade shop, bank the target before the clock.' },
   { id: 'gold-rush', name: 'Crypto Heist', icon: '💠', file: 'games/gold-rush.html', ready: true,
+    img: 'games/covers/gold-rush.png',
     desc: 'CryptoHack-style luck: answer, then crack an encrypted cache — crypto, OVERCLOCK, HACK a rival wallet, SWAP — vs 3 rival AIs.' },
   { id: 'escape-protocol', name: 'Escape Protocol', icon: '🔓', file: 'games/escape-protocol.html', ready: true,
+    img: 'games/covers/escape-protocol.png',
     desc: 'Sci-fi escape room: hack 5 sealed bulkheads before life support runs dry. Wrong codes freeze the terminal. 3 hint chips.' },
   { id: 'mecha-tamer', name: 'Mecha Tamer', icon: '🤖', file: 'games/mecha-tamer.html', ready: true,
+    img: 'games/covers/mecha-tamer.png',
     desc: 'Haypi-style battler: correct answers power your strikes; defeat 4 wild machines and EVOLVE 🐕→🐺→🦾.' },
   { id: 'void-ranger', name: 'Void Ranger', icon: '🎯', file: 'games/void-ranger.html', ready: true,
+    img: 'games/covers/void-ranger.png',
     desc: 'Archero-style roguelite (Phaser 3): drones hunt you — stand still to auto-fire, move to dodge. Decode questions between waves to draft upgrades.' },
   { id: 'pulse-runner', name: 'Pulse Runner', icon: '⚡', file: 'games/pulse-runner.html', ready: true,
+    img: 'games/covers/pulse-runner.png',
     desc: 'Geometry-Dash-style auto-runner: jump the firewalls, speed always climbing. Crash = knowledge checkpoint.' },
   { id: 'star-saga', name: 'Star Saga', icon: '🎲', file: 'games/star-saga.html', ready: true,
+    img: 'games/covers/star-saga.png',
     desc: 'Sci-fi D&D campaign: 8 chapters aboard a derelict megaship. Correct answers give ADVANTAGE on the d20.' },
   { id: 'sky-climb', name: 'Sky Climb', icon: '🧗', ready: false, desc: "Don't-Look-Down-style vertical ascent: answers generate jump energy. COMING SOON." },
   { id: 'stick-circuit', name: 'Stick Circuit', icon: '🥷', ready: false, desc: 'Stickman-style cyber-dojo fighter — combos charged by knowledge. COMING SOON.' },
@@ -3053,11 +3062,11 @@ function arenaStudioPlay(id) {
 // Side Quests shelf — player-made games rendered under the mode cards.
 function arenaStudioCardsHtml() {
   const games = baGames.list;
-  const create = '<div class="mode-card glass-panel glass-panel-hover" style="cursor:pointer;border:1px dashed rgba(255,215,64,0.45)" onclick="goScreen(\'studio\')">' +
+  const create = '<div class="mode-card glass-panel glass-panel-hover" style="cursor:pointer;border:1px dashed rgba(255,215,64,0.45)" onclick="window.open(\'creator.html\',\'_blank\')">' +
     '<div class="mode-content"><div class="mode-head" style="margin-bottom:8px"><div class="mode-icon">🛠</div>' +
-    '<div><div class="mode-name">Create a Game</div><div class="mode-meta">Battle Arena Studio</div></div></div>' +
-    '<div class="mode-desc">Build your own game from a Knowledge Deck and publish it here for everyone.</div>' +
-    '<div class="mode-tags" style="margin-top:12px"><span class="mode-tag beta">Studio</span></div></div></div>';
+    '<div><div class="mode-name">Battle Arena Creator</div><div class="mode-meta">3D game creation engine — opens in a new tab</div></div></div>' +
+    '<div class="mode-desc">Build maps with draggable 3D assets, then publish your game mode. Quick template games: <a href="#" onclick="event.stopPropagation();goScreen(\'studio\')" style="color:#00e5ff">template studio</a>.</div>' +
+    '<div class="mode-tags" style="margin-top:12px"><span class="mode-tag beta">Creator</span></div></div></div>';
   const cards = games.map(function (g) {
     const d = baDecks.byId(g.deckId);
     const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === g.template; }) || { icon: '⚔', name: 'Quiz Card Duel' };
@@ -3133,7 +3142,9 @@ function renderHostModes() {
     ${decks.length === 0 ? '<div class="glass-panel" style="border-radius:12px;padding:20px;margin-bottom:16px;font-size:0.65rem;color:#ffd740">No decks yet — <a href="#" onclick="goScreen(\'decks\')" style="color:#00e5ff">import a Quizlet deck</a> first, then come back to launch.</div>' : ''}
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
       ${STUDIO_TEMPLATES.filter(function (t) { return t.ready; }).map(function (t) {
-        return '<div class="glass-panel" style="border-radius:14px;padding:16px;border:1px solid rgba(0,229,255,0.25);display:flex;flex-direction:column;gap:8px">' +
+        return '<div class="glass-panel" style="border-radius:14px;overflow:hidden;border:1px solid rgba(0,229,255,0.25);display:flex;flex-direction:column;gap:8px;padding:0 0 16px">' +
+          (t.img ? '<div style="width:100%;aspect-ratio:16/7;background:#050b16"><img src="' + t.img + '" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentNode.style.display=\'none\'"/></div>' : '') +
+          '<div style="padding:0 16px;display:flex;flex-direction:column;gap:8px;margin-top:' + (t.img ? '4px' : '16px') + '">' +
           '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.5rem">' + t.icon + '</span>' +
           '<span style="font-family:Orbitron,monospace;font-size:0.68rem;font-weight:800;color:#e6f8ff;letter-spacing:0.06em">' + t.name + '</span></div>' +
           '<div style="font-size:0.55rem;color:#8a9ab8;line-height:1.5;min-height:32px">' + t.desc + '</div>' +
@@ -3155,7 +3166,7 @@ function renderHostModes() {
             '<option value="on">🎚 Season mode — level-up replays</option>' +
           '</select>' +
           '<button id="hm-btn-' + t.id + '" class="btn-arena btn-arena-red" style="font-size:0.58rem;padding:9px 14px" onclick="hostLaunchMode(\'' + t.id + '\')">🔴 LAUNCH</button>' +
-        '</div>';
+        '</div></div>';
       }).join('')}
     </div>
   </main>`;
@@ -3167,7 +3178,7 @@ function renderStudio() {
   const host = isHostUser(state.player);
   return `<main class="wrap" style="max-width:1050px;margin:0 auto;padding:24px">
     <div style="margin-bottom:18px">
-      <h2 class="text-glow-cyan" style="font-family:Orbitron,monospace;font-size:1.1rem;letter-spacing:0.15em;margin:0 0 6px">🛠 BATTLE ARENA STUDIO</h2>
+      <h2 class="text-glow-cyan" style="font-family:Orbitron,monospace;font-size:1.1rem;letter-spacing:0.15em;margin:0 0 6px">🛠 TEMPLATE STUDIO <button class="btn-arena btn-arena-gold" style="font-size:0.5rem;padding:6px 14px;vertical-align:middle;margin-left:10px" onclick="window.open('creator.html','_blank')">🧊 OPEN BATTLE ARENA CREATOR (3D)</button></h2>
       <div style="font-size:0.6rem;color:#8a9ab8;max-width:600px;line-height:1.6">Build a game from a Knowledge Deck and publish it to Side Quests. Your deck is the game's dataset — the better the deck, the better the game.</div>
     </div>
 
@@ -3695,13 +3706,13 @@ function renderSideQuests() {
     <div class="sq-header">
       <button class="sq-back" onclick="goHome()">← Back</button>
       <div class="sq-title">🗡️ Side Quests <span class="mode-tag beta" style="vertical-align:middle;margin-left:8px">Beta</span></div>
-      ${isHostUser(state.player) ? '<button class="btn-arena btn-arena-red" style="font-size:0.55rem;padding:8px 16px;margin-left:auto" onclick="goScreen(\'host_modes\')">🎛 HOST LAUNCHPAD</button>' : ''}
+      ${(function () { try { return isHostUser(state.player) ? '<button class="btn-arena btn-arena-red" style="font-size:0.55rem;padding:8px 16px;margin-left:auto" onclick="goScreen(\'host_modes\')">🎛 HOST LAUNCHPAD</button>' : ''; } catch (e) { return ''; } })()}
     </div>
     <div style="max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
       ${modeCards}
     </div>
-    ${arenaLiveSessionsHtml()}
-    ${arenaStudioCardsHtml()}
+    ${(function () { try { return arenaLiveSessionsHtml(); } catch (e) { console.warn('[sq] live sessions render failed', e); return ''; } })()}
+    ${(function () { try { return arenaStudioCardsHtml(); } catch (e) { console.warn('[sq] player games render failed', e); return ''; } })()}
     ${isHostUser(state.player) ? `<button class="admin-add-btn" onclick="state.adminPreCategory='side_quests';goScreen('mode_admin')" title="Add Side Quest">+</button>` : ''}
   </div>`;
 }
