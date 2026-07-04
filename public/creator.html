@@ -17,7 +17,9 @@
      as a playable cartridge.
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="vendor/three.min.js"></script>
+<script>if (typeof THREE === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
+<script src="vendor/GLTFLoader.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { height:100%; overflow:hidden; }
@@ -35,6 +37,15 @@
   .asset.armed { border-color:#ffd740; box-shadow:0 0 12px rgba(255,215,64,0.35); background:rgba(255,215,64,0.07); }
   .asset .ai { font-size:18px; }
   .asset .an { font-family:'Orbitron'; font-size:8px; letter-spacing:0.08em; color:#cfe3ff; }
+
+  /* 3D model library */
+  #modelSearch { background:rgba(0,0,0,0.5); border:1px solid rgba(0,229,255,0.3); border-radius:8px; padding:7px 10px;
+                 color:#e6f8ff; font-family:'Orbitron'; font-size:9px; letter-spacing:0.06em; width:100%; outline:none; }
+  .mcat { font-family:'Orbitron'; font-size:9px; letter-spacing:0.12em; color:#ffd740; cursor:pointer; padding:6px 2px;
+          border-bottom:1px solid rgba(255,215,64,0.2); user-select:none; }
+  .mcat:hover { color:#ffe58a; }
+  #modelList .asset { padding:6px 8px; }
+  #modelList .asset .ai { font-size:13px; }
 
   /* viewport */
   #viewport { flex:1; position:relative; min-width:0; }
@@ -83,6 +94,9 @@
     <h1>🧊 ARENA CREATOR</h1>
     <div class="sub">CLICK AN ASSET, THEN CLICK THE MAP</div>
     <div id="assetList"></div>
+    <div class="sub" style="margin-top:10px">3D MODEL LIBRARY (CC0)</div>
+    <input id="modelSearch" placeholder="Search 215 models…" />
+    <div id="modelList"><div style="font-size:9px;color:#7a8db0">Loading library…</div></div>
     <div class="sub" style="margin-top:8px">CAMERA</div>
     <div style="font-size:10px;color:#7a8db0;line-height:1.6">Drag empty space — orbit<br>Wheel — zoom<br>Shift+drag — pan</div>
     <div class="sub" style="margin-top:8px">OBJECT</div>
@@ -291,8 +305,53 @@
   function tip(t) { document.getElementById('hudTip').textContent = t; }
   function stats() { document.getElementById('stats').textContent = objects.length + ' OBJECTS'; }
 
+  // ── GLB model library (CC0 packs committed in assets/models/) ──
+  var MODEL_ICONS = { space: '🛸', blasters: '🔫', units: '🤖', city: '🏙️' };
+  var glbCache = {};   // path → THREE.Group (master copy)
+  var glbLoader = (typeof THREE.GLTFLoader === 'function') ? new THREE.GLTFLoader() : null;
+  function prettyName(file) { return file.replace(/\.glb$/, '').replace(/[_-]+/g, ' ').toUpperCase(); }
+  function assetDef(type) {
+    if (ASSETS[type]) return ASSETS[type];
+    if (type && type.indexOf('glb:') === 0) {
+      var parts = type.slice(4).split('/');
+      return { icon: MODEL_ICONS[parts[0]] || '🧩', name: prettyName(parts[parts.length - 1]) };
+    }
+    return null;
+  }
+  function fitAndGround(g, maxDim) {
+    var bb = new THREE.Box3().setFromObject(g);
+    var size = bb.getSize(new THREE.Vector3());
+    var m = Math.max(size.x, size.y, size.z) || 1;
+    var s = m > maxDim ? maxDim / m : (m < 0.8 ? 2 / m : 1);
+    g.scale.setScalar(s);
+    bb.setFromObject(g);
+    g.position.y -= bb.min.y;
+  }
+  function buildGlb(path) {
+    var holder = new THREE.Group();
+    // placeholder shimmer while the file streams in
+    var ph = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), mat(0x14263f, 0x00e5ff, 0.5));
+    ph.position.y = 0.8; holder.add(ph);
+    function attach(master) {
+      var inst = master.clone(true);
+      inst.traverse(function (n) { if (n.isMesh && n.material) n.material = n.material.clone(); });
+      fitAndGround(inst, 4.5);
+      holder.remove(ph);
+      holder.add(inst);
+    }
+    if (glbCache[path]) { attach(glbCache[path]); }
+    else if (glbLoader) {
+      glbLoader.load('assets/models/' + path, function (gltf) {
+        glbCache[path] = gltf.scene;
+        attach(gltf.scene);
+      }, undefined, function () { tip('MODEL FAILED TO LOAD — ' + path); });
+    }
+    return holder;
+  }
+
   function addObject(type, x, z, rotY, y, id) {
     var def = ASSETS[type];
+    if (!def && type.indexOf('glb:') === 0) def = { build: function () { return buildGlb(type.slice(4)); } };
     if (!def) return null;
     var g = def.build();
     g.position.set(x, y || 0, z);
@@ -316,11 +375,12 @@
     if (o) {
       setGlow(o, true);
       panel.style.display = 'block';
-      document.getElementById('selName').textContent = ASSETS[o.type].icon + ' ' + ASSETS[o.type].name;
+      var sd = assetDef(o.type) || { icon: '🧩', name: 'OBJECT' };
+      document.getElementById('selName').textContent = sd.icon + ' ' + sd.name;
       tip('SELECTED — drag to move · R rotate · Del delete · Esc deselect');
     } else {
       panel.style.display = 'none';
-      tip(armedType ? 'PLACE MODE — click the map to place ' + ASSETS[armedType].name : 'BUILD MODE — pick an asset on the left');
+      tip(armedType ? 'PLACE MODE — click the map to place ' + (assetDef(armedType) || { name: 'ASSET' }).name : 'BUILD MODE — pick an asset on the left');
     }
   }
   function setGlow(o, on) {
@@ -359,14 +419,54 @@
     var a = ASSETS[id];
     return '<div class="asset" data-a="' + id + '"><span class="ai">' + a.icon + '</span><span class="an">' + a.name + '</span></div>';
   }).join('');
-  list.addEventListener('click', function (e) {
+  function syncArmed() {
+    Array.prototype.forEach.call(document.querySelectorAll('#palette .asset'), function (c) {
+      c.classList.toggle('armed', c.getAttribute('data-a') === armedType);
+    });
+  }
+  function paletteClick(e) {
     var el = e.target.closest('.asset');
     if (!el) return;
     var id = el.getAttribute('data-a');
     armedType = armedType === id ? null : id;
-    Array.prototype.forEach.call(list.children, function (c) { c.classList.toggle('armed', c.getAttribute('data-a') === armedType); });
+    syncArmed();
     select(null);
+  }
+  list.addEventListener('click', paletteClick);
+
+  // ── 3D model library palette (loaded from assets/models/models.json) ──
+  var modelList = document.getElementById('modelList');
+  var modelManifest = null;
+  var openCats = { space: false, blasters: false, units: true, city: false };
+  function modelItemHtml(cat, file) {
+    var d = assetDef('glb:' + cat + '/' + file);
+    return '<div class="asset" data-a="glb:' + cat + '/' + file + '"><span class="ai">' + d.icon + '</span><span class="an">' + d.name + '</span></div>';
+  }
+  function renderModelList() {
+    if (!modelManifest) return;
+    var q = (document.getElementById('modelSearch').value || '').trim().toLowerCase();
+    var html = '';
+    Object.keys(modelManifest.categories).forEach(function (cat) {
+      var files = modelManifest.categories[cat];
+      if (q) files = files.filter(function (f) { return f.toLowerCase().indexOf(q) !== -1; });
+      if (!files.length) return;
+      var open = q ? true : openCats[cat];
+      html += '<div class="mcat" data-cat="' + cat + '">' + (open ? '▾' : '▸') + ' ' + (MODEL_ICONS[cat] || '🧩') + ' ' + cat.toUpperCase() + ' (' + files.length + ')</div>';
+      if (open) html += files.map(function (f) { return modelItemHtml(cat, f); }).join('');
+    });
+    modelList.innerHTML = html || '<div style="font-size:9px;color:#7a8db0">No models match.</div>';
+    syncArmed();
+  }
+  modelList.addEventListener('click', function (e) {
+    var cat = e.target.closest('.mcat');
+    if (cat) { var c = cat.getAttribute('data-cat'); openCats[c] = !openCats[c]; renderModelList(); return; }
+    paletteClick(e);
   });
+  document.getElementById('modelSearch').addEventListener('input', renderModelList);
+  fetch('assets/models/models.json')
+    .then(function (r) { return r.json(); })
+    .then(function (m) { modelManifest = m; renderModelList(); })
+    .catch(function () { modelList.innerHTML = '<div style="font-size:9px;color:#ff8fa3">Model library unavailable.</div>'; });
 
   // ── input ──
   var cv = renderer.domElement;

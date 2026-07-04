@@ -14,6 +14,14 @@
     {
       "source": "/games/:path*",
       "destination": "/public/games/:path*"
+    },
+    {
+      "source": "/vendor/:path*",
+      "destination": "/public/vendor/:path*"
+    },
+    {
+      "source": "/assets/:path*",
+      "destination": "/public/assets/:path*"
     }
   ],
   "headers": [
