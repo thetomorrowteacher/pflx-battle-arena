@@ -33,7 +33,7 @@
 
   function instantiate(master) {
     var inst = master.clone(true);
-    inst.traverse(function (n) { if (n.isMesh && n.material) { n.material = n.material.clone(); n.castShadow = false; } });
+    inst.traverse(function (n) { if (n.isMesh && n.material) { n.material = n.material.clone(); n.castShadow = true; n.receiveShadow = false; } });
     return inst;
   }
 
@@ -56,12 +56,31 @@
     catch (e) { return null; }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(W, H);
+    try {
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+    } catch (e) {}
     renderer.domElement.style.display = 'block';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
     container.appendChild(renderer.domElement);
 
     var scene = new THREE.Scene();
+    if (opts.fog !== false) scene.fog = new THREE.Fog(0x04070d, 16, 55);
+    // star dome — depth inside the scene itself
+    (function () {
+      var g = new THREE.BufferGeometry(), pts = [];
+      for (var i = 0; i < 240; i++) {
+        var th = Math.random() * Math.PI * 2, ph = Math.acos(Math.random() * 0.9);
+        var r = 34 + Math.random() * 8;
+        pts.push(r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph) * 0.6 + 2, r * Math.sin(ph) * Math.sin(th));
+      }
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+      scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xbfd9ff, size: 0.14, transparent: true, opacity: 0.75 })));
+    })();
     var camOpts = opts.cam || {};
     var camera = new THREE.PerspectiveCamera(camOpts.fov || 42, W / H, 0.1, 200);
     camera.position.set(camOpts.x !== undefined ? camOpts.x : 0, camOpts.y !== undefined ? camOpts.y : 4.2, camOpts.z !== undefined ? camOpts.z : 9);
@@ -69,13 +88,19 @@
     camera.lookAt(0, lookY, 0);
 
     scene.add(new THREE.HemisphereLight(0xbfd9ff, 0x0a1020, 0.95));
-    var key = new THREE.DirectionalLight(0xffffff, 0.85); key.position.set(4, 8, 6); scene.add(key);
+    var key = new THREE.DirectionalLight(0xffffff, 0.95); key.position.set(4, 9, 6);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.camera.left = -12; key.shadow.camera.right = 12;
+    key.shadow.camera.top = 12; key.shadow.camera.bottom = -12;
+    key.shadow.bias = -0.002;
+    scene.add(key);
     var rim = new THREE.PointLight(accent, 1.1, 30); rim.position.set(-5, 3, -4); scene.add(rim);
 
     if (opts.ground) {
       var disc = new THREE.Mesh(new THREE.CylinderGeometry(opts.groundR || 7, (opts.groundR || 7) * 1.06, 0.28, 48),
         new THREE.MeshStandardMaterial({ color: 0x0d1b30, emissive: accent, emissiveIntensity: 0.06, roughness: 0.6, metalness: 0.5 }));
-      disc.position.y = -0.14; scene.add(disc);
+      disc.position.y = -0.14; disc.receiveShadow = true; scene.add(disc);
       var ring = new THREE.Mesh(new THREE.TorusGeometry(opts.groundR || 7, 0.06, 8, 64),
         new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.9 }));
       ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; scene.add(ring);
@@ -84,10 +109,17 @@
     var frames = [], tweens = [], disposed = false, shakeT = 0;
     var clock = new THREE.Clock();
 
+    var camBase = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    var drift = opts.drift !== false;
     function tick() {
       if (disposed) return;
       requestAnimationFrame(tick);
       var dt = Math.min(clock.getDelta(), 0.06), t = clock.elapsedTime;
+      if (drift && shakeT <= 0) {
+        camera.position.x = camBase.x + Math.sin(t * 0.22) * 0.5;
+        camera.position.y = camBase.y + Math.sin(t * 0.15) * 0.2;
+        camera.lookAt(0, lookY, 0);
+      }
       for (var i = tweens.length - 1; i >= 0; i--) {
         var tw = tweens[i]; tw.t += dt;
         var k = Math.min(tw.t / tw.dur, 1);
