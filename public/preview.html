@@ -2904,6 +2904,7 @@ async function baLiveLaunch() {
     title: title || (tpl.name + ' LIVE'),
     hostId: state.player ? state.player.id : 'host', hostName: state.player ? state.player.brand : 'Host',
     code: baLiveCode(), open: false,
+    teams: !!(document.getElementById('lpTeams') && document.getElementById('lpTeams').checked),
     startsAt: Date.now(), endsAt: Date.now() + mins * 60000,
     players: [], updatedAt: Date.now()
   };
@@ -2953,7 +2954,13 @@ async function baLiveEnter(id, codeGuess) {
   }
   const me = { id: state.player ? state.player.id : 'p', brand: state.player ? state.player.brand : 'Player' };
   if (!(ev.players || []).some(function (pl) { return pl.id === me.id; })) {
-    ev.players = (ev.players || []).concat([{ id: me.id, brand: me.brand, score: 0, at: Date.now() }]);
+    var team;
+    if (ev.teams) {
+      var nova = (ev.players || []).filter(function (pl) { return pl.team === 'nova'; }).length;
+      var ion = (ev.players || []).filter(function (pl) { return pl.team === 'ion'; }).length;
+      team = nova <= ion ? 'nova' : 'ion';
+    }
+    ev.players = (ev.players || []).concat([{ id: me.id, brand: me.brand, score: 0, at: Date.now(), team: team }]);
     ev.updatedAt = Date.now();
     await baLive.upsert(ev);
   }
@@ -3933,12 +3940,28 @@ function lpEventCard(ev) {
   const meId = state.player ? state.player.id : 'p';
   const isMine = ev.hostId === meId;
   const joined = (ev.players || []).some(function (pl) { return pl.id === meId; });
-  const board = (ev.players || []).slice().sort(function (x, y) { return (y.score || 0) - (x.score || 0); }).slice(0, 8)
-    .map(function (pl, i) {
-      return '<div style="display:flex;justify-content:space-between;font-size:0.62rem;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
-        '<span>' + (i === 0 && pl.score ? '👑 ' : (i + 1) + '. ') + dkEsc(pl.brand) + (pl.won ? ' 🏆' : '') + '</span>' +
-        '<span style="color:#ffd740;font-family:Orbitron,monospace">' + (pl.score || 0) + '</span></div>';
-    }).join('');
+  let board;
+  if (ev.teams) {
+    const sq = function (key, label, color) {
+      const members = (ev.players || []).filter(function (pl) { return pl.team === key; });
+      const total = members.reduce(function (a, pl) { return a + (pl.score || 0); }, 0);
+      return '<div style="flex:1;min-width:150px"><div style="font-family:Orbitron,monospace;font-size:0.6rem;letter-spacing:0.1em;color:' + color + ';border-bottom:1px solid ' + color + '33;padding-bottom:3px;margin-bottom:4px;display:flex;justify-content:space-between"><span>' + label + '</span><b>' + total + '</b></div>' +
+        members.slice().sort(function (x, y) { return (y.score || 0) - (x.score || 0); }).slice(0, 6).map(function (pl) {
+          return '<div style="display:flex;justify-content:space-between;font-size:0.6rem;padding:2px 0"><span>' + dkEsc(pl.brand) + (pl.won ? ' 🏆' : '') + '</span><span style="color:#ffd740;font-family:Orbitron,monospace">' + (pl.score || 0) + '</span></div>';
+        }).join('') + '</div>';
+    };
+    const nT = (ev.players || []).filter(function (pl) { return pl.team === 'nova'; }).reduce(function (a, pl) { return a + (pl.score || 0); }, 0);
+    const iT = (ev.players || []).filter(function (pl) { return pl.team === 'ion'; }).reduce(function (a, pl) { return a + (pl.score || 0); }, 0);
+    board = '<div style="font-family:Orbitron,monospace;font-size:0.6rem;letter-spacing:0.12em;color:' + (nT === iT ? '#ffd740' : (nT > iT ? '#7df9ff' : '#ff8fa3')) + ';margin-bottom:4px">' + (nT === iT ? '⚖ SQUADS TIED' : (nT > iT ? '🔵 NOVA LEADS' : '🔴 ION LEADS')) + '</div>' +
+      '<div style="display:flex;gap:16px;flex-wrap:wrap">' + sq('nova', '🔵 NOVA', '#7df9ff') + sq('ion', '🔴 ION', '#ff8fa3') + '</div>';
+  } else {
+    board = (ev.players || []).slice().sort(function (x, y) { return (y.score || 0) - (x.score || 0); }).slice(0, 8)
+      .map(function (pl, i) {
+        return '<div style="display:flex;justify-content:space-between;font-size:0.62rem;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+          '<span>' + (i === 0 && pl.score ? '👑 ' : (i + 1) + '. ') + dkEsc(pl.brand) + (pl.won ? ' 🏆' : '') + '</span>' +
+          '<span style="color:#ffd740;font-family:Orbitron,monospace">' + (pl.score || 0) + '</span></div>';
+      }).join('');
+  }
   const hostControls = isMine
     ? '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">' +
         '<span style="font-family:Orbitron,monospace;font-size:0.9rem;letter-spacing:0.3em;color:#ffd740;background:rgba(0,0,0,0.4);border:1px dashed rgba(255,215,64,0.5);border-radius:8px;padding:8px 14px">' + ev.code + '</span>' +
@@ -3956,7 +3979,7 @@ function lpEventCard(ev) {
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">' +
       '<div class="mode-head" style="margin:0"><div class="mode-icon">' + tpl.icon + '</div>' +
       '<div><div class="mode-name">' + dkEsc(ev.title) + '</div>' +
-      '<div class="mode-meta">' + (ev.kind === 'room' ? '👥 co-op room' : '🔴 host event') + ' · by ' + dkEsc(ev.hostName) + ' · ⏳ ' + baLiveTimeLeft(ev) + ' · ' + (ev.players || []).length + ' playing</div></div></div>' +
+      '<div class="mode-meta">' + (ev.kind === 'room' ? '👥 co-op room' : '🔴 host event') + (ev.teams ? ' · 🔵🔴 TEAMS' : '') + ' · by ' + dkEsc(ev.hostName) + ' · ⏳ ' + baLiveTimeLeft(ev) + ' · ' + (ev.players || []).length + ' playing' + (function () { var mine = (ev.players || []).find(function (pl) { return pl.id === meId; }); return mine && mine.team ? ' · YOUR SQUAD: ' + (mine.team === 'nova' ? '🔵 NOVA' : '🔴 ION') : ''; })() + '</div></div></div>' +
       '<span class="cipher-status-badge active" style="font-size:0.5rem;border-color:rgba(255,77,109,0.6);color:#ff8fa3">● LIVE</span>' +
     '</div>' +
     '<div class="mode-desc">' + tpl.icon + ' ' + tpl.name + ' on "' + dkEsc(d ? d.name : 'deck') + '"' + (ev.open ? ' · OPEN JOIN' : (isMine ? '' : ' · 🔒 invite code required')) + '</div>' +
@@ -3985,6 +4008,7 @@ function renderLivePlay() {
         '<input id="lpTitle" class="deck-input" placeholder="Event title (optional)" maxlength="48" style="width:100%" />' +
         '<select id="lpDur" class="deck-input" style="width:100%"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="120">2 hours</option></select>' +
         '</div>' +
+        '<label style="display:flex;align-items:center;gap:8px;font-size:0.62rem;color:#cfe3ff;margin-top:10px;cursor:pointer"><input type="checkbox" id="lpTeams" /> 🔵🔴 TEAM BATTLE — players auto-split into NOVA vs ION squads; squad totals decide the winner</label>' +
         '<div style="font-size:0.6rem;color:#8a9ab8;margin:10px 0">Starts 🔒 PRIVATE: players need your 6-letter invite code. Flip to 🔓 OPEN JOIN anytime from the event card.</div>' +
         '<button class="btn-arena btn-arena-gold" style="font-size:0.6rem;padding:10px 20px" onclick="baLiveLaunch()">🔴 GO LIVE</button>' +
       '</div>'
@@ -5769,7 +5793,7 @@ function goSettings() { SFX.navigate(); state.screen = "settings"; render(); }
 // CIPHER GAME LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PFLX_ARENA_BUILD = '2026-07-04.5';
+const PFLX_ARENA_BUILD = '2026-07-04.6';
 try { console.log('[PFLX Arena] build', PFLX_ARENA_BUILD); } catch (e) {}
 function goScreen(s) { SFX.navigate(); state.screen = s; render(); }
 // Knowledge Decks + Studio games boot — pull the shared rows once at startup.

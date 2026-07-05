@@ -126,6 +126,11 @@
     <div id="qTerm"><span class="kick" id="doorKick">HACKING BULKHEAD 1 — 0 / 2 CODES</span><span id="qTermText"></span></div>
     <div id="qAnswers"></div>
     <div id="lockout"><div class="li">🚨</div><div class="lt">SECURITY LOCKOUT</div><div class="ls" id="lockTxt"></div></div>
+    <div id="search" style="display:none;text-align:center">
+      <div style="font-family:Orbitron;font-size:12px;font-weight:900;letter-spacing:0.14em;color:#00e676;margin-bottom:6px">🔦 SECTION CLEAR — SEARCH THE ROOM</div>
+      <div style="font-size:12px;color:#8a9ab8;margin-bottom:12px">No codes needed here. Pick ONE spot to scavenge before moving on — the clock keeps running.</div>
+      <div id="searchSpots" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"></div>
+    </div>
   </div>
 </div>
 <div id="doorBanner"></div>
@@ -332,6 +337,29 @@
     $('qAnswers').style.display = which === 'q' ? 'grid' : 'none';
     $('qTerm').style.display = which === 'q' ? 'block' : 'none';
     $('lockout').style.display = which === 'lock' ? 'flex' : 'none';
+    $('search').style.display = which === 'search' ? 'block' : 'none';
+  }
+  // ── exploration beat: scavenge one spot between bulkheads (no questions) ──
+  var SEARCH_SPOTS = [
+    { icon: '🗄', name: 'SUPPLY LOCKER' }, { icon: '🖥', name: 'DEAD CONSOLE' }, { icon: '🌬', name: 'VENT SHAFT' },
+    { icon: '🧰', name: 'TOOL CRATE' }, { icon: '🛏', name: 'CREW BUNK' }, { icon: '⚗', name: 'MED STATION' }
+  ];
+  function startSearch() {
+    var picks = SEARCH_SPOTS.slice().sort(function () { return Math.random() - 0.5; }).slice(0, 3);
+    $('searchSpots').innerHTML = picks.map(function (sp, i) {
+      return '<button class="qa" style="text-align:center" onclick="EP.search(' + i + ')"><div style="font-size:22px">' + sp.icon + '</div><div style="font-family:Orbitron;font-size:9px;letter-spacing:0.08em;margin-top:4px">' + sp.name + '</div></button>';
+    }).join('');
+    phase('search');
+  }
+  function doSearch(i) {
+    var s = G.s;
+    if (!s || s.over) return;
+    var roll = Math.random();
+    if (roll < 0.4) { s.o2 = Math.min(s.o2Max, s.o2 + 12); sfx.good(); banner('🫧 SPARE O₂ CANISTER +12s'); }
+    else if (roll < 0.65) { s.hints++; sfx.good(); banner('💡 ACCESS NOTE FOUND — +1 HINT'); var hb = $('hintBtn'); if (hb) hb.textContent = '💡 HINT ×' + s.hints; }
+    else if (roll < 0.85) { s.o2 = Math.min(s.o2Max, s.o2 + 5); banner('🔋 TRICKLE CHARGE +5s'); }
+    else { sfx.bad(); banner('🕸 EMPTY — DUST AND WIRES'); }
+    setTimeout(function () { phase('q'); showQuestion(); }, 900);
   }
   function showQuestion() {
     if (!G.s || G.s.over) return;
@@ -355,7 +383,11 @@
       var r = answerCorrect(G.s);
       sfx.good();
       if (r.escaped) { hud(); setTimeout(endScreen, 700); return; }
-      if (r.opened) { sfx.door(); banner('🟢 ' + DOOR_NAMES[G.s.doorIdx - 1] + ' UNSEALED'); }
+      if (r.opened) {
+        sfx.door();
+        banner('🟢 ' + DOOR_NAMES[G.s.doorIdx - 1] + ' UNSEALED');
+        if (!G.s.over) { setTimeout(startSearch, 900); return; }
+      }
       hud();
       setTimeout(showQuestion, r.opened ? 1300 : 550);
     } else {
@@ -472,6 +504,7 @@
       G.raf = requestAnimationFrame(loop);
     },
     answer: answer,
+    search: doSearch,
     hint: hint,
     rematch: function () { window.EP.start(); },
     exit: function () {
