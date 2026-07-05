@@ -109,7 +109,7 @@
 <div id="banner"></div>
 <div class="screen" id="intro">
   <div class="big" style="color:#7df9ff;text-shadow:0 0 20px rgba(0,229,255,0.6)">⚔ NEXUS LEGENDS</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="In the arena-moons of the outer belt, wars are settled by proxy: two Nexus cores, one lane, and endless ranks of loyal battle-minions. The enemy commander is already spawning. Your minions are brave, tireless, and exactly as smart as you are tonight."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Correct answers DEPLOY a minion into the lane — it marches and brawls on its own</li><li>Streaks deploy stronger tiers: ×3 = SOLDIER, ×5 = CHAMPION 👑</li><li>Wrong answers give the ENEMY a soldier — and their spawner never sleeps</li><li>Minions that reach a core damage it. Destroy the enemy NEXUS before yours falls</li></ul></div></div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="In the arena-moons of the outer belt, wars are settled by proxy: two Nexus cores, one lane, and endless ranks of loyal battle-minions. The enemy commander is already spawning. Your minions are brave, tireless, and exactly as smart as you are tonight."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Your barracks auto-trains GRUNTS — the lane war runs on its own</li><li>Correct answers deploy EXTRA minions instantly — streaks deploy elites</li><li>Streaks deploy stronger tiers: ×3 = SOLDIER, ×5 = CHAMPION 👑</li><li>Wrong answers give the ENEMY a soldier — and their spawner never sleeps</li><li>Minions that reach a core damage it. Destroy the enemy NEXUS before yours falls</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
   <button class="btn gold" id="startBtn" style="display:none" onclick="NL.start()">▶ ENTER THE LANE</button>
 </div>
@@ -142,7 +142,7 @@
   function newPush(difficulty) {
     var m = DIFF_MULT[difficulty] || 1;
     return { mult: m, myCore: CORE_HP, foeCore: CORE_HP, minions: [], t: 0, nextId: 1,
-             foeSpawnT: 4, deployed: 0, killsAlly: 0,
+             foeSpawnT: 4, allySpawnT: 6, deployed: 0, killsAlly: 0,
              correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false };
   }
   function spawn(s, side, tier) {
@@ -157,6 +157,8 @@
   function tick(s, dt) {
     if (s.over) return;
     s.t += dt;
+    s.allySpawnT -= dt;                 // your barracks auto-trains grunts — answers deploy the elites
+    if (s.allySpawnT <= 0) { spawn(s, 1, 0); s.allySpawnT = 9; }
     s.foeSpawnT -= dt;
     if (s.foeSpawnT <= 0) {
       var tier = s.t > 150 ? (Math.floor(s.t / 40) % 2 === 0 ? 1 : 0) : 0;

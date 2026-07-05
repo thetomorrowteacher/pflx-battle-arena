@@ -101,14 +101,14 @@
   <div id="tdWrap"><canvas id="cv" width="720" height="300"></canvas></div>
   <div id="log">ANSWER TO CLIMB — THE VOID NEVER STOPS</div>
   <div id="quiz">
-    <div id="qTerm"><span class="kick">CORRECT = VAULT UP · WRONG = SLIP AND FEED THE VOID</span><span id="qTermText"></span></div>
+    <div id="qTerm"><span class="kick">⛩ GATE SEALED — CORRECT ANSWER UNSEALS IT · WRONG FEEDS THE VOID</span><span id="qTermText"></span></div>
     <div id="qAnswers"></div>
   </div>
 </div>
 <div id="banner"></div>
 <div class="screen" id="intro">
   <div class="big" style="color:#7df9ff;text-shadow:0 0 20px rgba(0,229,255,0.6)">🧗 SKY CLIMB</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="They built the spire to outrun the datastorm — a kilometre of scaffold, ladders, and prayer. Then the storm learned to climb. Below you the void is chewing through the lower decks, deck by deck, and the only way out is the beacon at the summit. Climbers have one rule: never look down."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>The 🌩 VOID rises constantly — and it gets faster the higher you climb</li><li>Answer CORRECTLY to vault up the spire — streaks vault much farther</li><li>Answer WRONG and you SLIP 28m while the void surges 22m closer</li><li>Reach the 1000m SUMMIT BEACON before the void reaches you</li></ul></div></div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="They built the spire to outrun the datastorm — a kilometre of scaffold, ladders, and prayer. Then the storm learned to climb. Below you the void is chewing through the lower decks, deck by deck, and the only way out is the beacon at the summit. Climbers have one rule: never look down."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>TAP / SPACE to climb freely — fast fingers outrun the void</li><li>Every 200m a ⛩ CHECKPOINT GATE seals the spire — one CORRECT answer unseals it (+20m boost)</li><li>Wrong answers keep the gate sealed while the 🌩 VOID surges +30m closer</li><li>The void accelerates as you rise. Reach the 1000m SUMMIT BEACON</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
   <button class="btn gold" id="startBtn" style="display:none" onclick="SK.start()">▶ START THE ASCENT</button>
 </div>
@@ -132,12 +132,42 @@
   // ═════════════ PURE CORE (deterministic — Node-testable) ═════════════
   var DIFF_MULT = { easy: 0.8, normal: 1, hard: 1.25 };
   var SUMMIT = 1000;
+  var GATE_EVERY = 200;
   function newClimb(difficulty) {
     var m = DIFF_MULT[difficulty] || 1;
-    return { mult: m, alt: 0, voidY: -90, t: 0,
+    return { mult: m, alt: 0, voidY: -90, t: 0, nextGate: GATE_EVERY, gated: false, taps: 0,
              correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false };
   }
-  function voidRate(s) { return (3.5 + s.alt / 90) * s.mult; }   // m/s — accelerates as you rise
+  // free climbing: every tap vaults you up — no questions needed between gates
+  function tap(s) {
+    if (s.over || s.gated) return 0;
+    s.taps++;
+    var up = 14;
+    s.alt += up;
+    if (s.alt >= s.nextGate) {          // checkpoint gate seals the spire
+      s.alt = s.nextGate;
+      if (s.nextGate >= SUMMIT) { s.over = true; s.won = true; }
+      else s.gated = true;
+    }
+    return up;
+  }
+  // gate question: correct unseals (+boost), wrong feeds the void and keeps you sealed
+  function answerGate(s, correct) {
+    if (s.over || !s.gated) return { opened: false };
+    if (correct) {
+      s.correct++; s.streak++;
+      s.bestStreak = Math.max(s.bestStreak, s.streak);
+      s.gated = false;
+      s.nextGate += GATE_EVERY;
+      s.alt += 20;
+      return { opened: true };
+    }
+    s.wrong++; s.streak = 0;
+    s.voidY += 30;
+    if (s.voidY >= s.alt) { s.voidY = s.alt; s.over = true; s.won = false; }
+    return { opened: false };
+  }
+  function voidRate(s) { return (5 + s.alt / 65) * s.mult; }   // m/s — accelerates as you rise
   function tick(s, dt) {
     if (s.over) return;
     s.t += dt;
@@ -145,25 +175,7 @@
     if (s.alt >= SUMMIT) { s.over = true; s.won = true; }
     else if (s.voidY >= s.alt) { s.voidY = s.alt; s.over = true; s.won = false; }
   }
-  function answerCorrect(s) {
-    if (s.over) return 0;
-    s.correct++; s.streak++;
-    s.bestStreak = Math.max(s.bestStreak, s.streak);
-    var up = 58 + Math.min(8, s.streak) * 12;
-    s.alt += up;
-    if (s.alt >= SUMMIT) { s.alt = SUMMIT; s.over = true; s.won = true; }
-    return up;
-  }
-  function answerWrong(s) {
-    if (s.over) return 0;
-    s.wrong++; s.streak = 0;
-    var slip = 28;
-    s.alt = Math.max(0, s.alt - slip);
-    s.voidY += 22;
-    if (s.voidY >= s.alt) { s.voidY = s.alt; s.over = true; s.won = false; }
-    return slip;
-  }
-  function scoreFor(s) { return Math.round(s.alt / 10) + s.correct * 6 + s.bestStreak * 5 + (s.won ? 70 : 0); }
+  function scoreFor(s) { return Math.round(s.alt / 10) + s.correct * 8 + s.bestStreak * 5 + (s.won ? 70 : 0); }
 
   function buildQuestions(cards, rand) {
     rand = rand || shuffle;
@@ -257,7 +269,7 @@
     var gap = Math.round(s.alt - s.voidY);
     $('gapPill').textContent = '🌩 VOID ' + gap + 'm BELOW';
     $('gapPill').style.color = gap < 60 ? '#ff4d6d' : gap < 140 ? '#ff9f40' : '#00e676';
-    $('stkPill').textContent = '🔥 ×' + s.streak;
+    $('stkPill').textContent = s.gated ? '⛩ GATE ' + s.nextGate + 'm' : '⛩ NEXT ' + s.nextGate + 'm';
   }
   function draw() {
     var s = G.s, cv = $('cv'), ctx = cv.getContext('2d');
@@ -313,18 +325,41 @@
       ctx.stroke();
     }
   }
+  var wasGated = false;
   function loop(t) {
     if (!G.s) return;
     raf = requestAnimationFrame(loop);
     var dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
     lastT = t;
     tick(G.s, dt);
+    if (G.s.gated && !wasGated) {
+      wasGated = true;
+      sfx.bad();
+      banner('⛩ CHECKPOINT GATE — DECODE TO UNSEAL');
+      document.getElementById('quiz').style.display = 'block';
+      showQuestion();
+    }
+    if (!G.s.gated && wasGated) {
+      wasGated = false;
+      document.getElementById('quiz').style.display = 'none';
+    }
     draw(); hud();
     if (G.s.over && !ended) {
       ended = true;
       cancelAnimationFrame(raf);
       setTimeout(endScreen, 700);
     }
+  }
+  // free climbing input — tap / click / SPACE / ↑
+  var lastTap = 0;
+  function doTap() {
+    if (!G.s || G.s.over || G.s.gated) return;
+    var now = Date.now();
+    if (now - lastTap < 160) return;   // vault rhythm cap
+    lastTap = now;
+    var up = tap(G.s);
+    if (up) sfx.beep && sfx.beep(520 + Math.min(8, (G.s.alt / 120)) * 40, 0.05, 'triangle');
+    if (G.s.won && !ended) { ended = true; cancelAnimationFrame(raf); setTimeout(endScreen, 700); }
   }
   function showQuestion() {
     if (!G.s || G.s.over) return;
@@ -344,16 +379,16 @@
     Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
     G.qIdx++;
     if (i === q.correctIdx) {
-      var up = answerCorrect(s);
+      answerGate(s, true);
       sfx.good();
-      log('🧗 VAULT +' + up + 'm' + (s.streak >= 2 ? ' (STREAK ×' + s.streak + ')' : ''));
-      setTimeout(showQuestion, 450);
+      banner('⛩ GATE UNSEALED +20m — CLIMB!');
+      log('🧗 TAP / SPACE to climb — next gate at ' + s.nextGate + 'm');
     } else {
       if (els[i]) { els[i].classList.remove('dim'); els[i].classList.add('wrong'); }
-      answerWrong(s);
+      answerGate(s, false);
       sfx.bad();
-      banner('🌩 SLIP — THE VOID SURGES');
-      log('💥 Slipped 28m — void +22m');
+      banner('🌩 GATE HOLDS — VOID +30m');
+      log('💥 Wrong — the gate stays sealed. Try again, fast.');
       setTimeout(showQuestion, 750);
     }
   }
@@ -400,12 +435,12 @@
       if (big) big.textContent = (G.cfg.emblem || '🧗') + ' ' + G.cfg.title.toUpperCase();
     }
     $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
-      'The DATASTORM void rises beneath you and never stops. Correct answers vault you<br>up the spire — streaks vault farther. Wrong answers SLIP you down and feed the void.<br>Reach the 1000m summit beacon.';
+      'TAP to climb freely — the DATASTORM void never stops rising. Every 200m a<br>⛩ CHECKPOINT GATE seals the spire until you answer correctly.<br>Reach the 1000m summit beacon.';
     $('startBtn').style.display = 'inline-block';
   }
 
   window.SK = {
-    _core: { newClimb: newClimb, tick: tick, answerCorrect: answerCorrect, answerWrong: answerWrong,
+    _core: { newClimb: newClimb, tick: tick, tap: tap, answerGate: answerGate, GATE_EVERY: GATE_EVERY,
              voidRate: voidRate, scoreFor: scoreFor, buildQuestions: buildQuestions, SUMMIT: SUMMIT,
              DIFF_MULT: DIFF_MULT, applyConfig: applyConfig },
     start: function () {
@@ -424,12 +459,21 @@
           return (order[a.term + '' + a.choices[a.correctIdx]] || 0) - (order[b.term + '' + b.choices[b.correctIdx]] || 0);
         });
       }
-      log('ANSWER TO CLIMB — THE VOID NEVER STOPS');
+      log('TAP / SPACE to climb — gates every 200m need a correct answer');
       hud();
+      document.getElementById('quiz').style.display = 'none';
+      wasGated = false;
+      if (!G._inputsBound) {
+        G._inputsBound = true;
+        document.getElementById('cv').addEventListener('pointerdown', function (e) { e.preventDefault(); doTap(); });
+        window.addEventListener('keydown', function (e) {
+          if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); doTap(); }
+        });
+      }
       raf = requestAnimationFrame(loop);
-      showQuestion();
     },
     answer: answer,
+    tap: doTap,
     rematch: function () { if (raf) cancelAnimationFrame(raf); window.SK.start(); },
     exit: function () {
       post({ type: 'pflx_arena_game_exit' });

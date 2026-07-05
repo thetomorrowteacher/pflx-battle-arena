@@ -126,7 +126,7 @@
 <div id="banner"></div>
 <div class="screen" id="intro">
   <div class="big" style="color:#7df9ff;text-shadow:0 0 20px rgba(0,229,255,0.6)">🤖 MECHA TAMER</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="In the scrapworld beyond the fences, wild machines rule the rust. Tamers don't fight them with force — they out-THINK them. Your starter mech SPARK PUP is small, loyal, and hungry to evolve. Four wild machines guard this sector. Tame them all."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Answer CORRECTLY and your mech strikes — streaks charge harder hits</li><li>Answer WRONG and the wild machine counters (your evolution stage adds armor)</li><li>Defeat machines to EVOLVE: 🐕 Spark Pup → 🐺 Volt Hound → 🦾 Storm Titan (full repair on evolve)</li><li>One 🔧 repair kit revives you at half HP. Tame all 4 machines to claim the sector</li></ul></div></div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="In the scrapworld beyond the fences, wild machines rule the rust. Tamers don't fight them with force — they out-THINK them. Your starter mech SPARK PUP is small, loyal, and hungry to evolve. Four wild machines guard this sector. Tame them all."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>The battle runs LIVE — mechs trade auto-blows every few seconds on their own</li><li>Answer CORRECTLY to fire your SPECIAL strike — streaks charge it harder (autos alone won't win)</li><li>Answer WRONG and the wild machine lands a heavy counter (your evolution stage adds armor)</li><li>Defeat machines to EVOLVE: 🐕 Spark Pup → 🐺 Volt Hound → 🦾 Storm Titan (full repair on evolve)</li><li>One 🔧 repair kit revives you at half HP. Tame all 4 machines to claim the sector</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
   <button class="btn gold" id="startBtn" style="display:none" onclick="MT.start()">▶ DEPLOY MECH</button>
 </div>
@@ -200,6 +200,38 @@
     }
     return out;
   }
+  // real-time auto-battle: both mechs trade light blows on a timer.
+  // Autos alone can't carry you — SPECIALS (correct answers) decide fights.
+  function autoExchange(s) {
+    if (s.over) return { myDmg: 0, foeDmg: 0, defeated: false, won: false, lost: false, revived: false };
+    var myDmg = 3 + s.stage;
+    var foeDmg = Math.max(3, Math.round(s.enemy.atk * 0.5) - s.stage * 2);
+    s.enemy.hp -= myDmg;
+    var out = { myDmg: myDmg, foeDmg: foeDmg, defeated: false, won: false, lost: false, revived: false };
+    if (s.enemy.hp <= 0) {
+      s.enemy.hp = 0;
+      out.defeated = true;
+      s.battle++;
+      if (s.battle >= BATTLES) { s.over = true; s.won = true; out.won = true; return out; }
+      if (s.battle === 1 || s.battle === 3) {
+        s.stage = Math.min(STAGES.length - 1, s.stage + 1);
+        var st = STAGES[s.stage];
+        s.hpMax = st.hpMax; s.hp = st.hpMax; s.atk = st.atk;
+        out.evolved = true;
+      } else {
+        s.hp = Math.min(s.hpMax, s.hp + Math.round(s.hpMax * 0.25));
+      }
+      s.enemy = enemyFor(s.battle, s.mult);
+      return out;
+    }
+    s.hp -= foeDmg;
+    if (s.hp <= 0) {
+      if (s.repair > 0) { s.repair--; s.hp = Math.round(s.hpMax * 0.5); out.revived = true; }
+      else { s.hp = 0; s.over = true; s.won = false; out.lost = true; }
+    }
+    return out;
+  }
+
   // wrong answer → the wild mech strikes. Returns event info.
   function enemyStrike(s) {
     if (s.over) return { dmg: 0, revived: false, lost: false };
@@ -441,8 +473,26 @@
     }
   }
 
+  // real-time auto-battle driver (gameplay runs even between answers)
+  var autoTimer = null;
+  function autoStep() {
+    var s = G.s;
+    if (!s || s.over) return;
+    var r = autoExchange(s);
+    if (A3.st) {
+      A3.st.lunge(A3.my, 0.6);
+      setTimeout(function () { if (A3.st && !s.over) A3.st.lunge(A3.foe, -0.6); }, 400);
+    }
+    log('⚙ auto-battle: you ' + r.myDmg + ' ⇄ ' + (r.foeDmg || 0) + ' foe — SPECIALS decide this (answer!)');
+    if (r.defeated) { fxDefeated(); if (r.evolved) { sfx.evolve(); fxEvolve(); banner('✨ EVOLVED → ' + STAGES[s.stage].name); } else banner('🏆 TAMED — NEXT CHALLENGER'); setTimeout(arenaSync, 700); }
+    if (r.revived) { fxRevive(); banner('🔧 REPAIR KIT — BACK ONLINE'); }
+    hud();
+    if (s.over) { clearInterval(autoTimer); autoTimer = null; setTimeout(endScreen, 900); }
+  }
+
   // ═════════════ flow ═════════════
   function reportResult() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
     if (G.reported) return;
     G.reported = true;
     var s = G.s;
@@ -488,7 +538,7 @@
   }
 
   window.MT = {
-    _core: { newTamer: newTamer, strike: strike, enemyStrike: enemyStrike, enemyFor: enemyFor,
+    _core: { newTamer: newTamer, strike: strike, enemyStrike: enemyStrike, autoExchange: autoExchange, enemyFor: enemyFor,
              scoreFor: scoreFor, buildQuestions: buildQuestions, STAGES: STAGES, ENEMIES: ENEMIES,
              BATTLES: BATTLES, DIFF_MULT: DIFF_MULT, applyConfig: applyConfig },
     start: function () {
@@ -508,7 +558,9 @@
           return (order[a.term + '' + a.choices[a.correctIdx]] || 0) - (order[b.term + '' + b.choices[b.correctIdx]] || 0);
         });
       }
-      log('ANSWER TO CHARGE YOUR ATTACK');
+      log('AUTO-BATTLE IS LIVE — answers fire your SPECIAL strikes');
+      if (autoTimer) clearInterval(autoTimer);
+      autoTimer = setInterval(autoStep, 3500);
       showQuestion();
     },
     answer: answer,

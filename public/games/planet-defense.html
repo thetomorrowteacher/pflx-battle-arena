@@ -111,7 +111,7 @@
 <div id="banner"></div>
 <div class="screen" id="intro">
   <div class="big" style="color:#7df9ff;text-shadow:0 0 20px rgba(0,229,255,0.6)">🪐 LAST COLONY TD</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="Colony world VERIDIA-6 sits on the last stable warp lane out of the dark sector — which makes it the most raided planet in charted space. The orbital defense grid is yours now, commander. Six turret mounts, ten incoming waves, and a Dreadnought signature already burning on the long-range scan."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Answer CORRECTLY to earn ⚡ ENERGY — streaks earn more</li><li>Spend energy on the six turret slots: BUILD, then upgrade to L2 / L3 (more damage + range)</li><li>Wrong answers SURGE the raiders — 3 seconds of boosted speed toward your planet</li><li>Raiders that reach the planet damage it. Survive all 10 waves — wave 10 is the 👑 DREADNOUGHT</li></ul></div></div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="Colony world VERIDIA-6 sits on the last stable warp lane out of the dark sector — which makes it the most raided planet in charted space. The orbital defense grid is yours now, commander. Six turret mounts, ten incoming waves, and a Dreadnought signature already burning on the long-range scan."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Your reactor drips ⚡ passively — the game plays on its own; answer CORRECTLY for BIG energy surges (streaks pay more)</li><li>Spend energy on the six turret slots: BUILD, then upgrade to L2 / L3 (more damage + range)</li><li>Wrong answers SURGE the raiders — 3 seconds of boosted speed toward your planet</li><li>Raiders that reach the planet damage it. Survive all 10 waves — wave 10 is the 👑 DREADNOUGHT</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
   <button class="btn gold" id="startBtn" style="display:none" onclick="PD.start()">▶ MAN THE TURRETS</button>
 </div>
@@ -168,6 +168,7 @@
   function tick(s, dt, rand) {
     if (s.over) return;
     s.t += dt; s.shots = [];
+    s.energy += 1.6 * dt;               // passive reactor drip — the grid funds itself slowly
     if (s.surgeT > 0) s.surgeT = Math.max(0, s.surgeT - dt);
     if (!s.waveActive) {
       s.restT -= dt;
@@ -384,7 +385,7 @@
     var s = G.s;
     $('wavePill').textContent = 'WAVE ' + s.wave + ' / ' + WAVES + (s.boss && s.waveActive ? ' — DREADNOUGHT' : '');
     $('hpPill').textContent = '🪐 ' + Math.max(0, Math.ceil(s.planetHp));
-    $('enPill').textContent = '⚡ ' + s.energy;
+    $('enPill').textContent = '⚡ ' + Math.floor(s.energy);
     $('killPill').textContent = '☠ ' + s.kills;
   }
   function renderSlots() {
