@@ -725,6 +725,8 @@
     probe.onload = function () {
       var intro = document.getElementById('intro');
       if (!intro) return;
+      var big = intro.querySelector('.big');
+      if (big) big.style.display = 'none';   // the art carries the title
       var el = document.createElement('img');
       el.src = probe.src;
       el.alt = '';
