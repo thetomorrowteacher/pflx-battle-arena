@@ -3,17 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Overlimit 9001 — PFLX Battle Arena</title>
+<title>Neo City — PFLX Battle Arena</title>
 <!-- ═══════════════════════════════════════════════════════════════
-     SCOUTER BREAK — Arena Game Cartridge #10 (July 2026).
-     Power-level combat: correct answers CHARGE your power (streaks
-     multiply). UNLEASH a beam anytime — damage scales with power vs
-     the foe's rated level; past 150% the foe's scouter SHATTERS
-     (crit). Wrong answers = foe blast + charge drain. Five rated
-     fighters, the last rated 9001. One nano-repair revive.
-     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1. game id:
-     'scouter-break'. Config: { title, accent, background, emblem,
-     difficulty, ordered, sound, music }. Pure core: window.SB._core.
+     NEO CITY — Arena Game Cartridge #13 (July 2026).
+     SimCity-style builder: raise a neon colony from bare regolith.
+     Correct answers earn ₡ credits (+ income from SHOPs); spend them
+     on 12 plots — HAB / SHOP / PARK / SPIRE (each adds population,
+     rendered live as real 3D buildings). Wrong answers cause a
+     BLACKOUT that costs population. Reach 1,200 citizens within 24
+     council sessions. game id: 'neo-city'. Pure core: window.NC._core.
+     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1.
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="../vendor/three.min.js"></script>
@@ -96,6 +95,14 @@
   #unleashBtn.hot { border-color:#00e676; color:#00e676; background:rgba(0,230,118,0.12); animation:hotPulse 0.8s infinite; }
   @keyframes hotPulse { 50% { box-shadow:0 0 22px rgba(0,230,118,0.55); } }
 
+  #plots { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
+  .plotBtn { font-family:'Orbitron'; font-size:8px; font-weight:800; letter-spacing:0.04em; padding:7px 3px;
+             border-radius:8px; border:1px solid rgba(0,229,255,0.35); background:rgba(0,229,255,0.08); color:#7df9ff;
+             cursor:pointer; transition:all 0.13s; }
+  .plotBtn:hover { background:rgba(0,229,255,0.2); }
+  .plotBtn.cant { opacity:0.4; pointer-events:none; }
+  .plotBtn.built { border-color:rgba(0,230,118,0.5); color:#00e676; background:rgba(0,230,118,0.08); pointer-events:none; }
+
   /* ── 3D battle arena ── */
   #arena3d { display:none; height:220px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,229,255,0.25);
              background:radial-gradient(ellipse at 50% 120%, rgba(0,229,255,0.08), transparent 70%); }
@@ -108,35 +115,20 @@
 <canvas id="bgfx"></canvas>
 <div id="wrap" style="display:none">
   <div id="stageChips"></div>
-  <div id="arena3d"></div>
-  <div id="field">
-    <div class="mech mine" id="myMech">
-      <div class="mi" id="myIcon">🥋</div>
-      <div class="mn" id="myName">YOU — UNRANKED</div>
-      <div class="ms" id="myStats"></div>
-      <div class="hpb"><div class="hpf" id="myHp" style="width:100%"></div></div>
-    </div>
-    <div class="vs">VS</div>
-    <div class="mech enemy" id="foeMech">
-      <div class="mi" id="foeIcon">🛸</div>
-      <div class="mn" id="foeName">DRONE K-9</div>
-      <div class="ms" id="foeStats"></div>
-      <div class="hpb"><div class="hpf" id="foeHp" style="width:100%"></div></div>
-    </div>
-  </div>
-  <div id="log">ANSWER TO CHARGE YOUR POWER</div>
-  <button id="unleashBtn" onclick="SB.unleash()" style="display:none"></button>
+  <div id="arena3d" style="height:240px"></div>
+  <div id="plots"></div>
+    <div id="log">ANSWER TO EARN CREDITS — BUILD YOUR CITY</div>
   <div id="quiz">
-    <div id="qTerm"><span class="kick">CORRECT = YOU STRIKE · WRONG = IT STRIKES</span><span id="qTermText"></span></div>
+    <div id="qTerm"><span class="kick">CORRECT = +₡ CREDITS · WRONG = BLACKOUT</span><span id="qTermText"></span></div>
     <div id="qAnswers"></div>
   </div>
 </div>
 <div id="banner"></div>
 <div class="screen" id="intro">
-  <div class="big" style="color:#00e676;text-shadow:0 0 20px rgba(0,230,118,0.6)">🥽 OVERLIMIT 9001</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="The orbital fight rings of Sector 9 rank every fighter by POWER LEVEL — read through the green lens of a combat scouter. The scanners have never been wrong. Tonight an unranked challenger steps onto the ring: you. Five rated fighters stand between you and the belt. Make the scouters lie."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Every CORRECT answer charges your ⚡ POWER LEVEL — streaks multiply the gain</li><li>UNLEASH your beam anytime: damage scales with your power vs the foe's rating, then spends most of your charge</li><li>Push past 150% of the foe's rating before unleashing → SCOUTER SHATTERED, critical hit</li><li>Wrong answers = the foe blasts you AND drains your charge. One 🔧 nano-repair. Defeat all 5</li></ul></div></div>
+  <div class="big" style="color:#00e676;text-shadow:0 0 20px rgba(0,230,118,0.6)">🌆 NEO CITY</div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="The colony ship UNITY dropped 12 empty plots of regolith and a two-year charter: grow a city worth staying for, Governor, or the ship moves on. Credits flow when the council is sharp — and every blackout sends citizens packing for the stars."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Answer CORRECTLY to earn ₡ credits — streaks and 🏪 SHOPs boost every payout</li><li>Spend credits on the 12 plots: 🏠 HAB +90👥 · 🏪 SHOP +40👥 & income · 🌳 PARK +60👥 · 🏙 SPIRE +260👥</li><li>Every build rises on the 3D skyline. Wrong answers cause a BLACKOUT: −40 citizens</li><li>Reach 1,000 citizens within 24 council sessions</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
-  <button class="btn gold" id="startBtn" style="display:none" onclick="SB.start()">▶ ENTER THE RING</button>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="NC.start()">▶ FOUND THE CITY</button>
 </div>
 
 <script>
@@ -156,82 +148,58 @@
   };
 
   // ═════════════ PURE CORE (Node-testable) ═════════════
-  var FOES = [
-    { name: 'DRONE K-9',    icon: '🛸', power: 1200, hp: 60,  atk: 8  },
-    { name: 'SYNTH RAIDER', icon: '🤖', power: 2400, hp: 85,  atk: 10 },
-    { name: 'WAR GOLEM',    icon: '🗿', power: 4200, hp: 110, atk: 13 },
-    { name: 'VOID ANDROID', icon: '👁', power: 6400, hp: 145, atk: 16 },
-    { name: 'OMEGA PRIME',  icon: '👑', power: 9001, hp: 185, atk: 20 }
-  ];
-  var DIFF_MULT = { easy: 0.8, normal: 1, hard: 1.25 };
-  var BATTLES = FOES.length;
-  var BREAK_RATIO = 1.5;  // power past 150% of the foe's rating = scouter shatters (crit)
-
-  function foeFor(n, mult) {
-    var f = FOES[Math.min(n, FOES.length - 1)];
-    return { name: f.name, icon: f.icon, power: Math.round(f.power * mult),
-             hp: Math.round(f.hp * mult), hpMax: Math.round(f.hp * mult), atk: Math.round(f.atk * mult) };
+  var DIFF_MULT = { easy: 0.85, normal: 1, hard: 1.2 };   // population target multiplier
+  var SESSIONS = 24, PLOTS = 12, POP_TARGET = 1000;
+  var BUILDINGS = {
+    hab:   { name: 'HAB',   icon: '🏠', cost: 45,  pop: 90,  income: 0 },
+    shop:  { name: 'SHOP',  icon: '🏪', cost: 65,  pop: 40,  income: 12 },
+    park:  { name: 'PARK',  icon: '🌳', cost: 35,  pop: 60,  income: 0 },
+    spire: { name: 'SPIRE', icon: '🏙', cost: 150, pop: 260, income: 5 }
+  };
+  function targetFor(mult) { return Math.round(POP_TARGET * mult); }
+  function newCity(difficulty) {
+    var m = DIFF_MULT[difficulty] || 1;
+    return { mult: m, target: targetFor(m), session: 0, credits: 90, pop: 0,
+             plots: [], correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false };
   }
-  function newClash(difficulty) {
-    var mult = DIFF_MULT[difficulty] || 1;
-    return { mult: mult, battle: 0, power: 500, hp: 130, hpMax: 130,
-             foe: foeFor(0, mult), repair: 1, breaks: 0,
-             correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false };
+  function income(s) {
+    var v = 0;
+    s.plots.forEach(function (b) { v += BUILDINGS[b].income; });
+    return v;
   }
-  // correct answer → charge. Returns { gained, ratio }.
-  function charge(s) {
-    if (s.over) return { gained: 0, ratio: 0 };
-    s.correct++;
-    s.streak++;
+  function endCheck(s) {
+    if (s.pop >= s.target) { s.over = true; s.won = true; }
+    else if (s.session >= SESSIONS) { s.over = true; s.won = false; }
+  }
+  function answerCorrect(s) {
+    if (s.over) return 0;
+    s.correct++; s.streak++;
     s.bestStreak = Math.max(s.bestStreak, s.streak);
-    var gained = 600 + Math.min(8, s.streak) * 250;
-    s.power += gained;
-    return { gained: gained, ratio: s.power / s.foe.power };
+    s.session++;
+    var g = 34 + Math.min(6, s.streak) * 6 + income(s);
+    s.credits += g;
+    endCheck(s);
+    return g;
   }
-  // player fires the beam. Returns { dmg, broken, defeated, won }.
-  function unleash(s) {
-    if (s.over) return { dmg: 0, broken: false, defeated: false, won: false };
-    var ratio = s.power / s.foe.power;
-    var broken = ratio >= BREAK_RATIO;
-    var dmg = Math.round(Math.max(10, Math.min(120, 34 * ratio * (broken ? 1.5 : 1))));
-    s.power = Math.max(500, Math.round(s.power * 0.4));
-    s.foe.hp -= dmg;
-    if (broken) s.breaks++;
-    var out = { dmg: dmg, broken: broken, defeated: false, won: false };
-    if (s.foe.hp <= 0) {
-      s.foe.hp = 0;
-      out.defeated = true;
-      s.battle++;
-      if (s.battle >= BATTLES) { s.over = true; s.won = true; out.won = true; return out; }
-      s.hp = Math.min(s.hpMax, s.hp + 35);   // corner recovery between bouts
-      s.foe = foeFor(s.battle, s.mult);
-    }
-    return out;
+  function answerWrong(s) {
+    if (s.over) return 0;
+    s.wrong++; s.streak = 0;
+    s.session++;
+    var lost = Math.min(s.pop, 40);
+    s.pop -= lost;
+    endCheck(s);
+    return lost;
   }
-  // wrong answer → the foe blasts you and drains your charge.
-  function foeBlast(s) {
-    if (s.over) return { dmg: 0, drained: 0, revived: false, lost: false };
-    s.wrong++;
-    s.streak = 0;
-    var dmg = s.foe.atk;
-    var drained = Math.min(400, Math.max(0, s.power - 500));
-    s.hp -= dmg;
-    s.power -= drained;
-    var out = { dmg: dmg, drained: drained, revived: false, lost: false };
-    if (s.hp <= 0) {
-      if (s.repair > 0) {
-        s.repair--;
-        s.hp = Math.round(s.hpMax * 0.5);
-        out.revived = true;
-      } else {
-        s.hp = 0; s.over = true; s.won = false; out.lost = true;
-      }
-    }
-    return out;
+  function build(s, type) {
+    var def = BUILDINGS[type];
+    if (!def || s.over || s.plots.length >= PLOTS || s.credits < def.cost) return false;
+    s.credits -= def.cost;
+    s.plots.push(type);
+    s.pop += def.pop;
+    if (s.pop >= s.target) { s.over = true; s.won = true; }
+    return true;
   }
-  function scoreFor(s) {
-    return s.battle * 30 + s.correct * 8 + s.bestStreak * 5 + s.breaks * 12 + (s.won ? 60 : 0);
-  }
+  function scoreFor(s) { return Math.round(s.pop / 12) + s.correct * 6 + s.bestStreak * 4 + (s.won ? 80 : 0); }
 
   function buildQuestions(cards, rand) {
     rand = rand || shuffle;
@@ -292,8 +260,8 @@
     evolve: function () { var s2 = this; [392, 523, 659, 784].forEach(function (f, i) { setTimeout(function () { s2.beep(f, 0.14, 'triangle'); }, i * 110); }); }
   };
 
-  var G = { deck: null, player: { id: 'demo', brand: 'Challenger' },
-            cfg: { title: '', accent: '', emblem: '🥽', difficulty: 'normal', ordered: false, sound: true },
+  var G = { deck: null, player: { id: 'demo', brand: 'Governor' },
+            cfg: { title: '', accent: '', emblem: '🌆', difficulty: 'normal', ordered: false, sound: true },
             s: null, questions: [], qIdx: 0, reported: false };
 
   function applyConfig(cfg) {
@@ -301,7 +269,7 @@
     G.cfg.title = String(cfg.title || '').slice(0, 60);
     G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
     G.cfg.background = BG_CSS[cfg.background] ? cfg.background : 'space';
-    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🥽';
+    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🌆';
     G.cfg.difficulty = DIFF_MULT[cfg.difficulty] ? cfg.difficulty : 'normal';
     G.cfg.ordered = !!cfg.ordered;
     G.cfg.sound = cfg.sound !== false;
@@ -310,113 +278,81 @@
     return G.cfg;
   }
 
-  // ═════════════ 3D FIGHT RING (GLB models — CC0 Kenney packs) ═════════════
-  var A3 = { st: null, my: null, foe: null, foeBattle: -1, beamOn: false };
-  var FOE_MODELS = [
-    { path: 'units/enemy-flying.glb',   scale: 2.3, fly: true },
-    { path: 'space/astronautB.glb',     scale: 2.6 },
-    { path: 'space/turret_double.glb',  scale: 2.9 },
-    { path: 'space/rover.glb',          scale: 2.6 },
-    { path: 'space/alien.glb',          scale: 3.6 }
-  ];
-  function arenaInit() {
-    if (A3.st || !window.PFLXStage || !PFLXStage.has3D) return;
+  // ═════════════ 3D CITY VIEW (GLB city models — CC0 Kenney pack) ═════════════
+  var C3 = { st: null, holders: [], ground: [] };
+  var B_MODELS = {
+    hab:   ['city/building-small-a.glb', 'city/building-small-b.glb'],
+    shop:  ['city/building-small-c.glb', 'city/building-small-d.glb'],
+    park:  ['city/grass-trees.glb', 'city/grass-trees-tall.glb'],
+    spire: ['city/building-garage.glb']
+  };
+  var GRID = [[-4.4,-1.6],[-2.2,-1.6],[0,-1.6],[2.2,-1.6],[4.4,-1.6],[-4.4,0.8],[-2.2,0.8],[0,0.8],[2.2,0.8],[4.4,0.8],[-1.1,3.0],[1.1,3.0]];
+  function cityInit() {
+    if (C3.st || !window.PFLXStage || !PFLXStage.has3D) return;
     var el = $('arena3d');
     document.body.classList.add('has3d');
-    A3.st = PFLXStage.create(el, { ground: true, groundR: 6.5, accent: 0x00e676, cam: { y: 3.6, z: 9.5, lookY: 1.3 } });
-    if (!A3.st) { document.body.classList.remove('has3d'); return; }
-    A3.my = A3.st.load('units/character.glb', { x: -3.2, scale: 2.8, rotY: Math.PI / 2 }, function (h) {
-      A3.st.bob(h, 0.08, 1.4);
-    });
+    C3.st = PFLXStage.create(el, { ground: true, groundR: 7.5, accent: 0x7df9ff, cam: { y: 5.6, z: 10.5, lookY: 0.2, fov: 44 } });
+    if (!C3.st) { document.body.classList.remove('has3d'); return; }
+    C3.st.load('city/road-straight.glb', { x: 0, z: -0.4, scale: 2.2 });
+    C3.st.load('city/road-straight.glb', { x: -2.2, z: -0.4, scale: 2.2 });
+    C3.st.load('city/road-straight.glb', { x: 2.2, z: -0.4, scale: 2.2 });
   }
-  function arenaSetFoe(battle) {
-    if (!A3.st || A3.foeBattle === battle) return;
-    A3.foeBattle = battle;
-    if (A3.foe) A3.st.remove(A3.foe);
-    var m = FOE_MODELS[Math.min(battle, FOE_MODELS.length - 1)];
-    A3.foe = A3.st.load(m.path, { x: 3.2, y: m.fly ? 1.2 : 0, scale: m.scale, rotY: -Math.PI / 2 }, function (h) {
-      A3.st.bob(h, m.fly ? 0.3 : 0.06, m.fly ? 2.2 : 1.1);
-    });
+  function cityAdd(type, idx) {
+    if (!C3.st) return;
+    var opts = B_MODELS[type];
+    var path = opts[idx % opts.length];
+    var sp = GRID[Math.min(idx, GRID.length - 1)];
+    C3.holders.push(C3.st.load(path, { x: sp[0], z: sp[1], scale: type === 'spire' ? 2.6 : 1.9, rotY: (idx % 4) * 1.57 }, function (h) {
+      C3.st.hitFlash(h, 0x00e676);
+    }));
+    C3.st.burst(sp[0], 1.4, sp[1], 0x00e676);
   }
-  function arenaSync() {
-    if (!A3.st || !G.s) return;
-    if (!G.s.over) arenaSetFoe(G.s.battle);
+  function cityReset() {
+    if (!C3.st) return;
+    C3.holders.forEach(function (h) { C3.st.remove(h); });
+    C3.holders = [];
   }
-  function fxCharge(ratio) {  // aura pulse while charging
-    if (!A3.st) return;
-    A3.st.hitFlash(A3.my, ratio >= 1.5 ? 0x00e676 : 0x00e5ff);
-    A3.st.burst(-3.2, 0.6, 0, ratio >= 1.5 ? 0x00e676 : 0x00e5ff);
-  }
-  function fxBeam(broken) {   // the unleashed beam: glowing bar between fighters
-    if (!A3.st) return;
-    var T = A3.st.THREE;
-    var color = broken ? 0x00e676 : 0x7df9ff;
-    var beam = new T.Mesh(new T.CylinderGeometry(broken ? 0.34 : 0.2, broken ? 0.34 : 0.2, 6.4, 10),
-      new T.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.95 }));
-    beam.rotation.z = Math.PI / 2;
-    beam.position.set(0, 1.4, 0);
-    A3.st.scene.add(beam);
-    A3.st.tween(0.5, function (k) { beam.material.opacity = 0.95 * (1 - k); beam.scale.y = 1 - k * 0.4; },
-      function () { A3.st.scene.remove(beam); });
-    A3.st.lunge(A3.my, 1.0);
-    A3.st.hitFlash(A3.foe, color);
-    A3.st.burst(3.2, 1.4, 0, color);
-    if (broken) { A3.st.burst(3.2, 2.0, 0.5, 0xffd740); A3.st.shake(0.35); }
-  }
-  function fxBlast() {        // foe counterattack
-    if (!A3.st) return;
-    A3.st.lunge(A3.foe, -1.6);
-    A3.st.hitFlash(A3.my, 0xff4d6d);
-    A3.st.burst(-3.2, 1.4, 0, 0xff4d6d);
-    A3.st.shake(0.3);
-  }
-  function fxDefeated() { if (A3.st) { A3.st.burst(3.2, 1.6, 0, 0x00e676); A3.st.burst(3.2, 0.8, 0.6, 0xffd740); A3.st.shake(0.35); } }
-  function fxRevive()   { if (A3.st) A3.st.burst(-3.2, 1.4, 0, 0xffd740); }
+  function cityBlackout() { if (C3.st) { C3.st.burst(0, 2, 0, 0xff4d6d); C3.st.shake(0.3); } }
 
   // ═════════════ UI ═════════════
-  function fmtPower(v) { return v.toLocaleString('en-US'); }
   function hud() {
     var s = G.s;
-    $('myIcon').textContent = '🥋';
-    $('myName').textContent = 'YOU — ' + (s.battle >= BATTLES ? 'CHAMPION' : 'UNRANKED');
-    $('myStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.hp)) + '/' + s.hpMax + ' · ⚡ ' + fmtPower(s.power) + ' · 🔧×' + s.repair;
-    $('myHp').style.width = Math.max(0, (s.hp / s.hpMax) * 100) + '%';
-    $('foeIcon').textContent = s.foe.icon;
-    $('foeName').textContent = s.foe.name;
-    $('foeStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.foe.hp)) + '/' + s.foe.hpMax + ' · 🥽 RATED ' + fmtPower(s.foe.power);
-    $('foeHp').style.width = Math.max(0, (s.foe.hp / s.foe.hpMax) * 100) + '%';
-    $('stageChips').innerHTML = FOES.map(function (x, i) {
-      return '<span class="sc' + (i < s.battle ? ' on' : '') + '">' + x.icon + ' ' + fmtPower(Math.round(x.power * s.mult)) + '</span>';
-    }).join('');
-    var ratio = s.power / s.foe.power;
-    var btn = $('unleashBtn');
-    if (s.over) { btn.style.display = 'none'; }
-    else {
-      btn.style.display = 'block';
-      btn.classList.toggle('hot', ratio >= BREAK_RATIO);
-      btn.textContent = (ratio >= BREAK_RATIO ? '💥 UNLEASH — SCOUTER WILL SHATTER (' : '🔆 UNLEASH BEAM (')
-        + Math.round(ratio * 100) + '% OF FOE RATING)';
-    }
+    $('stageChips').innerHTML =
+      '<span class="sc on">👥 ' + s.pop + ' / ' + s.target + '</span>' +
+      '<span class="sc on">₡ ' + s.credits + '</span>' +
+      '<span class="sc' + (SESSIONS - s.session <= 5 ? ' on' : '') + '">🗓 SESSION ' + s.session + ' / ' + SESSIONS + '</span>' +
+      '<span class="sc">🔥 ×' + s.streak + '</span>';
+    renderPlots();
+  }
+  function renderPlots() {
+    var s = G.s;
+    var full = s.plots.length >= PLOTS;
+    $('plots').innerHTML = Object.keys(BUILDINGS).map(function (t) {
+      var d = BUILDINGS[t];
+      var cls = (s.over || full || s.credits < d.cost) ? ' cant' : '';
+      return '<button class="plotBtn' + cls + '" onclick="NC.build(\'' + t + '\')">' + d.icon + ' ' + d.name + ' ₡' + d.cost + '<br>+' + d.pop + '👥' + (d.income ? ' +' + d.income + '₡/✓' : '') + '</button>';
+    }).join('') + '<button class="plotBtn built">🏗 ' + s.plots.length + '/' + PLOTS + ' PLOTS</button><button class="plotBtn built">💰 +' + income(s) + '₡ INCOME</button>';
   }
   function banner(text) {
     var b = $('banner');
-    b.textContent = text;
-    b.style.opacity = '1';
+    b.textContent = text; b.style.opacity = '1';
     clearTimeout(banner._t);
-    banner._t = setTimeout(function () { b.style.opacity = '0'; }, 1600);
+    banner._t = setTimeout(function () { b.style.opacity = '0'; }, 1500);
   }
-  function shake(id) { var el = $(id); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
   function log(t) { $('log').textContent = t; }
-
   function showQuestion() {
     if (!G.s || G.s.over) return;
     if (G.qIdx >= G.questions.length) G.qIdx = 0;
     var q = G.questions[G.qIdx];
     $('qTermText').textContent = q.term;
     $('qAnswers').innerHTML = q.choices.map(function (ch, i) {
-      return '<div class="qa" onclick="SB.answer(' + i + ')">' + esc(ch) + '</div>';
+      return '<div class="qa" onclick="NC.answer(' + i + ')">' + esc(ch) + '</div>';
     }).join('');
     hud();
+  }
+  function finishIfOver() {
+    if (G.s.over) { setTimeout(endScreen, 900); return true; }
+    return false;
   }
   function answer(i) {
     var s = G.s;
@@ -427,41 +363,34 @@
     Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
     G.qIdx++;
     if (i === q.correctIdx) {
-      var r = charge(s);
-      fxCharge(r.ratio);
+      var g = answerCorrect(s);
       sfx.good();
-      log('⚡ +' + fmtPower(r.gained) + ' POWER' + (s.streak >= 2 ? ' (STREAK ×' + s.streak + ')' : '') + ' — ' + Math.round(r.ratio * 100) + '% of foe rating');
+      log('₡ +' + g + ' CREDITS' + (s.streak >= 2 ? ' (STREAK ×' + s.streak + ')' : ''));
       hud();
-      setTimeout(showQuestion, 600);
+      if (finishIfOver()) return;
+      setTimeout(showQuestion, 550);
     } else {
       if (els[i]) { els[i].classList.remove('dim'); els[i].classList.add('wrong'); }
-      var e = foeBlast(s);
-      shake('myMech');
-      fxBlast();
-      if (e.revived) fxRevive();
+      var lost = answerWrong(s);
+      cityBlackout();
       sfx.bad();
-      log('💥 ' + s.foe.name + ' blasts for ' + e.dmg + (e.drained ? ' — drained ' + fmtPower(e.drained) + ' ⚡' : ''));
+      banner('🌃 BLACKOUT — ' + lost + ' CITIZENS LEAVE');
+      log('💥 Grid failure — population −' + lost);
       hud();
-      if (e.lost) { setTimeout(endScreen, 900); return; }
-      if (e.revived) banner('🔧 NANO-REPAIR — BACK IN THE RING');
-      setTimeout(showQuestion, e.revived ? 1500 : 900);
+      if (finishIfOver()) return;
+      setTimeout(showQuestion, 850);
     }
   }
-  function doUnleash() {
+  function doBuild(type) {
     var s = G.s;
     if (!s || s.over) return;
-    var r = unleash(s);
-    shake('foeMech');
-    fxBeam(r.broken);
-    sfx.evolve();
-    log('🔆 BEAM HITS FOR ' + r.dmg + (r.broken ? ' — CRITICAL!' : ''));
-    if (r.broken) banner('💥 SCOUTER SHATTERED — READING OFF THE SCALE');
-    hud();
-    if (r.won) { setTimeout(endScreen, 900); return; }
-    if (r.defeated) {
-      banner('🏆 ' + FOES[s.battle - 1].name + ' DOWN — NEXT CHALLENGER');
-      setTimeout(arenaSync, 700);
-      setTimeout(function () { hud(); }, 750);
+    var before = s.plots.length;
+    if (build(s, type)) {
+      sfx.evolve();
+      cityAdd(type, before);
+      banner(BUILDINGS[type].icon + ' ' + BUILDINGS[type].name + ' ONLINE — +' + BUILDINGS[type].pop + ' 👥');
+      hud();
+      finishIfOver();
     }
   }
 
@@ -471,7 +400,7 @@
     G.reported = true;
     var s = G.s;
     post({
-      type: 'pflx_arena_game_result', game: 'scouter-break',
+      type: 'pflx_arena_game_result', game: 'neo-city',
       deckId: G.deck ? G.deck.id : 'demo',
       score: scoreFor(s), correct: s.correct, total: s.correct + s.wrong,
       bestStreak: s.bestStreak, won: !!s.won
@@ -483,16 +412,16 @@
     var el = document.createElement('div');
     el.className = 'screen';
     el.innerHTML =
-      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 BELT CLAIMED' : '💀 KNOCKED OUT') + '</div>' +
-      '<div class="sub">' + (s.won ? 'Five rated fighters, five broken scouters. The rings of Sector 9 have a new champion.' : 'You fell in bout ' + (s.battle + 1) + '. Train and requalify.') + '</div>' +
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏙 CITY THRIVES' : '🌃 GHOST TOWN') + '</div>' +
+      '<div class="sub">' + (s.won ? 'Neo City hums with ' + s.pop + ' citizens. The neon skyline is yours, Governor.' : 'The council term ended at ' + s.pop + ' / ' + s.target + ' citizens. The colony ship moves on.') + '</div>' +
       '<div class="stat-row">' +
         '<div class="stat"><b>' + scoreFor(s) + '</b><span>SCORE</span></div>' +
-        '<div class="stat"><b>' + s.battle + '/' + BATTLES + '</b><span>TAMED</span></div>' +
-        '<div class="stat"><b>' + s.breaks + '</b><span>SCOUTERS BROKEN</span></div>' +
+        '<div class="stat"><b>' + s.pop + '</b><span>POPULATION</span></div>' +
+        '<div class="stat"><b>' + s.plots.length + '</b><span>BUILDINGS</span></div>' +
         '<div class="stat"><b>' + s.correct + '</b><span>CORRECT</span></div>' +
       '</div>' +
-      '<div><button class="btn gold" onclick="SB.rematch()">⟳ REQUALIFY</button>' +
-      '<button class="btn" onclick="SB.exit()">✕ EXIT</button></div>';
+      '<div><button class="btn gold" onclick="NC.rematch()">⟳ NEW CHARTER</button>' +
+      '<button class="btn" onclick="NC.exit()">✕ EXIT</button></div>';
     document.body.appendChild(el);
   }
 
@@ -504,25 +433,24 @@
     if (G.cfg.title) {
       document.title = G.cfg.title + ' — PFLX Battle Arena';
       var big = document.querySelector('#intro .big');
-      if (big) big.textContent = (G.cfg.emblem || '🥽') + ' ' + G.cfg.title.toUpperCase();
+      if (big) big.textContent = (G.cfg.emblem || '🌆') + ' ' + G.cfg.title.toUpperCase();
     }
     $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
-      'Five rated fighters between you and the belt. Correct answers charge your ⚡ power;<br>UNLEASH when ready — past 150% their scouter SHATTERS.<br>The final champion is rated 9,001. One 🔧 nano-repair.';
+      'Twelve plots of bare regolith and a two-year charter. Correct answers earn ₡ credits;<br>build HABs, SHOPs, PARKs and SPIREs on the live 3D skyline.<br>Blackouts cost citizens. Reach 1,000 👥 in 24 sessions.';
     $('startBtn').style.display = 'inline-block';
   }
 
-  window.SB = {
-    _core: { newClash: newClash, charge: charge, unleash: unleash, foeBlast: foeBlast, foeFor: foeFor,
-             scoreFor: scoreFor, buildQuestions: buildQuestions, FOES: FOES, BREAK_RATIO: BREAK_RATIO,
-             BATTLES: BATTLES, DIFF_MULT: DIFF_MULT, applyConfig: applyConfig },
+  window.NC = {
+    _core: { newCity: newCity, answerCorrect: answerCorrect, answerWrong: answerWrong, build: build,
+             income: income, scoreFor: scoreFor, buildQuestions: buildQuestions, BUILDINGS: BUILDINGS,
+             SESSIONS: SESSIONS, PLOTS: PLOTS, POP_TARGET: POP_TARGET, DIFF_MULT: DIFF_MULT, applyConfig: applyConfig },
     start: function () {
       var intro = $('intro'); if (intro) intro.remove();
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       $('wrap').style.display = 'flex';
-      G.s = newClash(G.cfg.difficulty);
-      arenaInit();
-      A3.foeBattle = -1;
-      arenaSync();
+      G.s = newCity(G.cfg.difficulty);
+      cityInit();
+      cityReset();
       G.qIdx = 0; G.reported = false;
       G.questions = buildQuestions(G.deck.cards);
       if (G.cfg.ordered) {
@@ -532,12 +460,12 @@
           return (order[a.term + '' + a.choices[a.correctIdx]] || 0) - (order[b.term + '' + b.choices[b.correctIdx]] || 0);
         });
       }
-      log('ANSWER TO CHARGE YOUR POWER');
+      log('ANSWER TO EARN CREDITS — BUILD YOUR CITY');
       showQuestion();
     },
     answer: answer,
-    unleash: doUnleash,
-    rematch: function () { window.SB.start(); },
+    build: doBuild,
+    rematch: function () { window.NC.start(); },
     exit: function () {
       post({ type: 'pflx_arena_game_exit' });
       if (window.parent === window) location.reload();
@@ -554,7 +482,7 @@
     applyConfig(m.config);
     initWithDeck(m.deck, m.player);
   });
-  post({ type: 'pflx_game_ready', game: 'scouter-break' });
+  post({ type: 'pflx_game_ready', game: 'neo-city' });
   setTimeout(function () { if (!gotDeck) initWithDeck(DEMO_DECK, null); }, 1600);
 })();
 </script>
@@ -571,7 +499,7 @@
     fit(); addEventListener('resize', fit);
     for (var i = 0; i < 110; i++) stars.push({ x: Math.random(), y: Math.random(), z: 0.3 + Math.random() * 0.7, tw: Math.random() * 6.28 });
     for (var j = 0; j < 3; j++) orbs.push({ x: Math.random(), y: Math.random(), r: 140 + Math.random() * 160, dx: (Math.random() - 0.5) * 0.00012, dy: (Math.random() - 0.5) * 0.00012, hue: j });
-    var AC = '#00e676';
+    var AC = '#7df9ff';
     function hex2rgb(h) { return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]; }
     var rgb = hex2rgb(AC);
     var t = 0;
@@ -622,7 +550,7 @@
   // ── PFLX BGM — procedural game-mode soundtrack (no audio files) ──
   // Config: host/Studio can send config.music=false; player 🎵 toggle
   // persists per browser. Starts on the first user gesture.
-  var BPM = 132, ROOT = 110, MOOD = 'drive';
+  var BPM = 104, ROOT = 130.81, MOOD = 'upbeat';
   var SCALES = { tense: [0,3,5,7,10], march: [0,2,3,7,8], upbeat: [0,2,4,7,9], dark: [0,1,5,6,10], eerie: [0,2,3,6,7], drive: [0,3,5,7,10] };
   var scale = SCALES[MOOD] || SCALES.tense;
   var enabled = true, muted = false, ctx = null, master = null, timer = null, step = 0;
@@ -718,7 +646,7 @@
   try {
     if (window.PFLXStage && PFLXStage.has3D) {
       var intro = document.getElementById('intro');
-      if (intro) PFLXStage.hero(intro, 'units/character.glb', { accent: 0x00e676 });
+      if (intro) PFLXStage.hero(intro, 'city/building-small-a.glb', { accent: 0x7df9ff });
     }
   } catch (e) {}
 })();

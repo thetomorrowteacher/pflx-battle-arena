@@ -2678,18 +2678,30 @@ const STUDIO_TEMPLATES = [
   { id: 'star-saga', name: 'Star Saga', icon: '🎲', file: 'games/star-saga.html', ready: true,
     img: 'games/covers/star-saga.png',
     desc: 'Sci-fi D&D campaign: 8 chapters aboard a derelict megaship. Correct answers give ADVANTAGE on the d20.' },
-  { id: 'sky-climb', name: 'Sky Climb', icon: '🧗', ready: false, desc: "Don't-Look-Down-style vertical ascent: answers generate jump energy. COMING SOON." },
-  { id: 'planet-defense', name: 'Planet Defense: Space TD', icon: '🪐', file: 'games/planet-defense.html', ready: true,
+  { id: 'sky-climb', name: 'Sky Climb', icon: '🧗', file: 'games/sky-climb.html', ready: true,
+    img: 'games/covers/sky-climb.png',
+    desc: "Don't-Look-Down-style ascent: the void rises constantly — correct answers vault you up the spire, wrong answers slip you toward it. Reach 1000m." },
+  { id: 'planet-defense', name: 'Last Colony TD', icon: '🪐', file: 'games/planet-defense.html', ready: true,
     img: 'games/covers/planet-defense.png',
     desc: 'Space tower-defense: 6 turret slots ring your planet; correct answers fund builds/upgrades across 10 raider waves — wave 10 is the 👑 DREADNOUGHT.' },
-  { id: 'scouter-break', name: 'Scouter Break', icon: '🥽', file: 'games/scouter-break.html', ready: true,
+  { id: 'scouter-break', name: 'Overlimit 9001', icon: '🥽', file: 'games/scouter-break.html', ready: true,
     img: 'games/covers/scouter-break.png',
     desc: 'Power-level combat: correct answers CHARGE your ⚡ power, UNLEASH beams when ready — past 150% the foe\'s scouter SHATTERS. Final champion rated 9,001.' },
-  { id: 'stick-circuit', name: 'Stick Circuit', icon: '🥷', ready: false, desc: 'Stickman-style cyber-dojo fighter — combos charged by knowledge. COMING SOON.' },
-  { id: 'nexus-legends', name: 'Nexus Legends', icon: '🏟', ready: false, desc: 'MOBA-style lane battle (Mobile Legends): push the enemy core. COMING SOON.' },
-  { id: 'cyber-agents', name: 'Cyber Agents', icon: '🛡', ready: false, desc: 'Co-op beat-em-up: play as the CyberSecurity Agents of the Startup Studios — MINDFORGE, INNOV8, GENTECH, eMAGINATION — purging a breached network. COMING SOON.' },
-  { id: 'neo-city', name: 'Neo City', icon: '🏙', ready: false, desc: 'SimCity-style builder: knowledge funds districts of your megacity. COMING SOON.' },
-  { id: 'circuit-brawl', name: 'Circuit Brawl', icon: '🤼', ready: false, desc: 'Brawlhalla-style platform fighter — knockouts off the grid. COMING SOON.' }
+  { id: 'stick-circuit', name: 'Stick Circuit', icon: '🥷', file: 'games/stick-circuit.html', ready: true,
+    img: 'games/covers/stick-circuit.png',
+    desc: 'Stickman ladder fighter with live animated stick figures: land combos through 3 rounds — Novice Proxy, Volt Duelist, Grid Master.' },
+  { id: 'nexus-legends', name: 'Nexus Legends', icon: '🏟', file: 'games/nexus-legends.html', ready: true,
+    img: 'games/covers/nexus-legends.png',
+    desc: 'MOBA lane-push: correct answers deploy minions (streaks = SOLDIERS and CHAMPIONS) that march and brawl on their own. Destroy the enemy Nexus.' },
+  { id: 'cyber-agents', name: 'Cyber Agents', icon: '🛡', file: 'games/cyber-agents.html', ready: true,
+    img: 'games/covers/cyber-agents.png',
+    desc: 'Play a CyberSecurity Agent of the Startup Studios — 🔨 MINDFORGE, ⚡ INNOV8, 🧬 GENTECH or 🌈 eMAGINATION, each with a signature ability — and purge 3 floors of a breached network.' },
+  { id: 'neo-city', name: 'Neo City', icon: '🏙', file: 'games/neo-city.html', ready: true,
+    img: 'games/covers/neo-city.png',
+    desc: 'SimCity-style builder on a live 3D skyline: credits fund HABs, SHOPs, PARKs and SPIREs across 12 plots. Blackouts cost citizens — reach 1,000 👥 in 24 sessions.' },
+  { id: 'circuit-brawl', name: 'Circuit Brawl', icon: '🤼', file: 'games/circuit-brawl.html', ready: true,
+    img: 'games/covers/circuit-brawl.png',
+    desc: 'Brawlhalla-style platform fighter: stack the rival\'s DAMAGE % with combos — the higher it climbs, the easier they LAUNCH. 3 stocks each.' }
 ];
 const STUDIO_BACKGROUNDS = [
   { id: 'space',     label: 'Deep Space' },
@@ -5549,7 +5561,7 @@ function goSettings() { SFX.navigate(); state.screen = "settings"; render(); }
 // CIPHER GAME LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PFLX_ARENA_BUILD = '2026-07-04.3';
+const PFLX_ARENA_BUILD = '2026-07-04.4';
 try { console.log('[PFLX Arena] build', PFLX_ARENA_BUILD); } catch (e) {}
 function goScreen(s) { SFX.navigate(); state.screen = s; render(); }
 // Knowledge Decks + Studio games boot — pull the shared rows once at startup.

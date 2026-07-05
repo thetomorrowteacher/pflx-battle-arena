@@ -3,17 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Overlimit 9001 — PFLX Battle Arena</title>
+<title>Stick Circuit — PFLX Battle Arena</title>
 <!-- ═══════════════════════════════════════════════════════════════
-     SCOUTER BREAK — Arena Game Cartridge #10 (July 2026).
-     Power-level combat: correct answers CHARGE your power (streaks
-     multiply). UNLEASH a beam anytime — damage scales with power vs
-     the foe's rated level; past 150% the foe's scouter SHATTERS
-     (crit). Wrong answers = foe blast + charge drain. Five rated
-     fighters, the last rated 9001. One nano-repair revive.
+     STICK CIRCUIT — Arena Game Cartridge #17 (July 2026).
+     Stickman tournament fighter (canvas 2D, animated stick figures):
+     three rounds up the underground Circuit ladder. Correct answers
+     land strikes (streaks combo harder); wrong answers eat counters.
+     One 🔧 second wind. Beat all three fighters to take the Circuit.
      Speaks ARENA GAME CARTRIDGE CONTRACT v0.1. game id:
-     'scouter-break'. Config: { title, accent, background, emblem,
-     difficulty, ordered, sound, music }. Pure core: window.SB._core.
+     'stick-circuit'. Config: { title, accent, background, emblem,
+     difficulty, ordered, sound, music }. Pure core: window.ST._core.
      ═══════════════════════════════════════════════════════════════ -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="../vendor/three.min.js"></script>
@@ -89,54 +88,53 @@
   .howto li { font-size:12.5px; color:#aebad2; line-height:1.6; margin:4px 0 4px 16px; }
   .howto li::marker { color:#b388ff; }
 
-  #unleashBtn { font-family:'Orbitron'; font-size:11px; font-weight:900; letter-spacing:0.12em; padding:11px;
-                border-radius:10px; border:1px solid rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740;
-                cursor:pointer; transition:all 0.15s; }
-  #unleashBtn:hover { background:rgba(255,215,64,0.25); box-shadow:0 0 18px rgba(255,215,64,0.4); }
-  #unleashBtn.hot { border-color:#00e676; color:#00e676; background:rgba(0,230,118,0.12); animation:hotPulse 0.8s infinite; }
-  @keyframes hotPulse { 50% { box-shadow:0 0 22px rgba(0,230,118,0.55); } }
+  #agentRow { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
+  .agentBtn { font-family:'Orbitron'; font-size:8px; font-weight:800; letter-spacing:0.04em; padding:8px 4px;
+              border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(10,20,36,0.85); color:#cfe3ff;
+              cursor:pointer; transition:all 0.13s; text-align:center; }
+  .agentBtn:hover { border-color:rgba(0,229,255,0.5); }
+  .agentBtn.on { border-color:#ffd740; color:#ffd740; background:rgba(255,215,64,0.1); box-shadow:0 0 12px rgba(255,215,64,0.3); }
 
-  /* ── 3D battle arena ── */
-  #arena3d { display:none; height:220px; border-radius:14px; overflow:hidden; border:1px solid rgba(0,229,255,0.25);
-             background:radial-gradient(ellipse at 50% 120%, rgba(0,229,255,0.08), transparent 70%); }
-  body.has3d #arena3d { display:block; }
-  body.has3d .mech .mi { display:none; }
-  body.has3d .mech { padding:8px 12px; }
+  /* ── stick ring ── */
+  #ringWrap { border-radius:14px; overflow:hidden; border:1px solid rgba(0,229,255,0.25);
+              background:radial-gradient(ellipse at 50% 120%, rgba(0,229,255,0.07), transparent 70%); }
+  #ringWrap canvas { display:block; width:100%; height:auto; }
+  .mech .mi { display:none; }
+  .mech { padding:8px 12px; }
 </style>
 </head>
 <body>
 <canvas id="bgfx"></canvas>
 <div id="wrap" style="display:none">
   <div id="stageChips"></div>
-  <div id="arena3d"></div>
+  <div id="ringWrap"><canvas id="ring" width="720" height="210"></canvas></div>
   <div id="field">
     <div class="mech mine" id="myMech">
-      <div class="mi" id="myIcon">🥋</div>
-      <div class="mn" id="myName">YOU — UNRANKED</div>
+      <div class="mi" id="myIcon">🐕</div>
+      <div class="mn" id="myName">SPARK PUP</div>
       <div class="ms" id="myStats"></div>
       <div class="hpb"><div class="hpf" id="myHp" style="width:100%"></div></div>
     </div>
     <div class="vs">VS</div>
     <div class="mech enemy" id="foeMech">
-      <div class="mi" id="foeIcon">🛸</div>
-      <div class="mn" id="foeName">DRONE K-9</div>
+      <div class="mi" id="foeIcon">🦂</div>
+      <div class="mn" id="foeName">RUST CRAWLER</div>
       <div class="ms" id="foeStats"></div>
       <div class="hpb"><div class="hpf" id="foeHp" style="width:100%"></div></div>
     </div>
   </div>
-  <div id="log">ANSWER TO CHARGE YOUR POWER</div>
-  <button id="unleashBtn" onclick="SB.unleash()" style="display:none"></button>
+  <div id="log">ANSWER TO CHARGE YOUR ATTACK</div>
   <div id="quiz">
-    <div id="qTerm"><span class="kick">CORRECT = YOU STRIKE · WRONG = IT STRIKES</span><span id="qTermText"></span></div>
+    <div id="qTerm"><span class="kick">CORRECT = YOUR STRIKE · WRONG = COUNTER</span><span id="qTermText"></span></div>
     <div id="qAnswers"></div>
   </div>
 </div>
 <div id="banner"></div>
 <div class="screen" id="intro">
-  <div class="big" style="color:#00e676;text-shadow:0 0 20px rgba(0,230,118,0.6)">🥽 OVERLIMIT 9001</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="The orbital fight rings of Sector 9 rank every fighter by POWER LEVEL — read through the green lens of a combat scouter. The scanners have never been wrong. Tonight an unranked challenger steps onto the ring: you. Five rated fighters stand between you and the belt. Make the scouters lie."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Every CORRECT answer charges your ⚡ POWER LEVEL — streaks multiply the gain</li><li>UNLEASH your beam anytime: damage scales with your power vs the foe's rating, then spends most of your charge</li><li>Push past 150% of the foe's rating before unleashing → SCOUTER SHATTERED, critical hit</li><li>Wrong answers = the foe blasts you AND drains your charge. One 🔧 nano-repair. Defeat all 5</li></ul></div></div>
+  <div class="big" style="color:#7df9ff;text-shadow:0 0 20px rgba(0,229,255,0.6)">🥋 STICK CIRCUIT</div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="Below the arcology, past the vending drones, there's a door with no sign. Behind it: the Circuit — the stick-fighter ladder where reflex means nothing and a sharp mind hits like a freight loader. Three names sit above yours on the board. Time to erase them."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Correct answers land strikes — jabs, hooks, flash kicks. COMBOS hit harder</li><li>Wrong answers eat a counter from your opponent</li><li>Beat 🩶 Novice Proxy → ⚡ Volt Duelist → 🔴 Grid Master (they hit harder each round)</li><li>One 🔧 second wind revives you at half health. Take the Circuit title</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
-  <button class="btn gold" id="startBtn" style="display:none" onclick="SB.start()">▶ ENTER THE RING</button>
+  <button class="btn gold" id="startBtn" style="display:none" onclick="ST.start()">▶ STEP INTO THE RING</button>
 </div>
 
 <script>
@@ -156,82 +154,53 @@
   };
 
   // ═════════════ PURE CORE (Node-testable) ═════════════
-  var FOES = [
-    { name: 'DRONE K-9',    icon: '🛸', power: 1200, hp: 60,  atk: 8  },
-    { name: 'SYNTH RAIDER', icon: '🤖', power: 2400, hp: 85,  atk: 10 },
-    { name: 'WAR GOLEM',    icon: '🗿', power: 4200, hp: 110, atk: 13 },
-    { name: 'VOID ANDROID', icon: '👁', power: 6400, hp: 145, atk: 16 },
-    { name: 'OMEGA PRIME',  icon: '👑', power: 9001, hp: 185, atk: 20 }
+  var FLOORS = [
+    { name: 'NOVICE PROXY', icon: '🩶', hp: 80,  atk: 11, color: '#8a9ab8' },
+    { name: 'VOLT DUELIST', icon: '⚡', hp: 120, atk: 15, color: '#ffd740' },
+    { name: 'GRID MASTER',  icon: '🔴', hp: 170, atk: 20, color: '#ff4d6d' }
   ];
   var DIFF_MULT = { easy: 0.8, normal: 1, hard: 1.25 };
-  var BATTLES = FOES.length;
-  var BREAK_RATIO = 1.5;  // power past 150% of the foe's rating = scouter shatters (crit)
-
+  var BATTLES = FLOORS.length;
   function foeFor(n, mult) {
-    var f = FOES[Math.min(n, FOES.length - 1)];
-    return { name: f.name, icon: f.icon, power: Math.round(f.power * mult),
-             hp: Math.round(f.hp * mult), hpMax: Math.round(f.hp * mult), atk: Math.round(f.atk * mult) };
+    var f = FLOORS[Math.min(n, FLOORS.length - 1)];
+    return { name: f.name, icon: f.icon, color: f.color, hp: Math.round(f.hp * mult), hpMax: Math.round(f.hp * mult), atk: Math.round(f.atk * mult) };
   }
-  function newClash(difficulty) {
+  function newOp(difficulty) {
     var mult = DIFF_MULT[difficulty] || 1;
-    return { mult: mult, battle: 0, power: 500, hp: 130, hpMax: 130,
-             foe: foeFor(0, mult), repair: 1, breaks: 0,
+    return { mult: mult, battle: 0, hp: 110, hpMax: 110,
+             enemy: foeFor(0, mult), repair: 1,
              correct: 0, wrong: 0, streak: 0, bestStreak: 0, over: false, won: false };
   }
-  // correct answer → charge. Returns { gained, ratio }.
-  function charge(s) {
-    if (s.over) return { gained: 0, ratio: 0 };
-    s.correct++;
-    s.streak++;
+  function strike(s) {
+    if (s.over) return { dmg: 0, defeated: false, won: false };
+    s.correct++; s.streak++;
     s.bestStreak = Math.max(s.bestStreak, s.streak);
-    var gained = 600 + Math.min(8, s.streak) * 250;
-    s.power += gained;
-    return { gained: gained, ratio: s.power / s.foe.power };
-  }
-  // player fires the beam. Returns { dmg, broken, defeated, won }.
-  function unleash(s) {
-    if (s.over) return { dmg: 0, broken: false, defeated: false, won: false };
-    var ratio = s.power / s.foe.power;
-    var broken = ratio >= BREAK_RATIO;
-    var dmg = Math.round(Math.max(10, Math.min(120, 34 * ratio * (broken ? 1.5 : 1))));
-    s.power = Math.max(500, Math.round(s.power * 0.4));
-    s.foe.hp -= dmg;
-    if (broken) s.breaks++;
-    var out = { dmg: dmg, broken: broken, defeated: false, won: false };
-    if (s.foe.hp <= 0) {
-      s.foe.hp = 0;
+    var dmg = 13 + Math.min(9, s.streak) * 3;
+    s.enemy.hp -= dmg;
+    var out = { dmg: dmg, defeated: false, won: false };
+    if (s.enemy.hp <= 0) {
+      s.enemy.hp = 0;
       out.defeated = true;
       s.battle++;
       if (s.battle >= BATTLES) { s.over = true; s.won = true; out.won = true; return out; }
-      s.hp = Math.min(s.hpMax, s.hp + 35);   // corner recovery between bouts
-      s.foe = foeFor(s.battle, s.mult);
+      s.hp = Math.min(s.hpMax, s.hp + 30);
+      s.enemy = foeFor(s.battle, s.mult);
     }
     return out;
   }
-  // wrong answer → the foe blasts you and drains your charge.
-  function foeBlast(s) {
-    if (s.over) return { dmg: 0, drained: 0, revived: false, lost: false };
-    s.wrong++;
-    s.streak = 0;
-    var dmg = s.foe.atk;
-    var drained = Math.min(400, Math.max(0, s.power - 500));
+  function enemyStrike(s) {
+    if (s.over) return { dmg: 0, revived: false, lost: false };
+    s.wrong++; s.streak = 0;
+    var dmg = s.enemy.atk;
     s.hp -= dmg;
-    s.power -= drained;
-    var out = { dmg: dmg, drained: drained, revived: false, lost: false };
+    var out = { dmg: dmg, revived: false, lost: false };
     if (s.hp <= 0) {
-      if (s.repair > 0) {
-        s.repair--;
-        s.hp = Math.round(s.hpMax * 0.5);
-        out.revived = true;
-      } else {
-        s.hp = 0; s.over = true; s.won = false; out.lost = true;
-      }
+      if (s.repair > 0) { s.repair--; s.hp = Math.round(s.hpMax * 0.5); out.revived = true; }
+      else { s.hp = 0; s.over = true; s.won = false; out.lost = true; }
     }
     return out;
   }
-  function scoreFor(s) {
-    return s.battle * 30 + s.correct * 8 + s.bestStreak * 5 + s.breaks * 12 + (s.won ? 60 : 0);
-  }
+  function scoreFor(s) { return s.battle * 35 + s.correct * 8 + s.bestStreak * 5 + (s.won ? 60 : 0); }
 
   function buildQuestions(cards, rand) {
     rand = rand || shuffle;
@@ -292,8 +261,8 @@
     evolve: function () { var s2 = this; [392, 523, 659, 784].forEach(function (f, i) { setTimeout(function () { s2.beep(f, 0.14, 'triangle'); }, i * 110); }); }
   };
 
-  var G = { deck: null, player: { id: 'demo', brand: 'Challenger' },
-            cfg: { title: '', accent: '', emblem: '🥽', difficulty: 'normal', ordered: false, sound: true },
+  var G = { deck: null, player: { id: 'demo', brand: 'Fighter' },
+            cfg: { title: '', accent: '', emblem: '🥋', difficulty: 'normal', ordered: false, sound: true },
             s: null, questions: [], qIdx: 0, reported: false };
 
   function applyConfig(cfg) {
@@ -301,7 +270,7 @@
     G.cfg.title = String(cfg.title || '').slice(0, 60);
     G.cfg.accent = /^#[0-9a-fA-F]{6}$/.test(cfg.accent || '') ? cfg.accent : '';
     G.cfg.background = BG_CSS[cfg.background] ? cfg.background : 'space';
-    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🥽';
+    G.cfg.emblem = (typeof cfg.emblem === 'string' && cfg.emblem.length <= 4 && cfg.emblem.indexOf('<') === -1) ? cfg.emblem : '🥋';
     G.cfg.difficulty = DIFF_MULT[cfg.difficulty] ? cfg.difficulty : 'normal';
     G.cfg.ordered = !!cfg.ordered;
     G.cfg.sound = cfg.sound !== false;
@@ -310,93 +279,104 @@
     return G.cfg;
   }
 
-  // ═════════════ 3D FIGHT RING (GLB models — CC0 Kenney packs) ═════════════
-  var A3 = { st: null, my: null, foe: null, foeBattle: -1, beamOn: false };
-  var FOE_MODELS = [
-    { path: 'units/enemy-flying.glb',   scale: 2.3, fly: true },
-    { path: 'space/astronautB.glb',     scale: 2.6 },
-    { path: 'space/turret_double.glb',  scale: 2.9 },
-    { path: 'space/rover.glb',          scale: 2.6 },
-    { path: 'space/alien.glb',          scale: 3.6 }
-  ];
-  function arenaInit() {
-    if (A3.st || !window.PFLXStage || !PFLXStage.has3D) return;
-    var el = $('arena3d');
-    document.body.classList.add('has3d');
-    A3.st = PFLXStage.create(el, { ground: true, groundR: 6.5, accent: 0x00e676, cam: { y: 3.6, z: 9.5, lookY: 1.3 } });
-    if (!A3.st) { document.body.classList.remove('has3d'); return; }
-    A3.my = A3.st.load('units/character.glb', { x: -3.2, scale: 2.8, rotY: Math.PI / 2 }, function (h) {
-      A3.st.bob(h, 0.08, 1.4);
-    });
+  // ═════════════ STICKMAN RING (canvas 2D — the right layer for stick fighters) ═════════════
+  var R = { me: { pose: 'idle', t: 9, alt: 0 }, foe: { pose: 'idle', t: 9, alt: 0 }, raf: null, last: 0 };
+  function setPose(who, pose) { who.pose = pose; who.t = 0; }
+  // pose = joint angle targets (radians): [lean, armF, armB, legF, legB]
+  var POSES = {
+    idle:   [0.00,  0.7, -0.7,  0.25, -0.25],
+    jab:    [0.35,  1.5, -0.4,  0.55, -0.15],
+    kick:   [-0.2,  0.9, -0.9,  1.35, -0.3],
+    hit:    [-0.55, -0.3, 0.5, -0.1,  0.45],
+    down:   [-1.35, 0.2,  0.4,  0.3,  0.5],
+    win:    [0.0,   2.4,  2.4,  0.25, -0.25]
+  };
+  function lerp(a, b, k) { return a + (b - a) * k; }
+  function drawStick(ctx, x, y, facing, pose, k, color, t) {
+    var from = POSES.idle, to = POSES[pose] || POSES.idle;
+    var p = [];
+    for (var i = 0; i < 5; i++) p[i] = lerp(from[i], to[i], k);
+    var bob = pose === 'idle' ? Math.sin(t * 3 + x) * 2 : 0;
+    var lean = p[0] * facing;
+    ctx.strokeStyle = color; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+    var hipX = x, hipY = y + bob;
+    var shX = hipX + Math.sin(lean) * 26 * 0, shY = hipY - 26;
+    shX = hipX + Math.sin(lean) * 10;
+    // spine
+    ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.lineTo(shX, shY); ctx.stroke();
+    // head
+    ctx.beginPath(); ctx.arc(shX + Math.sin(lean) * 6, shY - 9, 7, 0, 6.29); ctx.stroke();
+    // arms
+    function limb(bx, by, ang, len) {
+      var mx = bx + Math.cos(ang) * len * facing, my = by + Math.sin(ang) * len * 0.55 - len * 0.35;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(mx, my); ctx.stroke();
+      return [mx, my];
+    }
+    limb(shX, shY + 3, p[1], 24);
+    limb(shX, shY + 3, p[2], 22);
+    // legs
+    function leg(ang) {
+      var kx = hipX + Math.cos(ang) * 15 * facing, ky = hipY + 14;
+      var fx = kx + Math.cos(ang * 0.7) * 13 * facing, fy = ky + 15;
+      ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+    }
+    leg(p[3]); leg(p[4]);
   }
-  function arenaSetFoe(battle) {
-    if (!A3.st || A3.foeBattle === battle) return;
-    A3.foeBattle = battle;
-    if (A3.foe) A3.st.remove(A3.foe);
-    var m = FOE_MODELS[Math.min(battle, FOE_MODELS.length - 1)];
-    A3.foe = A3.st.load(m.path, { x: 3.2, y: m.fly ? 1.2 : 0, scale: m.scale, rotY: -Math.PI / 2 }, function (h) {
-      A3.st.bob(h, m.fly ? 0.3 : 0.06, m.fly ? 2.2 : 1.1);
-    });
+  function ringLoop(ts) {
+    R.raf = requestAnimationFrame(ringLoop);
+    var dt = Math.min(0.05, (ts - R.last) / 1000 || 0.016);
+    R.last = ts;
+    var cv = $('ring'); if (!cv) return;
+    var ctx = cv.getContext('2d');
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    // floor
+    ctx.strokeStyle = 'rgba(0,229,255,0.35)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(30, H - 24); ctx.lineTo(W - 30, H - 24); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,229,255,0.1)';
+    for (var gx = 40; gx < W - 30; gx += 34) { ctx.beginPath(); ctx.moveTo(gx, H - 24); ctx.lineTo(gx - 14, H); ctx.stroke(); }
+    var t = ts / 1000;
+    R.me.t = Math.min(1, R.me.t + dt * 5);
+    R.foe.t = Math.min(1, R.foe.t + dt * 5);
+    var mk = R.me.pose === 'idle' ? 0 : (R.me.t < 0.5 ? R.me.t * 2 : (1 - R.me.t) * 2);
+    var fk = R.foe.pose === 'idle' ? 0 : (R.foe.t < 0.5 ? R.foe.t * 2 : (1 - R.foe.t) * 2);
+    if (R.me.pose === 'down' || R.me.pose === 'win') mk = Math.min(1, R.me.t * 2);
+    if (R.foe.pose === 'down' || R.foe.pose === 'win') fk = Math.min(1, R.foe.t * 2);
+    if (R.me.t >= 1 && R.me.pose !== 'down' && R.me.pose !== 'win') R.me.pose = 'idle';
+    if (R.foe.t >= 1 && R.foe.pose !== 'down' && R.foe.pose !== 'win') R.foe.pose = 'idle';
+    var lungeMe = (R.me.pose === 'jab' || R.me.pose === 'kick') ? mk * 60 : 0;
+    var lungeFoe = (R.foe.pose === 'jab' || R.foe.pose === 'kick') ? fk * 60 : 0;
+    var foeColor = (G.s && G.s.enemy && G.s.enemy.color) || '#ff4d6d';
+    drawStick(ctx, W * 0.32 + lungeMe, H - 68, 1, R.me.pose, mk, '#00e5ff', t);
+    drawStick(ctx, W * 0.68 - lungeFoe, H - 68, -1, R.foe.pose, fk, foeColor, t + 2);
+    ctx.font = '900 10px Orbitron, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#7a8db0';
+    ctx.fillText('THE CIRCUIT — UNDERGROUND LADDER', W / 2, 18);
   }
-  function arenaSync() {
-    if (!A3.st || !G.s) return;
-    if (!G.s.over) arenaSetFoe(G.s.battle);
+  function ringInit() {
+    if (R.raf) return;
+    R.raf = requestAnimationFrame(ringLoop);
   }
-  function fxCharge(ratio) {  // aura pulse while charging
-    if (!A3.st) return;
-    A3.st.hitFlash(A3.my, ratio >= 1.5 ? 0x00e676 : 0x00e5ff);
-    A3.st.burst(-3.2, 0.6, 0, ratio >= 1.5 ? 0x00e676 : 0x00e5ff);
-  }
-  function fxBeam(broken) {   // the unleashed beam: glowing bar between fighters
-    if (!A3.st) return;
-    var T = A3.st.THREE;
-    var color = broken ? 0x00e676 : 0x7df9ff;
-    var beam = new T.Mesh(new T.CylinderGeometry(broken ? 0.34 : 0.2, broken ? 0.34 : 0.2, 6.4, 10),
-      new T.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.95 }));
-    beam.rotation.z = Math.PI / 2;
-    beam.position.set(0, 1.4, 0);
-    A3.st.scene.add(beam);
-    A3.st.tween(0.5, function (k) { beam.material.opacity = 0.95 * (1 - k); beam.scale.y = 1 - k * 0.4; },
-      function () { A3.st.scene.remove(beam); });
-    A3.st.lunge(A3.my, 1.0);
-    A3.st.hitFlash(A3.foe, color);
-    A3.st.burst(3.2, 1.4, 0, color);
-    if (broken) { A3.st.burst(3.2, 2.0, 0.5, 0xffd740); A3.st.shake(0.35); }
-  }
-  function fxBlast() {        // foe counterattack
-    if (!A3.st) return;
-    A3.st.lunge(A3.foe, -1.6);
-    A3.st.hitFlash(A3.my, 0xff4d6d);
-    A3.st.burst(-3.2, 1.4, 0, 0xff4d6d);
-    A3.st.shake(0.3);
-  }
-  function fxDefeated() { if (A3.st) { A3.st.burst(3.2, 1.6, 0, 0x00e676); A3.st.burst(3.2, 0.8, 0.6, 0xffd740); A3.st.shake(0.35); } }
-  function fxRevive()   { if (A3.st) A3.st.burst(-3.2, 1.4, 0, 0xffd740); }
+  function fxStrike()   { setPose(R.me, Math.random() < 0.5 ? 'jab' : 'kick'); setTimeout(function () { setPose(R.foe, 'hit'); }, 110); }
+  function fxCounter()  { setPose(R.foe, Math.random() < 0.5 ? 'jab' : 'kick'); setTimeout(function () { setPose(R.me, 'hit'); }, 110); }
+  function fxDefeated() { setPose(R.foe, 'down'); setTimeout(function () { setPose(R.me, 'win'); }, 250); setTimeout(function () { setPose(R.me, 'idle'); setPose(R.foe, 'idle'); }, 1400); }
+  function fxRevive()   { setPose(R.me, 'win'); setTimeout(function () { setPose(R.me, 'idle'); }, 700); }
+  function arenaSync()  {}
 
-  // ═════════════ UI ═════════════
-  function fmtPower(v) { return v.toLocaleString('en-US'); }
+  // ═════════════ UI ═════════════  // ═════════════ UI ═════════════  // ═════════════ UI ═════════════
   function hud() {
     var s = G.s;
     $('myIcon').textContent = '🥋';
-    $('myName').textContent = 'YOU — ' + (s.battle >= BATTLES ? 'CHAMPION' : 'UNRANKED');
-    $('myStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.hp)) + '/' + s.hpMax + ' · ⚡ ' + fmtPower(s.power) + ' · 🔧×' + s.repair;
+    $('myName').textContent = 'YOU — CHALLENGER';
+    $('myStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.hp)) + '/' + s.hpMax + ' · 🔧×' + s.repair + ' · 🔥×' + s.streak;
     $('myHp').style.width = Math.max(0, (s.hp / s.hpMax) * 100) + '%';
-    $('foeIcon').textContent = s.foe.icon;
-    $('foeName').textContent = s.foe.name;
-    $('foeStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.foe.hp)) + '/' + s.foe.hpMax + ' · 🥽 RATED ' + fmtPower(s.foe.power);
-    $('foeHp').style.width = Math.max(0, (s.foe.hp / s.foe.hpMax) * 100) + '%';
-    $('stageChips').innerHTML = FOES.map(function (x, i) {
-      return '<span class="sc' + (i < s.battle ? ' on' : '') + '">' + x.icon + ' ' + fmtPower(Math.round(x.power * s.mult)) + '</span>';
+    $('foeIcon').textContent = s.enemy.icon;
+    $('foeName').textContent = s.enemy.name;
+    $('foeStats').textContent = '♥ ' + Math.max(0, Math.ceil(s.enemy.hp)) + '/' + s.enemy.hpMax + ' · ⚔ ' + s.enemy.atk;
+    $('foeHp').style.width = Math.max(0, (s.enemy.hp / s.enemy.hpMax) * 100) + '%';
+    $('stageChips').innerHTML = FLOORS.map(function (x, i) {
+      return '<span class="sc' + (i < s.battle ? ' on' : '') + '">' + x.icon + ' ROUND ' + (i + 1) + '</span>';
     }).join('');
-    var ratio = s.power / s.foe.power;
-    var btn = $('unleashBtn');
-    if (s.over) { btn.style.display = 'none'; }
-    else {
-      btn.style.display = 'block';
-      btn.classList.toggle('hot', ratio >= BREAK_RATIO);
-      btn.textContent = (ratio >= BREAK_RATIO ? '💥 UNLEASH — SCOUTER WILL SHATTER (' : '🔆 UNLEASH BEAM (')
-        + Math.round(ratio * 100) + '% OF FOE RATING)';
-    }
   }
   function banner(text) {
     var b = $('banner');
@@ -414,7 +394,7 @@
     var q = G.questions[G.qIdx];
     $('qTermText').textContent = q.term;
     $('qAnswers').innerHTML = q.choices.map(function (ch, i) {
-      return '<div class="qa" onclick="SB.answer(' + i + ')">' + esc(ch) + '</div>';
+      return '<div class="qa" onclick="ST.answer(' + i + ')">' + esc(ch) + '</div>';
     }).join('');
     hud();
   }
@@ -427,51 +407,44 @@
     Array.prototype.forEach.call(els, function (el) { el.classList.add('dim'); });
     G.qIdx++;
     if (i === q.correctIdx) {
-      var r = charge(s);
-      fxCharge(r.ratio);
+      var r = strike(s);
+      shake('foeMech');
+      fxStrike();
+      if (r.defeated) fxDefeated();
       sfx.good();
-      log('⚡ +' + fmtPower(r.gained) + ' POWER' + (s.streak >= 2 ? ' (STREAK ×' + s.streak + ')' : '') + ' — ' + Math.round(r.ratio * 100) + '% of foe rating');
+      var MOVES = ['CIRCUIT JAB', 'NEON HOOK', 'FLASH KICK', 'GRID SWEEP', 'VOLT UPPERCUT'];
+      log('🥋 ' + MOVES[(s.correct - 1) % MOVES.length] + ' — ' + r.dmg + (s.streak >= 2 ? ' (COMBO ×' + s.streak + ')' : ''));
       hud();
-      setTimeout(showQuestion, 600);
+      if (r.won) { setTimeout(endScreen, 900); return; }
+      if (r.defeated) {
+        sfx.evolve();
+        banner('🏅 ' + FLOORS[s.battle - 1].name + ' DOWN — NEXT ROUND');
+        setTimeout(showQuestion, 1500);
+      } else {
+        setTimeout(showQuestion, 650);
+      }
     } else {
       if (els[i]) { els[i].classList.remove('dim'); els[i].classList.add('wrong'); }
-      var e = foeBlast(s);
+      var e = enemyStrike(s);
       shake('myMech');
-      fxBlast();
+      fxCounter();
       if (e.revived) fxRevive();
       sfx.bad();
-      log('💥 ' + s.foe.name + ' blasts for ' + e.dmg + (e.drained ? ' — drained ' + fmtPower(e.drained) + ' ⚡' : ''));
+      log('💥 ' + s.enemy.name + ' counters for ' + e.dmg);
       hud();
       if (e.lost) { setTimeout(endScreen, 900); return; }
-      if (e.revived) banner('🔧 NANO-REPAIR — BACK IN THE RING');
+      if (e.revived) banner('🔧 NANO-REPAIR — BACK ONLINE');
       setTimeout(showQuestion, e.revived ? 1500 : 900);
     }
   }
-  function doUnleash() {
-    var s = G.s;
-    if (!s || s.over) return;
-    var r = unleash(s);
-    shake('foeMech');
-    fxBeam(r.broken);
-    sfx.evolve();
-    log('🔆 BEAM HITS FOR ' + r.dmg + (r.broken ? ' — CRITICAL!' : ''));
-    if (r.broken) banner('💥 SCOUTER SHATTERED — READING OFF THE SCALE');
-    hud();
-    if (r.won) { setTimeout(endScreen, 900); return; }
-    if (r.defeated) {
-      banner('🏆 ' + FOES[s.battle - 1].name + ' DOWN — NEXT CHALLENGER');
-      setTimeout(arenaSync, 700);
-      setTimeout(function () { hud(); }, 750);
-    }
-  }
 
-    // ═════════════ flow ═════════════
+  // ═════════════ flow ═════════════
   function reportResult() {
     if (G.reported) return;
     G.reported = true;
     var s = G.s;
     post({
-      type: 'pflx_arena_game_result', game: 'scouter-break',
+      type: 'pflx_arena_game_result', game: 'stick-circuit',
       deckId: G.deck ? G.deck.id : 'demo',
       score: scoreFor(s), correct: s.correct, total: s.correct + s.wrong,
       bestStreak: s.bestStreak, won: !!s.won
@@ -483,16 +456,16 @@
     var el = document.createElement('div');
     el.className = 'screen';
     el.innerHTML =
-      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 BELT CLAIMED' : '💀 KNOCKED OUT') + '</div>' +
-      '<div class="sub">' + (s.won ? 'Five rated fighters, five broken scouters. The rings of Sector 9 have a new champion.' : 'You fell in bout ' + (s.battle + 1) + '. Train and requalify.') + '</div>' +
+      '<div class="big" style="color:' + (s.won ? '#00e676;text-shadow:0 0 22px rgba(0,230,118,0.6)' : '#ff4d6d;text-shadow:0 0 22px rgba(255,77,109,0.6)') + '">' + (s.won ? '🏆 CIRCUIT CHAMPION' : '💀 KNOCKED OUT') + '</div>' +
+      '<div class="sub">' + (s.won ? 'Three fighters, three knockouts. The underground Circuit chants a new name tonight: yours.' : 'You hit the mat in round ' + (s.battle + 1) + '. Train and climb again.') + '</div>' +
       '<div class="stat-row">' +
         '<div class="stat"><b>' + scoreFor(s) + '</b><span>SCORE</span></div>' +
-        '<div class="stat"><b>' + s.battle + '/' + BATTLES + '</b><span>TAMED</span></div>' +
-        '<div class="stat"><b>' + s.breaks + '</b><span>SCOUTERS BROKEN</span></div>' +
+        '<div class="stat"><b>' + s.battle + '/' + BATTLES + '</b><span>ROUNDS</span></div>' +
+        '<div class="stat"><b>' + s.bestStreak + '</b><span>BEST COMBO</span></div>' +
         '<div class="stat"><b>' + s.correct + '</b><span>CORRECT</span></div>' +
       '</div>' +
-      '<div><button class="btn gold" onclick="SB.rematch()">⟳ REQUALIFY</button>' +
-      '<button class="btn" onclick="SB.exit()">✕ EXIT</button></div>';
+      '<div><button class="btn gold" onclick="ST.rematch()">⟳ REMATCH</button>' +
+      '<button class="btn" onclick="ST.exit()">✕ EXIT</button></div>';
     document.body.appendChild(el);
   }
 
@@ -504,25 +477,23 @@
     if (G.cfg.title) {
       document.title = G.cfg.title + ' — PFLX Battle Arena';
       var big = document.querySelector('#intro .big');
-      if (big) big.textContent = (G.cfg.emblem || '🥽') + ' ' + G.cfg.title.toUpperCase();
+      if (big) big.textContent = (G.cfg.emblem || '🥋') + ' ' + G.cfg.title.toUpperCase();
     }
     $('introSub').innerHTML = 'Deck: <b style="color:#7df9ff">' + esc(deck.name) + '</b> · ' + deck.cards.length + ' cards<br>' +
-      'Five rated fighters between you and the belt. Correct answers charge your ⚡ power;<br>UNLEASH when ready — past 150% their scouter SHATTERS.<br>The final champion is rated 9,001. One 🔧 nano-repair.';
+      'Three fighters stand between you and the underground Circuit title.<br>Correct answers land strikes — combos hit harder. Wrong answers eat counters.<br>One 🔧 second wind.';
     $('startBtn').style.display = 'inline-block';
   }
 
-  window.SB = {
-    _core: { newClash: newClash, charge: charge, unleash: unleash, foeBlast: foeBlast, foeFor: foeFor,
-             scoreFor: scoreFor, buildQuestions: buildQuestions, FOES: FOES, BREAK_RATIO: BREAK_RATIO,
+  window.ST = {
+    _core: { newOp: newOp, strike: strike, enemyStrike: enemyStrike, foeFor: foeFor,
+             scoreFor: scoreFor, buildQuestions: buildQuestions, FLOORS: FLOORS,
              BATTLES: BATTLES, DIFF_MULT: DIFF_MULT, applyConfig: applyConfig },
     start: function () {
       var intro = $('intro'); if (intro) intro.remove();
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       $('wrap').style.display = 'flex';
-      G.s = newClash(G.cfg.difficulty);
-      arenaInit();
-      A3.foeBattle = -1;
-      arenaSync();
+      G.s = newOp(G.cfg.difficulty);
+      ringInit();
       G.qIdx = 0; G.reported = false;
       G.questions = buildQuestions(G.deck.cards);
       if (G.cfg.ordered) {
@@ -532,12 +503,11 @@
           return (order[a.term + '' + a.choices[a.correctIdx]] || 0) - (order[b.term + '' + b.choices[b.correctIdx]] || 0);
         });
       }
-      log('ANSWER TO CHARGE YOUR POWER');
+      log('ROUND 1 — FIGHT');
       showQuestion();
     },
     answer: answer,
-    unleash: doUnleash,
-    rematch: function () { window.SB.start(); },
+    rematch: function () { window.ST.start(); },
     exit: function () {
       post({ type: 'pflx_arena_game_exit' });
       if (window.parent === window) location.reload();
@@ -554,7 +524,7 @@
     applyConfig(m.config);
     initWithDeck(m.deck, m.player);
   });
-  post({ type: 'pflx_game_ready', game: 'scouter-break' });
+  post({ type: 'pflx_game_ready', game: 'stick-circuit' });
   setTimeout(function () { if (!gotDeck) initWithDeck(DEMO_DECK, null); }, 1600);
 })();
 </script>
@@ -571,7 +541,7 @@
     fit(); addEventListener('resize', fit);
     for (var i = 0; i < 110; i++) stars.push({ x: Math.random(), y: Math.random(), z: 0.3 + Math.random() * 0.7, tw: Math.random() * 6.28 });
     for (var j = 0; j < 3; j++) orbs.push({ x: Math.random(), y: Math.random(), r: 140 + Math.random() * 160, dx: (Math.random() - 0.5) * 0.00012, dy: (Math.random() - 0.5) * 0.00012, hue: j });
-    var AC = '#00e676';
+    var AC = '#ffd740';
     function hex2rgb(h) { return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]; }
     var rgb = hex2rgb(AC);
     var t = 0;
@@ -622,7 +592,7 @@
   // ── PFLX BGM — procedural game-mode soundtrack (no audio files) ──
   // Config: host/Studio can send config.music=false; player 🎵 toggle
   // persists per browser. Starts on the first user gesture.
-  var BPM = 132, ROOT = 110, MOOD = 'drive';
+  var BPM = 136, ROOT = 110, MOOD = 'drive';
   var SCALES = { tense: [0,3,5,7,10], march: [0,2,3,7,8], upbeat: [0,2,4,7,9], dark: [0,1,5,6,10], eerie: [0,2,3,6,7], drive: [0,3,5,7,10] };
   var scale = SCALES[MOOD] || SCALES.tense;
   var enabled = true, muted = false, ctx = null, master = null, timer = null, step = 0;
@@ -718,7 +688,7 @@
   try {
     if (window.PFLXStage && PFLXStage.has3D) {
       var intro = document.getElementById('intro');
-      if (intro) PFLXStage.hero(intro, 'units/character.glb', { accent: 0x00e676 });
+      if (intro) PFLXStage.hero(intro, 'units/character.glb', { accent: 0x00e5ff });
     }
   } catch (e) {}
 })();
