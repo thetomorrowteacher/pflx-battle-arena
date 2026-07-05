@@ -2838,7 +2838,16 @@ const baSessions = {
   byId(id) { return this.list.find(function (x) { return x.id === id; }); },
   active() {
     const now = Date.now();
-    return this.list.filter(function (x) { return x.startsAt <= now && x.endsAt > now; });
+    return this.list.filter(function (x) {
+      if (!(x.startsAt <= now && x.endsAt > now)) return false;
+      // season sessions live and die with their Mission Control season
+      if (x.seasonMode) {
+        if (!mcSeasons.loaded) return true;   // don't flicker before seasons load
+        const s = x.seasonId ? mcSeasons.byId(x.seasonId) : null;
+        return !!(s && mcSeasons.active().indexOf(s) !== -1);
+      }
+      return true;
+    });
   }
 };
 // ═══════════════ LIVE PLAY — one-shot live events + co-op rooms ═══════════════
@@ -2995,8 +3004,35 @@ setInterval(function () {
 const SESSION_DURATIONS = [
   { m: 15, label: '15 minutes' }, { m: 30, label: '30 minutes' }, { m: 60, label: '1 hour' },
   { m: 120, label: '2 hours' }, { m: 360, label: '6 hours' }, { m: 1440, label: '24 hours' },
-  { m: 10080, label: '1 week' }, { m: 129600, label: 'Full Season (90 days)' }
+  { m: 10080, label: '1 week' }
 ];
+// ═══ MC SEASONS — Mission Control is the single source of truth ═══
+// Arena reads the 'seasons' KV row MC maintains ({id,name,startDate,endDate,
+// active}). A season only counts ACTIVE if MC flags it active AND today falls
+// inside its date window — stale 'active' flags don't leak into the arena.
+const mcSeasons = {
+  KEY: 'seasons', list: [], loaded: false,
+  async load() {
+    const d = await supabaseLoad(this.KEY);
+    this.list = Array.isArray(d) ? d : [];
+    this.loaded = true;
+    if (state.screen === 'host_modes' || state.screen === 'side_quests') render();
+  },
+  active() {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.list.filter(function (s) {
+      if (!s || !s.active) return false;
+      if (s.startDate && s.startDate > today) return false;
+      if (s.endDate && s.endDate < today) return false;
+      return true;
+    });
+  },
+  byId(id) { return this.list.find(function (s) { return s && s.id === id; }); },
+  endMsOf(s) {
+    if (!s || !s.endDate) return 0;
+    return new Date(s.endDate + 'T23:59:59').getTime();
+  }
+};
 // ── Season level-up replays (Ennis): a season session is replayable at
 // escalating difficulty — each WIN advances that player's level for
 // that session: LVL 1 easy → LVL 2 normal → LVL 3 hard (stays hard).
@@ -3107,7 +3143,7 @@ function arenaLiveSessionsHtml() {
           '<div class="mode-head" style="margin:0"><div class="mode-icon">' + dkEsc((sess.config && sess.config.emblem) || tpl.icon) + '</div>' +
           '<div><div class="mode-name">' + dkEsc(sess.title) + '</div>' +
           '<div class="mode-meta">by ' + dkEsc(sess.launchedByName || 'Host') + ' · ⏳ ' + sessionTimeLeft(sess) +
-            (sess.seasonMode ? ' · 🎚 YOUR LVL ' + (sessionLevelFor(sess.id) + 1) + '/' + SESSION_LEVELS.length : '') + '</div></div></div>' +
+            (sess.seasonMode ? ' · 🏆 ' + dkEsc(sess.seasonName || 'Season') + ' · 🎚 LVL ' + (sessionLevelFor(sess.id) + 1) + '/' + SESSION_LEVELS.length : '') + '</div></div></div>' +
           '<span class="cipher-status-badge active" style="font-size:0.5rem;border-color:rgba(255,77,109,0.6);color:#ff8fa3">● LIVE</span>' +
         '</div>' +
         '<div class="mode-desc">' + tpl.icon + ' ' + tpl.name + ' on "' + dkEsc(d ? d.name : 'deck deleted') + '"' + (d && d.subject ? ' · ' + dkEsc(d.subject) : '') + '</div>' +
@@ -3297,7 +3333,9 @@ async function hostLaunchMode(tplId) {
   const deckId = val('hm-deck-' + tplId, '');
   if (!deckId || !baDecks.byId(deckId)) { alert('Attach a Knowledge Deck first (import one on the DECKS screen).'); return; }
   const mins = Math.max(5, parseInt(val('hm-dur-' + tplId, '60'), 10) || 60);
-  const season = val('hm-season-' + tplId, 'off') === 'on';
+  const seasonVal = val('hm-season-' + tplId, 'off');
+  const mcSeason = seasonVal.indexOf('season:') === 0 ? mcSeasons.byId(seasonVal.slice(7)) : null;
+  const season = !!mcSeason;
   const diff = ['easy', 'normal', 'hard'].indexOf(val('hm-diff-' + tplId, 'normal')) !== -1 ? val('hm-diff-' + tplId, 'normal') : 'normal';
   const title = (val('hm-title-' + tplId, '') || '').trim() || (tpl.name + ' LIVE');
   const now = Date.now();
@@ -3308,9 +3346,13 @@ async function hostLaunchMode(tplId) {
       id: dkUid('sess'), title: title, template: tpl.id, deckId: deckId,
       config: { difficulty: diff, sound: true, music: true, powerups: true },
       seasonMode: season,
+      seasonId: mcSeason ? mcSeason.id : undefined,
+      seasonName: mcSeason ? mcSeason.name : undefined,
       launchedBy: (state.player && state.player.id) || 'host',
       launchedByName: (state.player && state.player.brand) || 'Host',
-      startsAt: now, endsAt: now + (season ? 129600 : mins) * 60000, createdAt: now
+      startsAt: now,
+      endsAt: season ? Math.max(now + 3600000, mcSeasons.endMsOf(mcSeason)) : now + mins * 60000,
+      createdAt: now
     });
     SFX.click();
     render();
@@ -3372,7 +3414,9 @@ function renderHostModes() {
           '</div>' +
           '<select id="hm-season-' + t.id + '" style="' + inp + '">' +
             '<option value="off" selected>One-shot session</option>' +
-            '<option value="on">🎚 Season mode — level-up replays</option>' +
+            (mcSeasons.active().length
+              ? mcSeasons.active().map(function (s) { return '<option value="season:' + s.id + '">🏆 ' + dkEsc(s.name || 'Season') + ' — ends ' + dkEsc(s.endDate || '?') + ' (level-up replays)</option>'; }).join('')
+              : '<option value="off" disabled>🏆 Season mode — no active Season in Mission Control</option>') +
           '</select>' +
           '<button id="hm-btn-' + t.id + '" class="btn-arena btn-arena-red" style="font-size:0.58rem;padding:9px 14px" onclick="hostLaunchMode(\'' + t.id + '\')">🔴 LAUNCH</button>' +
         '</div></div>';
@@ -5796,13 +5840,13 @@ function goSettings() { SFX.navigate(); state.screen = "settings"; render(); }
 // CIPHER GAME LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PFLX_ARENA_BUILD = '2026-07-05.1';
+const PFLX_ARENA_BUILD = '2026-07-05.2';
 try { console.log('[PFLX Arena] build', PFLX_ARENA_BUILD); } catch (e) {}
 function goScreen(s) { SFX.navigate(); state.screen = s; render(); }
 // Knowledge Decks + Studio games boot — pull the shared rows once at startup.
 setTimeout(function () { try { baDecks.load(); } catch (e) {} }, 900);
 setTimeout(function () { try { baGames.load(); } catch (e) {} }, 1100);
-setTimeout(function () { try { baSessions.load(); try { baLive.load(); } catch (e) {} } catch (e) {} }, 1300);
+setTimeout(function () { try { baSessions.load(); try { baLive.load(); } catch (e) {} try { mcSeasons.load(); } catch (e) {} } catch (e) {} }, 1300);
 // keep LIVE session countdowns fresh + drop expired cards
 setInterval(function () {
   try { if (state.screen === 'side_quests' || state.screen === 'studio') render(); } catch (e) {}
