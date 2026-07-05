@@ -1,0 +1,1 @@
+Drop Suno tracks here as <game-id>.mp3. The game auto-detects the file and plays it (looped) INSTEAD of the built-in procedural soundtrack. The in-game music toggle and host GAME MUSIC setting still apply.

@@ -548,6 +548,15 @@
   var SCALES = { tense: [0,3,5,7,10], march: [0,2,3,7,8], upbeat: [0,2,4,7,9], dark: [0,1,5,6,10], eerie: [0,2,3,6,7], drive: [0,3,5,7,10] };
   var scale = SCALES[MOOD] || SCALES.tense;
   var enabled = true, muted = false, ctx = null, master = null, timer = null, step = 0;
+  // ── Suno track override: games/music/<id>.mp3 replaces the procedural score ──
+  var GAME_ID = (location.pathname.split('/').pop() || '').replace('.html', '');
+  var fileBgm = null, fileOk = false;
+  try {
+    fileBgm = new Audio('music/' + GAME_ID + '.mp3');
+    fileBgm.loop = true; fileBgm.volume = 0.35; fileBgm.preload = 'auto';
+    fileBgm.addEventListener('canplaythrough', function () { fileOk = true; });
+    fileBgm.addEventListener('error', function () { fileOk = false; fileBgm = null; });
+  } catch (e) {}
   try { muted = localStorage.getItem('pflx_bgm_muted') === '1'; } catch (e) {}
   window.addEventListener('message', function (e) {
     var m = e.data;
@@ -597,7 +606,12 @@
     }
   }
   function start() {
-    if (!enabled || muted || ctx) { sync(); return; }
+    if (!enabled || muted) { sync(); return; }
+    if (fileBgm && (fileOk || fileBgm.readyState >= 3)) {
+      try { fileBgm.play(); } catch (e) {}
+      sync(); return;
+    }
+    if (ctx) { sync(); return; }
     try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
@@ -607,6 +621,7 @@
     sync();
   }
   function stop() {
+    if (fileBgm) { try { fileBgm.pause(); } catch (e) {} }
     if (timer) { clearInterval(timer); timer = null; }
     if (ctx) { try { ctx.close(); } catch (e) {} ctx = null; master = null; }
   }
@@ -675,6 +690,28 @@
       document.body.appendChild(ov);
     });
     document.body.appendChild(btn);
+  } catch (e) {}
+})();
+</script>
+<script>
+(function () {
+  // ── 16:9 title art: auto-detects games/art/<id>.png and crowns the intro ──
+  try {
+    var id = (location.pathname.split('/').pop() || '').replace('.html', '');
+    if (!id) return;
+    var probe = new Image();
+    probe.onload = function () {
+      var intro = document.getElementById('intro');
+      if (!intro) return;
+      var el = document.createElement('img');
+      el.src = probe.src;
+      el.alt = '';
+      el.style.cssText = 'width:min(600px,92vw);aspect-ratio:16/9;object-fit:cover;border-radius:16px;' +
+        'border:1px solid rgba(0,229,255,0.35);box-shadow:0 14px 44px rgba(0,0,0,0.6),0 0 30px rgba(0,229,255,0.12);' +
+        'margin:0 auto 14px;display:block;';
+      intro.insertBefore(el, intro.firstChild);
+    };
+    probe.src = 'art/' + id + '.png';
   } catch (e) {}
 })();
 </script>
