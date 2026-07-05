@@ -336,11 +336,11 @@
   }
 
   // ═════════════ 3D BATTLE ARENA (GLB models — CC0 Kenney packs) ═════════════
-  var A3 = { st: null, my: null, foe: null, myStage: -1, foeBattle: -1 };
+  var A3 = { st: null, my: null, myApi: null, foe: null, myStage: -1, foeBattle: -1 };
   var STAGE_MODELS = [
-    { path: 'space/rover.glb',      scale: 2.0 },
-    { path: 'units/character.glb',  scale: 2.7 },
-    { path: 'units/character.glb',  scale: 3.5 }
+    { scale: 2.3, tint: 0x00e5ff },
+    { scale: 3.0, tint: 0x00e676 },
+    { scale: 3.8, tint: 0xffd740 }
   ];
   var FOE_MODELS = [
     { path: 'space/machine_barrel.glb', scale: 2.2 },
@@ -360,9 +360,10 @@
     A3.myStage = stage;
     if (A3.my) A3.st.remove(A3.my);
     var m = STAGE_MODELS[stage];
-    A3.my = A3.st.load(m.path, { x: -3.2, scale: m.scale, rotY: Math.PI / 2 }, function (holder) {
-      A3.st.bob(holder, 0.08, 1.4);
-      if (stage === 2) A3.st.hitFlash(holder, 0x00e5ff);
+    A3.myApi = null;
+    A3.my = A3.st.loadAnimated('units/robot-expressive.glb', { x: -3.2, scale: m.scale, rotY: Math.PI / 2, tint: m.tint }, function (holder, api) {
+      A3.myApi = api;
+      if (stage > 0) { api.play('Jump'); A3.st.hitFlash(holder, m.tint); }
     });
   }
   function arenaSetFoe(battle) {
@@ -381,12 +382,14 @@
   }
   function fxStrike() {   // player hits foe
     if (!A3.st) return;
+    if (A3.myApi) A3.myApi.play('Punch');
     A3.st.lunge(A3.my, 1.6);
     A3.st.hitFlash(A3.foe, 0xff9f40);
     A3.st.burst(3.0, 1.4, 0, 0xffd740);
   }
   function fxCounter() {  // foe hits player
     if (!A3.st) return;
+    if (A3.myApi) A3.myApi.play('No');
     A3.st.lunge(A3.foe, -1.6);
     A3.st.hitFlash(A3.my, 0xff4d6d);
     A3.st.burst(-3.0, 1.4, 0, 0xff4d6d);
@@ -394,7 +397,9 @@
   }
   function fxDefeated() { if (A3.st) { A3.st.burst(3.2, 1.6, 0, 0x00e676); A3.st.burst(3.2, 0.8, 0.6, 0xffd740); A3.st.shake(0.35); } }
   function fxEvolve()   { if (A3.st) { A3.st.burst(-3.2, 1.8, 0, 0x00e5ff); A3.st.burst(-3.2, 1.0, -0.5, 0x00e676); } }
-  function fxRevive()   { if (A3.st) A3.st.burst(-3.2, 1.4, 0, 0xffd740); }
+  function fxWinPose()  { if (A3.myApi) A3.myApi.play('Dance'); }
+  function fxLosePose() { if (A3.myApi) A3.myApi.play('Death'); }
+  function fxRevive()   { if (A3.st) { A3.st.burst(-3.2, 1.4, 0, 0xffd740); if (A3.myApi) A3.myApi.play('ThumbsUp'); } }
 
   // ═════════════ UI ═════════════
   function hud() {
@@ -450,7 +455,7 @@
       sfx.good();
       log('⚔ ' + STAGES[s.stage].name + ' hits for ' + r.dmg + (s.streak >= 2 ? ' (STREAK ×' + s.streak + ')' : ''));
       hud();
-      if (r.won) { setTimeout(endScreen, 900); return; }
+      if (r.won) { fxWinPose(); setTimeout(endScreen, 1400); return; }
       if (r.defeated) {
         if (r.evolved) { sfx.evolve(); banner('✨ EVOLVED → ' + STAGES[s.stage].name); }
         else banner('🏆 ' + '(TAMED) — NEXT CHALLENGER');
@@ -467,7 +472,7 @@
       sfx.bad();
       log('💥 ' + s.enemy.name + ' counters for ' + e.dmg);
       hud();
-      if (e.lost) { setTimeout(endScreen, 900); return; }
+      if (e.lost) { fxLosePose(); setTimeout(endScreen, 1400); return; }
       if (e.revived) banner('🔧 REPAIR KIT — BACK ONLINE');
       setTimeout(showQuestion, e.revived ? 1500 : 900);
     }

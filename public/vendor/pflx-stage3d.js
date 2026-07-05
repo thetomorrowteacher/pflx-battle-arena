@@ -106,7 +106,7 @@
       ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; scene.add(ring);
     }
 
-    var frames = [], tweens = [], disposed = false, shakeT = 0;
+    var frames = [], tweens = [], mixers = [], disposed = false, shakeT = 0;
     var clock = new THREE.Clock();
 
     var camBase = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
@@ -126,6 +126,7 @@
         tw.step(tw.ease ? (1 - Math.pow(1 - k, 3)) : k);
         if (k >= 1) { tweens.splice(i, 1); tw.done && tw.done(); }
       }
+      for (var mi = 0; mi < mixers.length; mi++) { try { mixers[mi].update(dt); } catch (e) {} }
       frames.forEach(function (f) { try { f(dt, t) } catch (e) {} });
       if (shakeT > 0) {
         shakeT -= dt;
@@ -166,6 +167,49 @@
         return holder;
       },
       clearOf: function (holder) { while (holder.children.length) holder.remove(holder.children[0]); },
+      // animated (skinned) model — fresh load per instance, AnimationMixer with
+      // one-shot clips that auto-return to Idle. cb(holder, api{play, clips}).
+      loadAnimated: function (path, o, cb) {
+        o = o || {};
+        var holder = new THREE.Group();
+        holder.position.set(o.x || 0, o.y || 0, o.z || 0);
+        holder.rotation.y = o.rotY || 0;
+        scene.add(holder);
+        if (!loader) return holder;
+        loader.load(BASE + path, function (gltf) {
+          if (disposed) return;
+          var inst = gltf.scene;
+          inst.traverse(function (n) { if (n.isMesh) { n.castShadow = true; if (o.tint && n.material && n.material.emissive) { n.material = n.material.clone(); n.material.emissive.setHex(o.tint); n.material.emissiveIntensity = 0.12; } } });
+          fitTo(inst, o.scale || 3);
+          holder.add(inst);
+          var mixer = new THREE.AnimationMixer(inst);
+          mixers.push(mixer);
+          var actions = {};
+          (gltf.animations || []).forEach(function (c) { actions[c.name] = mixer.clipAction(c); });
+          var idleName = o.idle || (actions.Idle ? 'Idle' : (gltf.animations[0] && gltf.animations[0].name));
+          var current = null;
+          function play(name, once) {
+            var a = actions[name];
+            if (!a) return;
+            if (current && current !== a) current.fadeOut(0.2);
+            a.reset().fadeIn(0.15);
+            if (once) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
+            a.play();
+            current = a;
+          }
+          mixer.addEventListener('finished', function () {
+            if (idleName && actions[idleName]) { play(idleName); }
+          });
+          if (idleName) play(idleName);
+          var api = {
+            clips: Object.keys(actions),
+            play: function (name) { play(name, name !== idleName); },
+            idle: function () { if (idleName) play(idleName); }
+          };
+          cb && cb(holder, api);
+        });
+        return holder;
+      },
       remove: function (holder) { scene.remove(holder); },
       spin: function (obj, speed) { frames.push(function (dt) { obj.rotation.y += (speed || 0.6) * dt; }); },
       bob: function (obj, amp, rate) {
