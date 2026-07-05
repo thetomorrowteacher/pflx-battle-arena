@@ -667,5 +667,38 @@
   } catch (e) {}
 })();
 </script>
+<script>
+(function () {
+  // ── in-game ❓ HOW TO PLAY — instructions stay available mid-game ──
+  try {
+    var srcEl = document.querySelector('#intro .howto');
+    var saved = srcEl ? srcEl.outerHTML : '';
+    var loreEl = document.querySelector('#intro .lore');
+    var loreTxt = loreEl ? (loreEl.getAttribute('data-story') || '') : '';
+    if (!saved) return;
+    var btn = document.createElement('button');
+    btn.textContent = '\u2753';
+    btn.title = 'How to play';
+    btn.style.cssText = 'position:fixed;top:54px;right:10px;z-index:200;width:38px;height:38px;border-radius:50%;' +
+      'background:rgba(4,10,20,0.85);border:1px solid rgba(255,215,64,0.35);color:#ffd740;font-size:14px;cursor:pointer;';
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var ov = document.getElementById('howtoOverlay');
+      if (ov) { ov.remove(); return; }
+      ov = document.createElement('div');
+      ov.id = 'howtoOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(2,5,10,0.92);backdrop-filter:blur(5px);' +
+        'display:flex;align-items:center;justify-content:center;padding:22px;overflow-y:auto;';
+      ov.innerHTML = '<div style="max-width:620px;width:100%">' +
+        (loreTxt ? '<div style="font-size:13.5px;line-height:1.7;color:#cfd8ee;font-style:italic;margin-bottom:12px;border-left:3px solid rgba(255,215,64,0.5);padding-left:12px">' + loreTxt + '</div>' : '') +
+        saved +
+        '<div style="text-align:center;margin-top:14px"><button style="font-family:Orbitron;font-size:11px;font-weight:800;letter-spacing:0.1em;padding:10px 26px;border-radius:10px;border:1px solid rgba(0,229,255,0.55);background:rgba(0,229,255,0.12);color:#7df9ff;cursor:pointer" onclick="document.getElementById(&quot;howtoOverlay&quot;).remove()">\u2715 BACK TO THE GAME</button></div></div>';
+      ov.addEventListener('click', function (ev) { if (ev.target === ov) ov.remove(); });
+      document.body.appendChild(ov);
+    });
+    document.body.appendChild(btn);
+  } catch (e) {}
+})();
+</script>
 </body>
 </html>

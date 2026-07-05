@@ -101,7 +101,7 @@
 <div id="wrap" style="display:none">
   <div id="vault3d"></div>
   <div id="board"></div>
-  <div id="roundStrip"><span id="roundLbl">ROUND 1 / 12</span><span id="streakLbl"></span></div>
+  <div id="roundStrip"><span id="roundLbl">ROUND 1 / 12</span><button id="freeDigBtn" onclick="GR.freeDig()" style="font-family:Orbitron;font-size:9px;font-weight:800;letter-spacing:0.08em;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,215,64,0.5);background:rgba(255,215,64,0.1);color:#ffd740;cursor:pointer">⛏ FREE DIG READY</button><span id="streakLbl"></span></div>
   <div id="quiz">
     <div id="qTerm"><span class="kick">ANSWER TO MINE — WRONG = RIVAL RIGS MINE WITHOUT YOU</span><span id="qTermText"></span></div>
     <div id="qAnswers"></div>
@@ -115,7 +115,7 @@
 </div>
 <div class="screen" id="intro">
   <div class="big" style="color:#ffd740;text-shadow:0 0 20px rgba(255,215,64,0.6)">💠 CRYPTO HEIST</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="Deep in the abandoned blockchain — the ruins of a dead economy — miners whisper about caches of unspent ₵rypto. You jack in beside three rival AIs: NOVA-7, VEX, and ORION. Twelve blocks remain before the chain seals forever. What you know is your mining rig."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Answer a question to earn a dig — WRONG means the rival rigs mine without you</li><li>Crack 1 of 3 encrypted caches: ₵rypto, COLD WALLETS, MOTHERLODES… or worse</li><li>⚡ OVERCLOCK doubles you · 👾 HACK steals from the richest rival · 🔀 SWAP trades fortunes · 🚨 FIREWALL TRACE takes a cut</li><li>Richest wallet after 12 blocks wins the heist</li></ul></div></div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="Deep in the abandoned blockchain — the ruins of a dead economy — miners whisper about caches of unspent ₵rypto. You jack in beside three rival AIs: NOVA-7, VEX, and ORION. Twelve blocks remain before the chain seals forever. What you know is your mining rig."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Your ⛏ rig auto-charges a FREE DIG every 18s — bonus caches, no question needed</li><li>Answer a question to earn your main dig — WRONG means the rival rigs mine without you</li><li>Crack 1 of 3 encrypted caches: ₵rypto, COLD WALLETS, MOTHERLODES… or worse</li><li>⚡ OVERCLOCK doubles you · 👾 HACK steals from the richest rival · 🔀 SWAP trades fortunes · 🚨 FIREWALL TRACE takes a cut</li><li>Richest wallet after 12 blocks wins the heist</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
   <button class="btn gold" id="startBtn" style="display:none" onclick="GR.start()">▶ JACK IN</button>
 </div>
@@ -394,6 +394,32 @@
     if (color === '#ff4d6d' || color === '#ff9f40') V3.st.shake(0.3);
   }
 
+  // FREE DIG — mining rig auto-charges every 18s; opens a bonus cache
+  // without a question and without advancing the block.
+  var freeDigReadyAt = 0;
+  function freeDigReady() { return Date.now() >= freeDigReadyAt; }
+  function freeDig() {
+    var s = G.s;
+    if (!s || s.over || !freeDigReady()) return;
+    freeDigReadyAt = Date.now() + 18000;
+    sfx.chest();
+    var set = rollChests();
+    var out = applyOutcome(s, set[(Math.random() * set.length) | 0]);
+    v3Outcome(out.color);
+    banner((out.icon || '🗄️') + ' FREE DIG — ' + out.text);
+    board();
+    syncFreeDig();
+  }
+  function syncFreeDig() {
+    var b = document.getElementById('freeDigBtn');
+    if (!b || !G.s) return;
+    var left = Math.max(0, freeDigReadyAt - Date.now());
+    b.disabled = left > 0 || G.s.over;
+    b.textContent = left > 0 ? '⛏ RIG CHARGING — ' + Math.ceil(left / 1000) + 's' : '⛏ FREE DIG READY';
+    b.style.opacity = left > 0 ? '0.5' : '1';
+  }
+  setInterval(syncFreeDig, 1000);
+
   function pick(i) {
     if (!G.chestSet) return;
     var id = G.chestSet[i];
@@ -481,6 +507,8 @@
       $('wrap').style.display = 'flex';
       v3Init();
       G.s = newRush(G.cfg.difficulty);
+      freeDigReadyAt = Date.now() + 10000;
+      syncFreeDig();
       G.qIdx = 0; G.reported = false; G.chestSet = null;
       G.questions = buildQuestions(G.deck.cards);
       if (G.cfg.ordered) {
@@ -493,6 +521,7 @@
       showQuestion();
     },
     answer: answer,
+    freeDig: freeDig,
     pick: pick,
     rematch: function () { window.GR.start(); },
     exit: function () {
@@ -677,6 +706,39 @@
       var intro = document.getElementById('intro');
       if (intro) PFLXStage.hero(intro, 'space/machine_generatorLarge.glb', { accent: 0xffd740 });
     }
+  } catch (e) {}
+})();
+</script>
+<script>
+(function () {
+  // ── in-game ❓ HOW TO PLAY — instructions stay available mid-game ──
+  try {
+    var srcEl = document.querySelector('#intro .howto');
+    var saved = srcEl ? srcEl.outerHTML : '';
+    var loreEl = document.querySelector('#intro .lore');
+    var loreTxt = loreEl ? (loreEl.getAttribute('data-story') || '') : '';
+    if (!saved) return;
+    var btn = document.createElement('button');
+    btn.textContent = '\u2753';
+    btn.title = 'How to play';
+    btn.style.cssText = 'position:fixed;top:54px;right:10px;z-index:200;width:38px;height:38px;border-radius:50%;' +
+      'background:rgba(4,10,20,0.85);border:1px solid rgba(255,215,64,0.35);color:#ffd740;font-size:14px;cursor:pointer;';
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var ov = document.getElementById('howtoOverlay');
+      if (ov) { ov.remove(); return; }
+      ov = document.createElement('div');
+      ov.id = 'howtoOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(2,5,10,0.92);backdrop-filter:blur(5px);' +
+        'display:flex;align-items:center;justify-content:center;padding:22px;overflow-y:auto;';
+      ov.innerHTML = '<div style="max-width:620px;width:100%">' +
+        (loreTxt ? '<div style="font-size:13.5px;line-height:1.7;color:#cfd8ee;font-style:italic;margin-bottom:12px;border-left:3px solid rgba(255,215,64,0.5);padding-left:12px">' + loreTxt + '</div>' : '') +
+        saved +
+        '<div style="text-align:center;margin-top:14px"><button style="font-family:Orbitron;font-size:11px;font-weight:800;letter-spacing:0.1em;padding:10px 26px;border-radius:10px;border:1px solid rgba(0,229,255,0.55);background:rgba(0,229,255,0.12);color:#7df9ff;cursor:pointer" onclick="document.getElementById(&quot;howtoOverlay&quot;).remove()">\u2715 BACK TO THE GAME</button></div></div>';
+      ov.addEventListener('click', function (ev) { if (ev.target === ov) ov.remove(); });
+      document.body.appendChild(ov);
+    });
+    document.body.appendChild(btn);
   } catch (e) {}
 })();
 </script>

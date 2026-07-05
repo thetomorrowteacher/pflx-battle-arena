@@ -134,7 +134,7 @@
 <div id="banner"></div>
 <div class="screen" id="intro">
   <div class="big" style="color:#00e676;text-shadow:0 0 20px rgba(0,230,118,0.6)">🥽 OVERLIMIT 9001</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="The orbital fight rings of Sector 9 rank every fighter by POWER LEVEL — read through the green lens of a combat scouter. The scanners have never been wrong. Tonight an unranked challenger steps onto the ring: you. Five rated fighters stand between you and the belt. Make the scouters lie."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Every CORRECT answer charges your ⚡ POWER LEVEL — streaks multiply the gain</li><li>UNLEASH your beam anytime: damage scales with your power vs the foe's rating, then spends most of your charge</li><li>Push past 150% of the foe's rating before unleashing → SCOUTER SHATTERED, critical hit</li><li>Wrong answers = the foe blasts you AND drains your charge. One 🔧 nano-repair. Defeat all 5</li></ul></div></div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="The orbital fight rings of Sector 9 rank every fighter by POWER LEVEL — read through the green lens of a combat scouter. The scanners have never been wrong. Tonight an unranked challenger steps onto the ring: you. Five rated fighters stand between you and the belt. Make the scouters lie."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>The bout runs LIVE — fighters trade blows and your ⚡ power trickles up on its own</li><li>CORRECT answers charge power MUCH faster — streaks multiply the gain</li><li>UNLEASH your beam anytime: damage scales with your power vs the foe's rating, then spends most of your charge</li><li>Push past 150% of the foe's rating before unleashing → SCOUTER SHATTERED, critical hit</li><li>Wrong answers = the foe blasts you AND drains your charge. One 🔧 nano-repair. Defeat all 5</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
   <button class="btn gold" id="startBtn" style="display:none" onclick="SB.start()">▶ ENTER THE RING</button>
 </div>
@@ -226,6 +226,27 @@
       } else {
         s.hp = 0; s.over = true; s.won = false; out.lost = true;
       }
+    }
+    return out;
+  }
+  // real-time exchange: light trades + slow power trickle. Idle can't win —
+  // the trickle is too slow to out-charge the foe's chip damage across 5 bouts.
+  function autoExchange(s) {
+    if (s.over) return { lost: false, revived: false };
+    s.power += 60;
+    s.foe.hp -= 2;
+    var out = { lost: false, revived: false, defeated: false, won: false };
+    if (s.foe.hp <= 0) {
+      s.foe.hp = 0; out.defeated = true; s.battle++;
+      if (s.battle >= BATTLES) { s.over = true; s.won = true; out.won = true; return out; }
+      s.hp = Math.min(s.hpMax, s.hp + 25);
+      s.foe = foeFor(s.battle, s.mult);
+      return out;
+    }
+    s.hp -= Math.max(3, Math.round(s.foe.atk * 0.35));
+    if (s.hp <= 0) {
+      if (s.repair > 0) { s.repair--; s.hp = Math.round(s.hpMax * 0.5); out.revived = true; }
+      else { s.hp = 0; s.over = true; s.won = false; out.lost = true; }
     }
     return out;
   }
@@ -465,8 +486,21 @@
     }
   }
 
-    // ═════════════ flow ═════════════
+    var autoTimer = null;
+  function autoStep() {
+    var s = G.s;
+    if (!s || s.over) return;
+    var r = autoExchange(s);
+    if (A3.st) { A3.st.lunge(A3.my, 0.5); setTimeout(function () { if (A3.st && G.s && !G.s.over) A3.st.lunge(A3.foe, -0.5); }, 380); }
+    if (r.defeated) { fxDefeated(); banner('🏆 DOWN — NEXT RATED FIGHTER'); setTimeout(arenaSync, 700); }
+    if (r.revived) { fxRevive(); banner('🔧 NANO-REPAIR — BACK IN THE RING'); }
+    hud();
+    if (s.over) { clearInterval(autoTimer); autoTimer = null; setTimeout(endScreen, 900); }
+  }
+
+  // ═════════════ flow ═════════════
   function reportResult() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
     if (G.reported) return;
     G.reported = true;
     var s = G.s;
@@ -524,6 +558,8 @@
       A3.foeBattle = -1;
       arenaSync();
       G.qIdx = 0; G.reported = false;
+      if (autoTimer) clearInterval(autoTimer);
+      autoTimer = setInterval(autoStep, 3500);
       G.questions = buildQuestions(G.deck.cards);
       if (G.cfg.ordered) {
         var order = {};
@@ -720,6 +756,39 @@
       var intro = document.getElementById('intro');
       if (intro) PFLXStage.hero(intro, 'units/character.glb', { accent: 0x00e676 });
     }
+  } catch (e) {}
+})();
+</script>
+<script>
+(function () {
+  // ── in-game ❓ HOW TO PLAY — instructions stay available mid-game ──
+  try {
+    var srcEl = document.querySelector('#intro .howto');
+    var saved = srcEl ? srcEl.outerHTML : '';
+    var loreEl = document.querySelector('#intro .lore');
+    var loreTxt = loreEl ? (loreEl.getAttribute('data-story') || '') : '';
+    if (!saved) return;
+    var btn = document.createElement('button');
+    btn.textContent = '\u2753';
+    btn.title = 'How to play';
+    btn.style.cssText = 'position:fixed;top:54px;right:10px;z-index:200;width:38px;height:38px;border-radius:50%;' +
+      'background:rgba(4,10,20,0.85);border:1px solid rgba(255,215,64,0.35);color:#ffd740;font-size:14px;cursor:pointer;';
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var ov = document.getElementById('howtoOverlay');
+      if (ov) { ov.remove(); return; }
+      ov = document.createElement('div');
+      ov.id = 'howtoOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(2,5,10,0.92);backdrop-filter:blur(5px);' +
+        'display:flex;align-items:center;justify-content:center;padding:22px;overflow-y:auto;';
+      ov.innerHTML = '<div style="max-width:620px;width:100%">' +
+        (loreTxt ? '<div style="font-size:13.5px;line-height:1.7;color:#cfd8ee;font-style:italic;margin-bottom:12px;border-left:3px solid rgba(255,215,64,0.5);padding-left:12px">' + loreTxt + '</div>' : '') +
+        saved +
+        '<div style="text-align:center;margin-top:14px"><button style="font-family:Orbitron;font-size:11px;font-weight:800;letter-spacing:0.1em;padding:10px 26px;border-radius:10px;border:1px solid rgba(0,229,255,0.55);background:rgba(0,229,255,0.12);color:#7df9ff;cursor:pointer" onclick="document.getElementById(&quot;howtoOverlay&quot;).remove()">\u2715 BACK TO THE GAME</button></div></div>';
+      ov.addEventListener('click', function (ev) { if (ev.target === ov) ov.remove(); });
+      document.body.appendChild(ov);
+    });
+    document.body.appendChild(btn);
   } catch (e) {}
 })();
 </script>

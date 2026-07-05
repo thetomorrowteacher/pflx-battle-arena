@@ -126,7 +126,7 @@
 <div id="banner"></div>
 <div class="screen" id="intro">
   <div class="big" style="color:#00e676;text-shadow:0 0 20px rgba(0,230,118,0.6)">🌆 NEO CITY</div>
-  <div class="brief"><div class="lore" id="loreStory" data-story="The colony ship UNITY dropped 12 empty plots of regolith and a two-year charter: grow a city worth staying for, Governor, or the ship moves on. Credits flow when the council is sharp — and every blackout sends citizens packing for the stars."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Answer CORRECTLY to earn ₡ credits — streaks and 🏪 SHOPs boost every payout</li><li>Spend credits on the 12 plots: 🏠 HAB +90👥 · 🏪 SHOP +40👥 & income · 🌳 PARK +60👥 · 🏙 SPIRE +260👥</li><li>Every build rises on the 3D skyline. Wrong answers cause a BLACKOUT: −40 citizens</li><li>Reach 1,000 citizens within 24 council sessions</li></ul></div></div>
+  <div class="brief"><div class="lore" id="loreStory" data-story="The colony ship UNITY dropped 12 empty plots of regolith and a two-year charter: grow a city worth staying for, Governor, or the ship moves on. Credits flow when the council is sharp — and every blackout sends citizens packing for the stars."></div><div class="howto"><h3>▸ HOW TO PLAY</h3><ul><li>Your city earns ₡2/s passively (🌳 PARKs add +1/s each) — it lives while you plan</li><li>Answer CORRECTLY for big ₡ payouts — streaks and 🏪 SHOPs boost them</li><li>Spend credits on the 12 plots: 🏠 HAB +90👥 · 🏪 SHOP +40👥 & income · 🌳 PARK +60👥 · 🏙 SPIRE +260👥</li><li>Every build rises on the 3D skyline. Wrong answers cause a BLACKOUT: −40 citizens</li><li>Reach 1,000 citizens within 24 council sessions</li></ul></div></div>
   <div class="sub" id="introSub">Waiting for deck…</div>
   <button class="btn gold" id="startBtn" style="display:none" onclick="NC.start()">▶ FOUND THE CITY</button>
 </div>
@@ -176,7 +176,7 @@
     s.correct++; s.streak++;
     s.bestStreak = Math.max(s.bestStreak, s.streak);
     s.session++;
-    var g = 34 + Math.min(6, s.streak) * 6 + income(s);
+    var g = 26 + Math.min(6, s.streak) * 6 + income(s);
     s.credits += g;
     endCheck(s);
     return g;
@@ -314,6 +314,16 @@
   }
   function cityBlackout() { if (C3.st) { C3.st.burst(0, 2, 0, 0xff4d6d); C3.st.shake(0.3); } }
 
+  // passive economy: the city earns ₡2/s on its own (+PARK bonus) while you think
+  var dripTimer = null;
+  function dripStep() {
+    var s = G.s;
+    if (!s || s.over) return;
+    var parks = s.plots.filter(function (b) { return b === 'park'; }).length;
+    s.credits += 2 + parks;
+    hud();
+  }
+
   // ═════════════ UI ═════════════
   function hud() {
     var s = G.s;
@@ -396,6 +406,7 @@
 
     // ═════════════ flow ═════════════
   function reportResult() {
+    if (dripTimer) { clearInterval(dripTimer); dripTimer = null; }
     if (G.reported) return;
     G.reported = true;
     var s = G.s;
@@ -449,6 +460,8 @@
       document.querySelectorAll('.screen').forEach(function (el) { el.remove(); });
       $('wrap').style.display = 'flex';
       G.s = newCity(G.cfg.difficulty);
+      if (dripTimer) clearInterval(dripTimer);
+      dripTimer = setInterval(dripStep, 1000);
       cityInit();
       cityReset();
       G.qIdx = 0; G.reported = false;
@@ -648,6 +661,39 @@
       var intro = document.getElementById('intro');
       if (intro) PFLXStage.hero(intro, 'city/building-small-a.glb', { accent: 0x7df9ff });
     }
+  } catch (e) {}
+})();
+</script>
+<script>
+(function () {
+  // ── in-game ❓ HOW TO PLAY — instructions stay available mid-game ──
+  try {
+    var srcEl = document.querySelector('#intro .howto');
+    var saved = srcEl ? srcEl.outerHTML : '';
+    var loreEl = document.querySelector('#intro .lore');
+    var loreTxt = loreEl ? (loreEl.getAttribute('data-story') || '') : '';
+    if (!saved) return;
+    var btn = document.createElement('button');
+    btn.textContent = '\u2753';
+    btn.title = 'How to play';
+    btn.style.cssText = 'position:fixed;top:54px;right:10px;z-index:200;width:38px;height:38px;border-radius:50%;' +
+      'background:rgba(4,10,20,0.85);border:1px solid rgba(255,215,64,0.35);color:#ffd740;font-size:14px;cursor:pointer;';
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var ov = document.getElementById('howtoOverlay');
+      if (ov) { ov.remove(); return; }
+      ov = document.createElement('div');
+      ov.id = 'howtoOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(2,5,10,0.92);backdrop-filter:blur(5px);' +
+        'display:flex;align-items:center;justify-content:center;padding:22px;overflow-y:auto;';
+      ov.innerHTML = '<div style="max-width:620px;width:100%">' +
+        (loreTxt ? '<div style="font-size:13.5px;line-height:1.7;color:#cfd8ee;font-style:italic;margin-bottom:12px;border-left:3px solid rgba(255,215,64,0.5);padding-left:12px">' + loreTxt + '</div>' : '') +
+        saved +
+        '<div style="text-align:center;margin-top:14px"><button style="font-family:Orbitron;font-size:11px;font-weight:800;letter-spacing:0.1em;padding:10px 26px;border-radius:10px;border:1px solid rgba(0,229,255,0.55);background:rgba(0,229,255,0.12);color:#7df9ff;cursor:pointer" onclick="document.getElementById(&quot;howtoOverlay&quot;).remove()">\u2715 BACK TO THE GAME</button></div></div>';
+      ov.addEventListener('click', function (ev) { if (ev.target === ov) ov.remove(); });
+      document.body.appendChild(ov);
+    });
+    document.body.appendChild(btn);
   } catch (e) {}
 })();
 </script>
