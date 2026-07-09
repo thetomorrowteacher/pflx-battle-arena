@@ -1534,9 +1534,20 @@ const MODES = [
 let CUSTOM_MODES = [];
 function loadCustomModes() {
   try { CUSTOM_MODES = JSON.parse(localStorage.getItem('pflx_custom_modes') || '[]'); } catch(e) { CUSTOM_MODES = []; }
+  // Supabase is the source of truth — cache is just for instant boot
+  try {
+    supabaseLoad('pflx_ba_custom_modes').then(function (d) {
+      if (d && Array.isArray(d.modes)) {
+        CUSTOM_MODES = d.modes;
+        try { localStorage.setItem('pflx_custom_modes', JSON.stringify(CUSTOM_MODES)); } catch (e) {}
+        if (state.screen === 'side_quests' || state.screen === 'live_play' || state.screen === 'mode_admin') render();
+      }
+    }).catch(function () {});
+  } catch (e) {}
 }
 function saveCustomModes() {
   localStorage.setItem('pflx_custom_modes', JSON.stringify(CUSTOM_MODES));
+  try { supabaseSave('pflx_ba_custom_modes', { modes: CUSTOM_MODES, updatedAt: Date.now() }); } catch (e) {}
 }
 function addCustomMode(mode) {
   mode.id = 'custom_' + Date.now();
@@ -5840,7 +5851,7 @@ function goSettings() { SFX.navigate(); state.screen = "settings"; render(); }
 // CIPHER GAME LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PFLX_ARENA_BUILD = '2026-07-05.2';
+const PFLX_ARENA_BUILD = '2026-07-06.1';
 try { console.log('[PFLX Arena] build', PFLX_ARENA_BUILD); } catch (e) {}
 function goScreen(s) { SFX.navigate(); state.screen = s; render(); }
 // Knowledge Decks + Studio games boot — pull the shared rows once at startup.
@@ -9064,14 +9075,24 @@ const esportsState = {
   view: 'hub',           // hub | lobby | match | judging | results
 };
 
-// Load persisted matches
+// Load persisted matches — localStorage for instant boot, Supabase as truth
 try {
   const saved = localStorage.getItem('pflx_esports_matches');
   if (saved) esportsState.matches = JSON.parse(saved);
 } catch(e) {}
+try {
+  supabaseLoad('pflx_esports_matches').then(function (d) {
+    if (d && Array.isArray(d.matches)) {
+      esportsState.matches = d.matches;
+      try { localStorage.setItem('pflx_esports_matches', JSON.stringify(d.matches)); } catch (e) {}
+      if (state.screen === 'esports') render();
+    }
+  }).catch(function () {});
+} catch (e) {}
 
 function saveEsportsState() {
   try { localStorage.setItem('pflx_esports_matches', JSON.stringify(esportsState.matches)); } catch(e) {}
+  try { supabaseSave('pflx_esports_matches', { matches: esportsState.matches, updatedAt: Date.now() }); } catch (e) {}
 }
 
 // ── Match ID generator ──
