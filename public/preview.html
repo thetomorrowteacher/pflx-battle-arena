@@ -2564,7 +2564,7 @@ window.addEventListener('message', function (e) {
     arenaGame.frame.contentWindow.postMessage({
       type: 'pflx_arena_deck',
       deck: { id: d.id, name: d.name, subject: d.subject || '', cards: d.cards.map(function (c) { return { term: c.term, definition: c.definition }; }) },
-      player: { id: (state.player && state.player.id) || 'p', brand: (state.player && state.player.brand) || 'Challenger' },
+      player: { id: (state.player && state.player.id) || 'p', brand: (state.player && state.player.brand) || 'Challenger', studioId: (state.player && state.player.studioId) || '' },
       config: (arenaGame.opts && arenaGame.opts.config) || null
     }, '*');
   } else if (m.type === 'pflx_arena_game_result' && arenaGame.open) {
@@ -5899,7 +5899,7 @@ function goSettings() { SFX.navigate(); state.screen = "settings"; render(); }
 // CIPHER GAME LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PFLX_ARENA_BUILD = '2026-07-09.2';
+const PFLX_ARENA_BUILD = '2026-07-09.3';
 try { console.log('[PFLX Arena] build', PFLX_ARENA_BUILD); } catch (e) {}
 function goScreen(s) { SFX.navigate(); state.screen = s; render(); }
 // Knowledge Decks + Studio games boot — pull the shared rows once at startup.

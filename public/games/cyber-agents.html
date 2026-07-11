@@ -553,6 +553,17 @@
     if (!m || m.type !== 'pflx_arena_deck' || !m.deck) return;
     gotDeck = true;
     applyConfig(m.config);
+    // Your default agent IS your Startup Studio (house) — recruits fight for home.
+    try {
+      var sidMap = { 'studio-mindforge': 'mindforge', 'studio-innov8': 'innov8', 'studio-gentech': 'gentech', 'studio-emagination': 'emagination' };
+      var homeAgent = m.player && sidMap[m.player.studioId];
+      if (homeAgent && AGENTS[homeAgent]) {
+        G.agentPick = homeAgent;
+        document.querySelectorAll('.agentBtn').forEach(function (b) {
+          b.classList.toggle('on', b.getAttribute('data-agent') === homeAgent);
+        });
+      }
+    } catch (e) {}
     initWithDeck(m.deck, m.player);
   });
   post({ type: 'pflx_game_ready', game: 'cyber-agents' });
