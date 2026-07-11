@@ -2943,7 +2943,7 @@ async function baLiveLaunch() {
     title: title || (tpl.name + ' LIVE'),
     hostId: state.player ? state.player.id : 'host', hostName: state.player ? state.player.brand : 'Host',
     code: baLiveCode(), open: false,
-    teams: !!(document.getElementById('lpTeams') && document.getElementById('lpTeams').checked),
+    teams: (function () { var v = (document.getElementById('lpTeams') || {}).value; return v === 'duo' || v === 'studios' ? v : false; })(),
     startsAt: Date.now(), endsAt: Date.now() + mins * 60000,
     players: [], updatedAt: Date.now()
   };
@@ -2994,7 +2994,17 @@ async function baLiveEnter(id, codeGuess) {
   const me = { id: state.player ? state.player.id : 'p', brand: state.player ? state.player.brand : 'Player' };
   if (!(ev.players || []).some(function (pl) { return pl.id === me.id; })) {
     var team;
-    if (ev.teams) {
+    if (ev.teams === 'studios') {
+      // STUDIO WAR: your squad IS your house. Unaffiliated players get
+      // drafted into the smallest studio squad for this event.
+      team = (state.player && state.player.studioId) || '';
+      if (!team || !ARENA_STUDIOS[team]) {
+        var sizes = {};
+        Object.keys(ARENA_STUDIOS).forEach(function (sid) { sizes[sid] = 0; });
+        (ev.players || []).forEach(function (pl) { if (sizes[pl.team] !== undefined) sizes[pl.team]++; });
+        team = Object.keys(sizes).sort(function (a, b) { return sizes[a] - sizes[b]; })[0];
+      }
+    } else if (ev.teams) {
       var nova = (ev.players || []).filter(function (pl) { return pl.team === 'nova'; }).length;
       var ion = (ev.players || []).filter(function (pl) { return pl.team === 'ion'; }).length;
       team = nova <= ion ? 'nova' : 'ion';
@@ -4015,7 +4025,23 @@ function lpEventCard(ev) {
   const isMine = ev.hostId === meId;
   const joined = (ev.players || []).some(function (pl) { return pl.id === meId; });
   let board;
-  if (ev.teams) {
+  if (ev.teams === 'studios') {
+    const totals = {};
+    Object.keys(ARENA_STUDIOS).forEach(function (sid) { totals[sid] = 0; });
+    (ev.players || []).forEach(function (pl) { if (totals[pl.team] !== undefined) totals[pl.team] += (pl.score || 0); });
+    const active = Object.keys(ARENA_STUDIOS).filter(function (sid) { return (ev.players || []).some(function (pl) { return pl.team === sid; }); });
+    const lead = active.slice().sort(function (a, b) { return totals[b] - totals[a]; })[0];
+    board = (lead ? '<div style="font-family:Orbitron,monospace;font-size:0.6rem;letter-spacing:0.12em;color:' + ARENA_STUDIOS[lead].color + ';margin-bottom:4px;">🏢 ' + ARENA_STUDIOS[lead].name + ' LEADS THE WAR</div>' : '') +
+      '<div style="display:flex;gap:14px;flex-wrap:wrap">' +
+      active.map(function (sid) {
+        const m = ARENA_STUDIOS[sid];
+        const members = (ev.players || []).filter(function (pl) { return pl.team === sid; });
+        return '<div style="flex:1;min-width:130px"><div style="font-family:Orbitron,monospace;font-size:0.58rem;letter-spacing:0.08em;color:' + m.color + ';border-bottom:1px solid ' + m.color + '44;padding-bottom:3px;margin-bottom:4px;display:flex;align-items:center;gap:5px;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:4px"><img src="' + m.logo + '" style="width:14px;height:14px;object-fit:contain;background:rgba(255,255,255,0.9);border-radius:3px" onerror="this.style.display=\'none\'">' + m.name + '</span><b>' + totals[sid] + '</b></div>' +
+          members.slice().sort(function (x, y) { return (y.score || 0) - (x.score || 0); }).slice(0, 5).map(function (pl) {
+            return '<div style="display:flex;justify-content:space-between;font-size:0.6rem;padding:2px 0"><span>' + dkEsc(pl.brand) + (pl.won ? ' 🏆' : '') + '</span><span style="color:#ffd740;font-family:Orbitron,monospace">' + (pl.score || 0) + '</span></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div>';
+  } else if (ev.teams) {
     const sq = function (key, label, color) {
       const members = (ev.players || []).filter(function (pl) { return pl.team === key; });
       const total = members.reduce(function (a, pl) { return a + (pl.score || 0); }, 0);
@@ -4053,7 +4079,9 @@ function lpEventCard(ev) {
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">' +
       '<div class="mode-head" style="margin:0"><div class="mode-icon">' + tpl.icon + '</div>' +
       '<div><div class="mode-name">' + dkEsc(ev.title) + '</div>' +
-      '<div class="mode-meta">' + (ev.kind === 'room' ? '👥 co-op room' : '🔴 host event') + (ev.teams ? ' · 🔵🔴 TEAMS' : '') + ' · by ' + dkEsc(ev.hostName) + ' · ⏳ ' + baLiveTimeLeft(ev) + ' · ' + (ev.players || []).length + ' playing' + (function () { var mine = (ev.players || []).find(function (pl) { return pl.id === meId; }); return mine && mine.team ? ' · YOUR SQUAD: ' + (mine.team === 'nova' ? '🔵 NOVA' : '🔴 ION') : ''; })() + '</div></div></div>' +
+      '<div class="mode-meta">' + (ev.kind === 'room' ? '👥 co-op room' : '🔴 host event') + (ev.teams === 'studios' ? ' · 🏢 STUDIO WAR' : ev.teams ? ' · 🔵🔴 TEAMS' : '') + ' · by ' + dkEsc(ev.hostName) + ' · ⏳ ' + baLiveTimeLeft(ev) + ' · ' + (ev.players || []).length + ' playing' + (function () { var mine = (ev.players || []).find(function (pl) { return pl.id === meId; }); if (!mine || !mine.team) return '';
+        if (ARENA_STUDIOS[mine.team]) return ' · YOUR HOUSE: 🏢 ' + ARENA_STUDIOS[mine.team].name;
+        return ' · YOUR SQUAD: ' + (mine.team === 'nova' ? '🔵 NOVA' : '🔴 ION'); })() + '</div></div></div>' +
       '<span class="cipher-status-badge active" style="font-size:0.5rem;border-color:rgba(255,77,109,0.6);color:#ff8fa3">● LIVE</span>' +
     '</div>' +
     '<div class="mode-desc">' + tpl.icon + ' ' + tpl.name + ' on "' + dkEsc(d ? d.name : 'deck') + '"' + (ev.open ? ' · OPEN JOIN' : (isMine ? '' : ' · 🔒 invite code required')) + '</div>' +
@@ -4082,7 +4110,11 @@ function renderLivePlay() {
         '<input id="lpTitle" class="deck-input" placeholder="Event title (optional)" maxlength="48" style="width:100%" />' +
         '<select id="lpDur" class="deck-input" style="width:100%"><option value="3">3 minutes</option><option value="5">5 minutes</option><option value="10" selected>10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option></select>' +
         '</div>' +
-        '<label style="display:flex;align-items:center;gap:8px;font-size:0.62rem;color:#cfe3ff;margin-top:10px;cursor:pointer"><input type="checkbox" id="lpTeams" /> 🔵🔴 TEAM BATTLE — players auto-split into NOVA vs ION squads; squad totals decide the winner</label>' +
+        '<select id="lpTeams" class="deck-input" style="width:100%;margin-top:10px">' +
+          '<option value="off" selected>Solo scores — everyone for themselves</option>' +
+          '<option value="duo">🔵🔴 TEAM BATTLE — auto-split into NOVA vs ION squads</option>' +
+          '<option value="studios">🏢 STUDIO WAR — squads are the Startup Studios (your real house)</option>' +
+        '</select>' +
         '<div style="font-size:0.6rem;color:#8a9ab8;margin:10px 0">Starts 🔒 PRIVATE: players need your 6-letter invite code. Flip to 🔓 OPEN JOIN anytime from the event card.</div>' +
         '<button class="btn-arena btn-arena-gold" style="font-size:0.6rem;padding:10px 20px" onclick="baLiveLaunch()">🔴 GO LIVE</button>' +
       '</div>'
@@ -5867,7 +5899,7 @@ function goSettings() { SFX.navigate(); state.screen = "settings"; render(); }
 // CIPHER GAME LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PFLX_ARENA_BUILD = '2026-07-09.1';
+const PFLX_ARENA_BUILD = '2026-07-09.2';
 try { console.log('[PFLX Arena] build', PFLX_ARENA_BUILD); } catch (e) {}
 function goScreen(s) { SFX.navigate(); state.screen = s; render(); }
 // Knowledge Decks + Studio games boot — pull the shared rows once at startup.
