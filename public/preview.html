@@ -1440,6 +1440,263 @@ function arenaStudioChip(sid) {
     `<span style="font-family:Orbitron,monospace;font-size:0.42rem;font-weight:800;color:#fff;letter-spacing:0.06em;">${m.name}</span></span>`;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// EXO AVATAR SYSTEM — Phase 1 (Design Spec v1.1, approved 2026-08-27)
+// One persistent studio-affiliated companion per player. Stage-1 Cores are
+// procedural SVG (no art assets needed); stages 2+ unlock via Sync XP in
+// Phase 2. Data lives in the dedicated `player_avatars` table (row per
+// player) — deliberately NOT an app_data KV row (oversized-row lesson).
+// ═══════════════════════════════════════════════════════════════════════════
+
+const EXO_LINES = {
+  ironwright: {
+    id: 'ironwright', studio: 'studio-gentech', name: 'IRONWRIGHT', stat: 'GUARD',
+    flavor: 'Constructor mech — plating, servos, tools that become weapons.',
+    stages: ['Cogling', 'Gearframe', 'Forgeguard', 'Titanwright', 'Omniforge'],
+    colorways: {
+      default: { label: 'Foundry',  a: '#06b6d4', b: '#155e75', glow: '#67e8f9' },
+      magma:   { label: 'Magma',    a: '#f97316', b: '#7c2d12', glow: '#fdba74' },
+      titan:   { label: 'Titan',    a: '#94a3b8', b: '#334155', glow: '#e2e8f0' },
+      verdant: { label: 'Verdant',  a: '#22c55e', b: '#14532d', glow: '#86efac' }
+    }
+  },
+  resonant: {
+    id: 'resonant', studio: 'studio-mindforge', name: 'RESONANT', stat: 'SYNC',
+    flavor: 'Living resonance — light, sound and pattern; wears culture as glyphs.',
+    stages: ['Emberling', 'Pulseframe', 'Chorusguard', 'Soulbeacon', 'Luminarch'],
+    colorways: {
+      default: { label: 'Pulse',   a: '#f43f5e', b: '#881337', glow: '#fda4af' },
+      aurora:  { label: 'Aurora',  a: '#2dd4bf', b: '#134e4a', glow: '#99f6e4' },
+      solar:   { label: 'Solar',   a: '#f59e0b', b: '#78350f', glow: '#fcd34d' },
+      violet:  { label: 'Violet',  a: '#a78bfa', b: '#4c1d95', glow: '#ddd6fe' }
+    }
+  },
+  mythweaver: {
+    id: 'mythweaver', studio: 'studio-emagination', name: 'MYTHWEAVER', stat: 'LUCK',
+    flavor: 'Story-creature — ink, paint and fable made solid.',
+    stages: ['Sketchling', 'Fableframe', 'Dreamguard', 'Mythmaker', 'Worldsmith'],
+    colorways: {
+      default: { label: 'Fable',   a: '#2563eb', b: '#1e3a8a', glow: '#93c5fd' },
+      inkgold: { label: 'Inkgold', a: '#eab308', b: '#713f12', glow: '#fde047' },
+      rose:    { label: 'Rose',    a: '#ec4899', b: '#831843', glow: '#f9a8d4' },
+      forest:  { label: 'Forest',  a: '#10b981', b: '#064e3b', glow: '#6ee7b7' }
+    }
+  },
+  neonborn: {
+    id: 'neonborn', studio: 'studio-innov8', name: 'NEONBORN', stat: 'HACK',
+    flavor: 'Glitchcore synthetic — neon noir, scanlines, cyberpunk chrome.',
+    stages: ['Bitling', 'Glitchframe', 'Neonguard', 'Cipher', 'Singularity'],
+    colorways: {
+      default:     { label: 'Neon',        a: '#9333ea', b: '#3b0764', glow: '#d8b4fe' },
+      ultraviolet: { label: 'Ultraviolet', a: '#7c3aed', b: '#2e1065', glow: '#c4b5fd' },
+      acid:        { label: 'Acid',        a: '#84cc16', b: '#365314', glow: '#d9f99d' },
+      chrome:      { label: 'Chrome',      a: '#e11d48', b: '#4c0519', glow: '#fecdd3' }
+    }
+  }
+};
+const EXO_STAGE_XP = [0, 500, 2500, 8000, 20000];
+const EXO_ACCENTS = { '': 'None', antenna: 'Antenna', visor: 'Visor', halo: 'Halo', fins: 'Fins' };
+
+function exoLineForStudio(sid) {
+  for (var k in EXO_LINES) { if (EXO_LINES[k].studio === sid) return k; }
+  return '';
+}
+function exoEscape(s) {
+  return String(s || '').replace(/[<>&"']/g, '').slice(0, 20);
+}
+
+// ── State + Supabase I/O (dedicated table, same anon REST pattern) ──
+const EXO_STATE = { byPlayer: {}, loaded: false };
+
+async function exoLoadAll() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/player_avatars?select=*', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    if (!res.ok) return;
+    const rows = await res.json();
+    (rows || []).forEach(function (r) { EXO_STATE.byPlayer[r.player_id] = r; });
+    EXO_STATE.loaded = true;
+    if (state.screen === 'exo_bay' || state.screen === 'leaderboard' || state.screen === 'home' || state.screen === 'lobby') render();
+  } catch (e) { console.warn('EXO load failed:', e.message); }
+}
+
+async function exoSaveRow(row) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/player_avatars?on_conflict=player_id', {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(row)
+    });
+    return res.ok;
+  } catch (e) { console.warn('EXO save failed:', e.message); return false; }
+}
+
+function exoGet(pid) { return EXO_STATE.byPlayer[pid] || null; }
+
+// ── Procedural Stage-1 Core renderer (SVG, no assets) ──
+function exoSVG(exo, size) {
+  const line = EXO_LINES[exo.line]; if (!line) return '';
+  const cw = line.colorways[exo.colorway] || line.colorways.default;
+  const gid = 'exog-' + exo.line + '-' + (exo.colorway || 'default');
+  const accent = (exo.cosmetics && exo.cosmetics.accent) || '';
+  let motif = '';
+  if (exo.line === 'ironwright') {
+    motif = '<polygon points="50,36 62,43 62,57 50,64 38,57 38,43" fill="none" stroke="' + cw.glow + '" stroke-width="2.5" opacity="0.9"/>' +
+            '<circle cx="50" cy="50" r="5" fill="' + cw.glow + '"/>' +
+            '<g stroke="' + cw.glow + '" stroke-width="3" opacity="0.55">' +
+            '<line x1="50" y1="24" x2="50" y2="30"/><line x1="50" y1="70" x2="50" y2="76"/>' +
+            '<line x1="24" y1="50" x2="30" y2="50"/><line x1="70" y1="50" x2="76" y2="50"/></g>';
+  } else if (exo.line === 'resonant') {
+    motif = '<g fill="none" stroke="' + cw.glow + '" stroke-linecap="round">' +
+            '<path d="M38,50 a12,12 0 0 1 24,0" stroke-width="2.5" opacity="0.9"/>' +
+            '<path d="M32,52 a18,18 0 0 1 36,0" stroke-width="2" opacity="0.6"/>' +
+            '<path d="M26,54 a24,24 0 0 1 48,0" stroke-width="1.5" opacity="0.35"/></g>' +
+            '<circle cx="50" cy="56" r="4.5" fill="' + cw.glow + '"/>';
+  } else if (exo.line === 'mythweaver') {
+    motif = '<path d="M50,30 c14,4 16,20 4,26 c10,2 14,12 6,18 c-2,-8 -12,-10 -16,-4 c-6,-10 0,-18 8,-20 c-10,-4 -10,-16 -2,-20z" fill="' + cw.glow + '" opacity="0.85"/>' +
+            '<circle cx="63" cy="36" r="3" fill="#fff" opacity="0.9"/>';
+  } else {
+    motif = '<g fill="' + cw.glow + '">' +
+            '<rect x="34" y="40" width="24" height="5" opacity="0.9"/>' +
+            '<rect x="42" y="49" width="24" height="5" opacity="0.65"/>' +
+            '<rect x="36" y="58" width="18" height="5" opacity="0.8"/></g>' +
+            '<line x1="28" y1="34" x2="72" y2="34" stroke="' + cw.glow + '" stroke-width="1" opacity="0.4"/>' +
+            '<line x1="28" y1="68" x2="72" y2="68" stroke="' + cw.glow + '" stroke-width="1" opacity="0.4"/>';
+  }
+  let acc = '';
+  if (accent === 'antenna') acc = '<line x1="50" y1="14" x2="50" y2="24" stroke="' + cw.a + '" stroke-width="2.5"/><circle cx="50" cy="11" r="3.5" fill="' + cw.glow + '"/>';
+  else if (accent === 'visor') acc = '<rect x="32" y="42" width="36" height="9" rx="4.5" fill="#0b1020" stroke="' + cw.glow + '" stroke-width="1.5" opacity="0.95"/>';
+  else if (accent === 'halo') acc = '<ellipse cx="50" cy="16" rx="16" ry="4.5" fill="none" stroke="' + cw.glow + '" stroke-width="2.5" opacity="0.9"/>';
+  else if (accent === 'fins') acc = '<polygon points="20,50 30,42 30,58" fill="' + cw.a + '" opacity="0.85"/><polygon points="80,50 70,42 70,58" fill="' + cw.a + '" opacity="0.85"/>';
+  return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '" style="display:block;overflow:visible">' +
+    '<defs><radialGradient id="' + gid + '" cx="50%" cy="42%" r="60%">' +
+    '<stop offset="0%" stop-color="' + cw.a + '"/><stop offset="100%" stop-color="' + cw.b + '"/></radialGradient></defs>' +
+    '<circle cx="50" cy="50" r="30" fill="url(#' + gid + ')" stroke="' + cw.glow + '" stroke-width="1.5"/>' +
+    '<circle cx="50" cy="50" r="36" fill="none" stroke="' + cw.a + '" stroke-width="1" opacity="0.35"/>' +
+    motif + acc + '</svg>';
+}
+
+function exoMini(pid, size) {
+  const ex = exoGet(pid); if (!ex) return '';
+  const line = EXO_LINES[ex.line]; if (!line) return '';
+  const nm = exoEscape(ex.exo_name) || line.stages[0];
+  return '<span title="' + nm + ' — ' + line.name + '" style="display:inline-flex;vertical-align:middle;filter:drop-shadow(0 0 4px rgba(0,229,255,0.35))">' + exoSVG(ex, size) + '</span>';
+}
+
+// ── EXO BAY screen ──
+function goExoBay() {
+  const p = state.player; if (!p) return;
+  const ex = exoGet(p.id);
+  state.exoDraft = ex
+    ? { line: ex.line, colorway: ex.colorway || 'default', accent: (ex.cosmetics && ex.cosmetics.accent) || '', exo_name: ex.exo_name || '' }
+    : { line: exoLineForStudio(p.studioId), colorway: 'default', accent: '', exo_name: '' };
+  state.exoSaved = false;
+  SFX.navigate(); state.screen = 'exo_bay'; render();
+}
+
+function exoSetDraft(k, v) {
+  if (!state.exoDraft) return;
+  const inp = document.getElementById('exoNameInput');
+  if (inp) state.exoDraft.exo_name = inp.value;
+  state.exoDraft[k] = v;
+  if (k === 'line') { state.exoDraft.colorway = 'default'; }
+  SFX.click(); render();
+}
+
+async function exoSaveBay() {
+  const p = state.player; if (!p || !state.exoDraft) return;
+  const d = state.exoDraft;
+  const inp = document.getElementById('exoNameInput');
+  if (inp) d.exo_name = inp.value;
+  if (!d.line || !EXO_LINES[d.line]) return;
+  const prev = exoGet(p.id) || {};
+  const row = {
+    player_id: p.id, line: d.line,
+    stage: prev.stage || 1, sync_xp: prev.sync_xp || 0,
+    exo_name: exoEscape(d.exo_name) || EXO_LINES[d.line].stages[0],
+    colorway: d.colorway || 'default',
+    equipped: prev.equipped || {},
+    cosmetics: { accent: d.accent || '' },
+    stats_cache: prev.stats_cache || {},
+    updated_at: new Date().toISOString()
+  };
+  const ok = await exoSaveRow(row);
+  if (ok) { EXO_STATE.byPlayer[p.id] = row; state.exoSaved = true; SFX.victory ? SFX.victory() : SFX.click(); }
+  render();
+}
+
+function renderExoBay() {
+  const p = state.player;
+  const d = state.exoDraft || { line: exoLineForStudio(p.studioId), colorway: 'default', accent: '', exo_name: '' };
+  state.exoDraft = d;
+  const hasStudio = !!exoLineForStudio(p.studioId);
+  const line = EXO_LINES[d.line];
+  const existing = exoGet(p.id);
+  const stage = (existing && existing.stage) || 1;
+  const syncXp = (existing && existing.sync_xp) || 0;
+
+  const linePicker = Object.keys(EXO_LINES).map(function (k) {
+    const L = EXO_LINES[k];
+    const sel = d.line === k;
+    const lockedToStudio = hasStudio && exoLineForStudio(p.studioId) !== k;
+    const cw = L.colorways.default;
+    return '<div onclick="' + (lockedToStudio ? '' : "exoSetDraft('line','" + k + "')") + '" style="cursor:' + (lockedToStudio ? 'not-allowed' : 'pointer') + ';opacity:' + (lockedToStudio ? '0.35' : '1') + ';padding:12px;border-radius:12px;border:1px solid ' + (sel ? cw.a : 'rgba(255,255,255,0.12)') + ';background:' + (sel ? cw.a + '18' : 'rgba(255,255,255,0.03)') + ';text-align:center">' +
+      exoSVG({ line: k, colorway: 'default', cosmetics: {} }, 54) +
+      '<div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:800;color:' + cw.glow + ';letter-spacing:0.08em;margin-top:6px">' + L.name + '</div>' +
+      '<div style="font-size:8.5px;color:#8a92b0;margin-top:2px">' + (ARENA_STUDIOS[L.studio] ? ARENA_STUDIOS[L.studio].name : '') + '</div></div>';
+  }).join('');
+
+  let body = '';
+  if (line) {
+    const cwKeys = Object.keys(line.colorways);
+    const swatches = cwKeys.map(function (k) {
+      const c = line.colorways[k]; const sel = d.colorway === k;
+      return '<div onclick="exoSetDraft(\'colorway\',\'' + k + '\')" title="' + c.label + '" style="cursor:pointer;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,' + c.a + ',' + c.b + ');border:2px solid ' + (sel ? '#fff' : 'rgba(255,255,255,0.15)') + ';box-shadow:' + (sel ? '0 0 12px ' + c.glow : 'none') + '"></div>';
+    }).join('');
+    const accents = Object.keys(EXO_ACCENTS).map(function (k) {
+      const sel = d.accent === k;
+      return '<button onclick="exoSetDraft(\'accent\',\'' + k + '\')" style="cursor:pointer;padding:7px 12px;border-radius:8px;font-family:Orbitron,monospace;font-size:0.55rem;letter-spacing:0.08em;border:1px solid ' + (sel ? '#00e5ff' : 'rgba(255,255,255,0.15)') + ';background:' + (sel ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.04)') + ';color:' + (sel ? '#00e5ff' : '#aab') + '">' + EXO_ACCENTS[k].toUpperCase() + '</button>';
+    }).join('');
+    const stageTrack = line.stages.map(function (nm, i) {
+      const unlocked = i < stage;
+      return '<div style="flex:1;min-width:90px;text-align:center;padding:10px 6px;border-radius:10px;border:1px solid ' + (unlocked ? line.colorways[d.colorway || 'default'].a : 'rgba(255,255,255,0.08)') + ';background:' + (unlocked ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)') + ';opacity:' + (unlocked ? '1' : '0.5') + '">' +
+        '<div style="font-family:Orbitron,monospace;font-size:0.55rem;font-weight:800;color:' + (unlocked ? '#fff' : '#667') + ';letter-spacing:0.05em">' + (unlocked ? '' : '🔒 ') + nm.toUpperCase() + '</div>' +
+        '<div style="font-size:8px;color:#778;margin-top:3px">' + (i === 4 ? EXO_STAGE_XP[i].toLocaleString() + '+ SYNC + FEAT' : EXO_STAGE_XP[i].toLocaleString() + ' SYNC') + '</div></div>';
+    }).join('');
+    const cw = line.colorways[d.colorway || 'default'];
+    body =
+      '<div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:22px;align-items:start">' +
+      '<div class="glass-panel" style="padding:22px;text-align:center">' +
+        '<div style="filter:drop-shadow(0 0 24px ' + cw.glow + '55);display:flex;justify-content:center">' + exoSVG({ line: d.line, colorway: d.colorway, cosmetics: { accent: d.accent } }, 170) + '</div>' +
+        '<input id="exoNameInput" maxlength="20" placeholder="' + line.stages[0] + '" value="' + exoEscape(d.exo_name) + '" style="margin-top:14px;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(0,229,255,0.25);border-radius:10px;padding:10px;color:#fff;font-family:Orbitron,monospace;font-size:0.75rem;text-align:center;letter-spacing:0.08em" />' +
+        '<div style="font-size:9px;color:#778;margin-top:6px">STAGE ' + stage + ' · ' + line.stages[stage - 1].toUpperCase() + ' · ' + syncXp.toLocaleString() + ' SYNC XP</div>' +
+        '<div style="font-size:9px;color:' + cw.glow + ';margin-top:2px">SIGNATURE STAT: ' + line.stat + '</div>' +
+        '<button class="btn-arena btn-arena-gold" style="width:100%;justify-content:center;margin-top:14px;padding:12px" onclick="exoSaveBay()">' + (existing ? '💾 UPDATE EXO' : '⚡ ACTIVATE EXO') + '</button>' +
+        (state.exoSaved ? '<div style="margin-top:10px;font-size:10px;color:#00e676;font-family:Orbitron,monospace;letter-spacing:0.1em">✓ SAVED — YOUR EXO IS LIVE</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:16px">' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">' + line.name + ' LINE</div><div style="font-size:12px;color:#99a">' + line.flavor + '</div></div>' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Colorway</div><div style="display:flex;gap:10px;flex-wrap:wrap">' + swatches + '</div></div>' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Accent</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + accents + '</div></div>' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Evolution Track</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + stageTrack + '</div><div style="font-size:9px;color:#667;margin-top:10px">Sync XP is earned by playing — matches, Side Quests and Live games. Evolution can never be bought.</div></div>' +
+      '</div></div>';
+  } else {
+    body = '<div class="glass-panel" style="padding:22px;text-align:center;color:#99a;font-size:12px">Choose your line to begin — your Startup Studio decides your EXO\'s nature.</div>';
+  }
+
+  return '<div style="max-width:1000px;margin:0 auto;padding:32px 24px;position:relative;z-index:10">' +
+    '<div style="text-align:center;margin-bottom:24px"><h2 style="font-family:Orbitron,monospace;font-size:1.5rem;font-weight:700;color:#00e5ff;text-transform:uppercase;letter-spacing:0.1em" class="text-glow-cyan">EXO BAY</h2>' +
+    '<p style="font-size:12px;color:#888;margin-top:4px">Your evolving companion — one EXO, every arena, every game.</p></div>' +
+    (hasStudio ? '' : '<div style="margin-bottom:16px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Choose your line</div></div>') +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px">' + linePicker + '</div>' +
+    body +
+    '<div style="text-align:center;margin-top:28px"><button class="btn-arena" onclick="goHome()">← Back to Arena</button></div></div>';
+}
+
 // Fallback roster in case fetch fails
 const FALLBACK_ROSTER = [
   { id: "admin-0", name: "PrototypeFLX", brandName: "PrototypeFLX", role: "admin", avatar: "PF", cohort: "N/A", pathway: "Host", email: "host@prototypeflx.com", pin: "0000", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
@@ -1525,6 +1782,7 @@ async function loadRoster() {
 // Initialize with fallback immediately, then fetch live data
 buildPlayers(FALLBACK_ROSTER);
 loadRoster();
+exoLoadAll();
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BATTLE ARENA PLAYER RECORDS — built from the X-Coin roster
@@ -3624,6 +3882,7 @@ function render() {
   else if (state.screen === "lobby") { app.innerHTML = bg + panel + renderNav() + renderLobby(); }
   else if (state.screen === "esports") { app.innerHTML = bg + panel + renderNav() + renderEsportsScreen(); }
   else if (state.screen === "settings") { app.innerHTML = bg + panel + renderNav() + renderSettings(); }
+  else if (state.screen === "exo_bay") { app.innerHTML = bg + panel + renderNav() + renderExoBay(); }
   bindEvents();
   // Restore focus to active input after re-render
   if (state._focusId) {
@@ -3677,6 +3936,7 @@ function renderNav() {
       <a href="#" onclick="goScreen('decks')" class="${state.screen==='decks'?'active':''}">Decks</a>
     </div>
     <div class="player-info">
+      <div onclick="goExoBay()" title="EXO Bay" style="cursor:pointer;display:flex;align-items:center;gap:4px">${exoMini(p.id, 30) || '<span style="font-size:8px;font-family:Orbitron,monospace;color:#00e5ff;border:1px dashed rgba(0,229,255,0.4);border-radius:8px;padding:4px 7px;letter-spacing:0.08em">+ EXO</span>'}</div>
       <div class="xc-bal">${p.xc.toLocaleString()} XC</div>
       <div class="rank-badge" style="background:${ri.color}15;border:1px solid ${ri.color}40;color:${ri.color}">${ri.icon} ${ri.tier}</div>
       <div class="avatar-wrap" style="cursor:pointer" onclick="togglePanel()">
@@ -3718,6 +3978,7 @@ function renderSidePanel() {
         <div style="text-align:center;margin-top:6px">
           <div class="rank-badge" style="background:${ri.color}15;border:1px solid ${ri.color}40;color:${ri.color};font-size:9px;display:inline-flex">${ri.icon} ${ri.tier}</div>
         </div>
+        ${(function(){ var ex = exoGet(p.id); if (!ex) return '<div style="text-align:center;margin-top:10px"><button class="btn-arena" style="font-size:0.55rem;padding:7px 12px" onclick="goExoBay();togglePanel()">⚡ ACTIVATE YOUR EXO</button></div>'; var L = EXO_LINES[ex.line]; return '<div onclick="goExoBay();togglePanel()" style="cursor:pointer;display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(0,229,255,0.15)">' + exoSVG(ex, 40) + '<div style="text-align:left"><div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:800;color:#fff;letter-spacing:0.05em">' + (exoEscape(ex.exo_name) || L.stages[0]) + '</div><div style="font-size:8.5px;color:#8a92b0">' + L.name + ' · STAGE ' + (ex.stage||1) + ' · ' + (ex.sync_xp||0).toLocaleString() + ' SYNC</div></div></div>'; })()}
 
         <!-- Quick Stats -->
         <div class="panel-stats">
@@ -3758,6 +4019,7 @@ function renderSidePanel() {
           <a href="#" onclick="goHome();togglePanel()" class="${state.screen==='home'||state.screen==='side_quests'?'active':''}"><span class="nav-icon">⚔️</span> Arena</a>
           <a href="#" onclick="goLobby();togglePanel()" class="${state.screen==='lobby'?'active':''}"><span class="nav-icon">🏛️</span> Battle Lobby</a>
           <a href="#" onclick="goLeaderboard();togglePanel()" class="${state.screen==='leaderboard'?'active':''}"><span class="nav-icon">🏆</span> Leaderboard</a>
+          <a href="#" onclick="goExoBay();togglePanel()" class="${state.screen==='exo_bay'?'active':''}"><span class="nav-icon">🤖</span> EXO Bay</a>
           <a href="#" onclick="goScreen('esports');togglePanel()" class="${state.screen==='esports'?'active':''}"><span class="nav-icon">🏟️</span> Creator Showdown</a>
           ${isHost ? `<a href="#" onclick="goSettings();togglePanel()" class="${state.screen==='settings'?'active':''}"><span class="nav-icon">⚙️</span> Settings <span style="font-size:8px;color:var(--pflx-gold);margin-left:4px">HOST</span></a>` : ''}
         </div>
@@ -5026,7 +5288,7 @@ function renderLeaderboard() {
     const isMe = p.id === state.player.id;
     return `<div class="podium-slot">
       <div class="podium-avatar" style="border:2px solid ${borderGlows[i]};box-shadow:0 0 20px ${borderGlows[i]};background:linear-gradient(135deg,rgba(0,229,255,0.12),rgba(124,77,255,0.12))">${avatarHTML(p)}</div>
-      <div class="name" style="${isMe?'color:#ffd740':''}">${p.brand}</div>
+      <div class="name" style="${isMe?'color:#ffd740':''}">${p.brand} ${exoMini(p.id, 18)}</div>
       <div class="pathway">${p.pathway}</div>
       <div class="ap">${p.stats.ap.toLocaleString()} AP</div>
       <div class="podium-bar" style="height:${heights[i]}px;background:linear-gradient(to top,${colors[i]}33,${colors[i]}08);border:1px solid ${colors[i]}44;border-bottom:none">${medals[i]}</div>
@@ -5044,7 +5306,7 @@ function renderLeaderboard() {
       <div class="player">
         <div class="lb-avatar">${avatarHTML(p)}</div>
         <div class="info">
-          <div class="pname" style="${isMe?'color:#ffd740':'color:#ccc'}">${p.brand}</div>
+          <div class="pname" style="${isMe?'color:#ffd740':'color:#ccc'}">${p.brand} ${exoMini(p.id, 16)}</div>
           <div class="ppath">${p.pathway}</div>
         </div>
       </div>
