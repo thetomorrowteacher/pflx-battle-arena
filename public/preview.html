@@ -2233,6 +2233,23 @@ function renderExoVault() {
     '<div style="text-align:center;margin-top:28px"><button class="btn-arena" onclick="goExoBay()">🤖 EXO BAY</button> <button class="btn-arena" onclick="goHome()">← Back to Arena</button></div></div>';
 }
 
+
+// ── EXO → game cartridge payload (spec §4.3: descriptor + stats + rendered SVG) ──
+function exoGamePayloadFor(pid) {
+  const ex = exoGet(pid); if (!ex) return null;
+  const line = EXO_LINES[ex.line];
+  return {
+    name: exoEscape(ex.exo_name) || (line ? line.stages[(ex.stage || 1) - 1] : 'EXO'),
+    line: line ? line.name : String(ex.line || '').toUpperCase(),
+    stage: ex.stage || 1, stats: exoStatTotal(pid), svg: exoSVG(ex, 64)
+  };
+}
+function exoGameRivals(excludeId) {
+  const ids = Object.keys(EXO_STATE.byPlayer).filter(function (id) { return id !== excludeId; });
+  ids.sort(function () { return Math.random() - 0.5; });
+  return ids.slice(0, 3).map(exoGamePayloadFor).filter(Boolean);
+}
+
 // Fallback roster in case fetch fails
 const FALLBACK_ROSTER = [
   { id: "admin-0", name: "PrototypeFLX", brandName: "PrototypeFLX", role: "admin", avatar: "PF", cohort: "N/A", pathway: "Host", email: "host@prototypeflx.com", pin: "0000", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
@@ -3360,7 +3377,9 @@ window.addEventListener('message', function (e) {
       type: 'pflx_arena_deck',
       deck: { id: d.id, name: d.name, subject: d.subject || '', cards: d.cards.map(function (c) { return { term: c.term, definition: c.definition }; }) },
       player: { id: (state.player && state.player.id) || 'p', brand: (state.player && state.player.brand) || 'Challenger', studioId: (state.player && state.player.studioId) || '' },
-      config: (arenaGame.opts && arenaGame.opts.config) || null
+      config: (arenaGame.opts && arenaGame.opts.config) || null,
+      exo: (state.player ? exoGamePayloadFor(state.player.id) : null),
+      rivals: (state.player ? exoGameRivals(state.player.id) : [])
     }, '*');
   } else if (m.type === 'pflx_arena_game_result' && arenaGame.open) {
     // Season sessions: a WIN advances this player's level for that session
@@ -3484,6 +3503,9 @@ function renderDecks() {
 // createdByName, createdAt, plays } in Supabase row `pflx_ba_games`.
 // ═══════════════════════════════════════════════════════════════════
 const STUDIO_TEMPLATES = [
+  { id: 'exo-clash', name: 'EXO Clash', icon: '🤖', file: 'games/exo-clash.html', ready: true,
+    img: 'games/covers/exo-clash.png',
+    desc: 'The EXO showcase brawler: your EXO and three rival EXOs on one platform — correct answers land strikes, gear stats are live (max 12% swing), OVERDRIVE hits everyone.' },
   { id: 'quiz-card-duel', name: 'Quiz Card Duel', icon: '⚔', file: 'games/quiz-card-duel.html', ready: true,
     img: 'games/covers/quiz-card-duel.png',
     desc: 'HP battle vs a rival AI. Answer fast to hit harder; streaks stack damage.' },

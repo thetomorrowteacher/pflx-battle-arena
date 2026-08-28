@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>EXO Clash — PFLX Battle Arena</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     EXO CLASH — Arena Game Cartridge #18 (Aug 2026, EXO Phase 3).
+     The avatar showcase brawler from the EXO spec §4.4: your EXO and
+     three rival EXOs battle on a platform ring. Correct answers land
+     strikes; EXO gear stats apply BOUNDED effects (≤12% swing):
+       POWER  +1%/pt damage dealt (cap 12%)
+       GUARD  -1%/pt damage taken (cap 12%)
+       SPEED  +0.25s/pt answer time (cap +3s)
+       LUCK   +1%/pt crit chance (base 3%, cap 15%, crits x1.5)
+       HACK   +1%/pt OVERDRIVE charge per correct (special: hits ALL)
+     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1 (pflx_game_ready →
+     pflx_arena_deck → pflx_arena_game_result / pflx_arena_game_exit).
+     The parent passes pre-rendered EXO SVGs + stats in payload.exo /
+     payload.rivals — same contract a future Godot export will speak.
+     ═══════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:radial-gradient(ellipse at 50% -10%, #140a2f 0%, #04060d 60%); color:#e6f0ff;
+         font-family:'Rajdhani',sans-serif; overflow:hidden; user-select:none; }
+  #wrap { height:100%; display:flex; flex-direction:column; max-width:820px; margin:0 auto; padding:12px; gap:10px; }
+  #ring { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .exo { background:rgba(12,10,30,0.85); border:1px solid rgba(140,110,255,0.3); border-radius:14px; padding:10px; text-align:center; position:relative; transition:opacity .3s; }
+  .exo.me { border-color:rgba(0,229,255,0.55); box-shadow:0 0 14px rgba(0,229,255,0.15); }
+  .exo.ko { opacity:0.28; filter:grayscale(1); }
+  .exo .av { width:64px; height:64px; margin:0 auto; filter:drop-shadow(0 0 10px rgba(140,110,255,0.5)); transition:transform .15s; }
+  .exo .av svg { width:100%; height:100%; }
+  .exo.hit .av { animation:eHit .4s; }
+  @keyframes eHit { 25% { transform:translateX(-7px) rotate(-7deg); } 60% { transform:translateX(7px) rotate(7deg); } }
+  .exo.strike .av { animation:eStrike .4s; }
+  @keyframes eStrike { 40% { transform:translateY(-10px) scale(1.15); } }
+  .exo .nm { font-family:'Orbitron'; font-size:8.5px; letter-spacing:0.08em; color:#fff; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .exo .ln { font-size:7.5px; color:#8a86b8; letter-spacing:0.1em; font-family:'Orbitron'; }
+  .hpb { height:8px; border-radius:5px; background:rgba(255,255,255,0.08); overflow:hidden; margin-top:7px; border:1px solid rgba(255,255,255,0.08); }
+  .hpf { height:100%; border-radius:5px; transition:width .4s cubic-bezier(.22,1,.36,1); background:linear-gradient(90deg,#ff4d6d,#ffd740,#00e676); }
+  .dmg { position:absolute; top:8px; left:50%; transform:translateX(-50%); font-family:'Orbitron'; font-weight:900; font-size:15px; pointer-events:none; opacity:0; }
+  .dmg.show { animation:dPop 0.9s ease forwards; }
+  @keyframes dPop { 0% { opacity:0; transform:translate(-50%,4px) scale(.6);} 25% {opacity:1; transform:translate(-50%,-8px) scale(1.15);} 100% { opacity:0; transform:translate(-50%,-26px) scale(.9);} }
+  #odBar { height:12px; border-radius:7px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,215,64,0.3); overflow:hidden; }
+  #odFill { height:100%; width:0%; background:linear-gradient(90deg,#b388ff,#ffd740); transition:width .4s; }
+  #odRow { display:flex; align-items:center; gap:10px; }
+  #odLbl { font-family:'Orbitron'; font-size:8px; letter-spacing:0.14em; color:#ffd740; white-space:nowrap; }
+  #odBtn { font-family:'Orbitron'; font-size:9px; font-weight:900; letter-spacing:0.1em; padding:7px 14px; border-radius:8px;
+           border:1px solid rgba(255,215,64,0.5); background:rgba(255,215,64,0.1); color:#ffd740; cursor:pointer; opacity:0.4; pointer-events:none; }
+  #odBtn.ready { opacity:1; pointer-events:auto; animation:odPulse .8s infinite; }
+  @keyframes odPulse { 50% { box-shadow:0 0 18px rgba(255,215,64,0.6); } }
+  #quiz { background:rgba(6,6,18,0.92); border:1px solid rgba(140,110,255,0.35); border-radius:14px; padding:14px; flex:1; display:flex; flex-direction:column; }
+  #timerB { height:5px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; margin-bottom:10px; }
+  #timerF { height:100%; background:linear-gradient(90deg,#00e5ff,#b388ff); width:100%; }
+  #qTerm { font-family:'Orbitron'; font-size:clamp(13px,3.4vw,17px); font-weight:800; color:#f6f4ff; margin-bottom:10px; text-align:center; }
+  #qTerm .kick { display:block; font-size:7px; letter-spacing:0.22em; color:#b388ff; margin-bottom:4px; }
+  #qAnswers { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .qa { background:rgba(14,12,32,0.9); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:11px 10px;
+        font-size:13px; font-weight:600; cursor:pointer; color:#d6d2ff; line-height:1.3; transition:all .12s; word-break:break-word; }
+  .qa:hover { border-color:rgba(140,110,255,0.7); transform:translateY(-2px); }
+  .qa.correct { border-color:#00e676; background:rgba(0,230,118,0.14); color:#c9ffe2; }
+  .qa.wrong { border-color:#ff4d6d; background:rgba(255,77,109,0.12); color:#ffd3dc; }
+  .qa.dim { opacity:0.35; pointer-events:none; }
+  #log { font-family:'Orbitron'; font-size:9px; letter-spacing:0.1em; color:#8f8ab8; text-align:center; min-height:14px; }
+  #statChips { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .stc { font-family:'Orbitron'; font-size:7.5px; letter-spacing:0.08em; padding:3px 8px; border-radius:7px; border:1px solid rgba(0,229,255,0.25); color:#7de9ff; background:rgba(0,229,255,0.06); }
+  .screen { position:fixed; inset:0; overflow-y:auto; background:rgba(3,4,12,0.94); backdrop-filter:blur(6px); z-index:100;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .big { font-family:'Orbitron'; font-weight:900; font-size:clamp(24px,6.5vw,40px); letter-spacing:0.1em; margin-bottom:10px; }
+  .sub { font-size:14px; color:#8f8ab8; margin-bottom:18px; max-width:470px; line-height:1.6; }
+  .btn { font-family:'Orbitron'; font-size:12px; font-weight:800; letter-spacing:0.12em; padding:13px 34px; border-radius:10px;
+         border:1px solid rgba(140,110,255,0.55); background:rgba(140,110,255,0.12); color:#cbb8ff; cursor:pointer; margin:6px; transition:all .15s; }
+  .btn:hover { background:rgba(140,110,255,0.25); box-shadow:0 0 18px rgba(140,110,255,0.4); }
+  .btn.gold { border-color:rgba(255,215,64,0.6); background:rgba(255,215,64,0.12); color:#ffd740; }
+  .stat-row { display:flex; gap:22px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
+  .stat b { display:block; font-family:'Orbitron'; font-size:20px; color:#ffd740; }
+  .stat span { font-size:10px; letter-spacing:0.12em; color:#7a76a8; }
+  .bigav { width:120px; height:120px; margin:0 auto 12px; filter:drop-shadow(0 0 24px rgba(140,110,255,0.7)); }
+  .bigav svg { width:100%; height:100%; }
+  #banner { position:fixed; top:32%; left:50%; transform:translateX(-50%); font-family:'Orbitron'; font-weight:900;
+            font-size:clamp(16px,4.2vw,26px); color:#ffd740; text-shadow:0 0 22px rgba(255,215,64,0.7); z-index:60;
+            pointer-events:none; opacity:0; transition:opacity .35s; letter-spacing:0.12em; text-align:center; }
+</style>
+</head>
+<body>
+<div id="banner"></div>
+<div id="wrap" style="display:none">
+  <div id="ring"></div>
+  <div id="odRow"><span id="odLbl">⚡ OVERDRIVE</span><div id="odBar" style="flex:1"><div id="odFill"></div></div><button id="odBtn" onclick="EC.overdrive()">UNLEASH</button></div>
+  <div id="quiz"><div id="timerB"><div id="timerF"></div></div><div id="qTerm"></div><div id="qAnswers"></div></div>
+  <div id="statChips"></div>
+  <div id="log">CORRECT ANSWERS POWER YOUR EXO'S STRIKES</div>
+</div>
+<div class="screen" id="introScr">
+  <div class="bigav" id="introAv">🤖</div>
+  <div class="big" style="color:#cbb8ff">EXO CLASH</div>
+  <div class="sub" id="introSub">Four EXOs enter the ring. Correct answers land strikes on the strongest rival; wrong answers leave you open. Last EXO standing — or top damage when the deck runs out — takes the crown. Your gear's stats are live (bounded, max 12% swing).</div>
+  <div id="introStats" style="margin-bottom:14px"></div>
+  <button class="btn gold" onclick="EC.start()">ENTER THE RING</button>
+</div>
+<div class="screen" id="endScr" style="display:none">
+  <div class="bigav" id="endAv"></div>
+  <div class="big" id="endTitle"></div>
+  <div class="sub" id="endSub"></div>
+  <div class="stat-row" id="endStats"></div>
+  <button class="btn gold" onclick="EC.finish()">CLAIM RESULT</button>
+  <button class="btn" onclick="EC.exit()">EXIT</button>
+</div>
+<script>
+(function () {
+  const EC = window.EC = {};
+  let DECK = null, PLAYER = null, CONFIG = null, MYEXO = null, RIVALS = [];
+  let F = [];               // fighters: {id, name, line, svg, stats, hp, dealt, kos, me, ai:{acc,dmg}}
+  let qs = [], qi = 0, answered = false, timerIv = null, timeLeft = 0, timeMax = 0;
+  let od = 0, odReady = false, score = 0, correct = 0, wrong = 0, streak = 0, bestStreak = 0, over = false;
+
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const stat = (f, k) => (f.stats && f.stats[k]) || 0;
+  const powMult  = f => 1 + clamp(stat(f, 'POWER') * 0.01, 0, 0.12);
+  const grdMult  = f => 1 - clamp(stat(f, 'GUARD') * 0.01, 0, 0.12);
+  const timeBon  = f => clamp(stat(f, 'SPEED') * 0.25, 0, 3);
+  const critCh   = f => clamp(0.03 + stat(f, 'LUCK') * 0.01, 0, 0.15);
+  const hackBon  = f => clamp(stat(f, 'HACK') * 1, 0, 15);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  // ── boot: cartridge handshake ──
+  window.addEventListener('message', function (e) {
+    let m = e.data;
+    if (typeof m === 'string') { try { m = JSON.parse(m); } catch (er) { return; } }
+    if (!m || m.type !== 'pflx_arena_deck') return;
+    DECK = m.deck; PLAYER = m.player || {}; CONFIG = m.config || {};
+    MYEXO = m.exo || null; RIVALS = Array.isArray(m.rivals) ? m.rivals : [];
+    init();
+  });
+  try { parent.postMessage(JSON.stringify({ type: 'pflx_game_ready', game: 'exo-clash' }), '*'); } catch (e) {}
+  // Standalone dev fallback
+  setTimeout(function () { if (!DECK) { DECK = { id: 'dev', name: 'Dev Deck', cards: [
+    { term: '2+2', definition: '4' }, { term: '3x3', definition: '9' }, { term: 'H2O is', definition: 'water' },
+    { term: 'Sun is a', definition: 'star' }, { term: '10/2', definition: '5' }, { term: 'CPU means', definition: 'processor' }
+  ] }; PLAYER = { id: 'dev', brand: 'Dev' }; init(); } }, 2500);
+
+  const FALLBACK_SVG = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="#4c1d95" stroke="#d8b4fe" stroke-width="2"/><rect x="36" y="44" width="24" height="5" fill="#d8b4fe"/><rect x="42" y="53" width="20" height="5" fill="#d8b4fe" opacity="0.7"/></svg>';
+  const RIVAL_NAMES = [['Forgeguard', 'IRONWRIGHT'], ['Chorusguard', 'RESONANT'], ['Dreamguard', 'MYTHWEAVER']];
+
+  function init() {
+    const me = {
+      id: 'me', me: true,
+      name: (MYEXO && MYEXO.name) || (PLAYER.brand || 'YOU'),
+      line: (MYEXO && MYEXO.line) || 'NEONBORN',
+      svg: (MYEXO && MYEXO.svg) || FALLBACK_SVG,
+      stats: (MYEXO && MYEXO.stats) || {}, hp: 100, dealt: 0, kos: 0
+    };
+    F = [me];
+    for (let i = 0; i < 3; i++) {
+      const r = RIVALS[i] || {};
+      F.push({
+        id: 'r' + i, me: false,
+        name: r.name || RIVAL_NAMES[i][0], line: r.line || RIVAL_NAMES[i][1],
+        svg: r.svg || FALLBACK_SVG, stats: r.stats || {},
+        hp: 100, dealt: 0, kos: 0,
+        ai: { acc: 0.45 + i * 0.1, dmg: 14 + i * 2 }
+      });
+    }
+    qs = [];
+    const cards = (DECK.cards || []).slice();
+    while (qs.length < Math.max(10, cards.length) && cards.length >= 4) {
+      const shuffled = cards.slice().sort(() => Math.random() - 0.5);
+      shuffled.forEach(c => qs.push(c));
+    }
+    qs = qs.slice(0, 14);
+    timeMax = 12 + timeBon(me);
+    document.getElementById('introAv').innerHTML = me.svg;
+    document.getElementById('introStats').innerHTML = statChips(me);
+    document.getElementById('statChips').innerHTML = statChips(me);
+  }
+  function statChips(f) {
+    return ['POWER', 'GUARD', 'SPEED', 'HACK', 'LUCK'].map(k =>
+      '<span class="stc">' + k + ' ' + stat(f, k) + '</span>').join(' ');
+  }
+
+  EC.start = function () {
+    document.getElementById('introScr').style.display = 'none';
+    document.getElementById('wrap').style.display = 'flex';
+    drawRing(); nextQ();
+  };
+
+  function drawRing() {
+    document.getElementById('ring').innerHTML = F.map(f =>
+      '<div class="exo ' + (f.me ? 'me' : '') + (f.hp <= 0 ? ' ko' : '') + '" id="fx-' + f.id + '">' +
+      '<div class="dmg" id="dm-' + f.id + '"></div>' +
+      '<div class="av">' + f.svg + '</div>' +
+      '<div class="nm">' + esc(f.name) + (f.me ? ' ★' : '') + '</div>' +
+      '<div class="ln">' + esc(f.line) + '</div>' +
+      '<div class="hpb"><div class="hpf" style="width:' + Math.max(0, f.hp) + '%"></div></div></div>'
+    ).join('');
+  }
+  function floatDmg(f, txt, color) {
+    const el = document.getElementById('dm-' + f.id); if (!el) return;
+    el.textContent = txt; el.style.color = color || '#ff4d6d';
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
+  function anim(f, cls) {
+    const el = document.getElementById('fx-' + f.id); if (!el) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  }
+  function banner(t, c) {
+    const b = document.getElementById('banner');
+    b.textContent = t; b.style.color = c || '#ffd740'; b.style.opacity = 1;
+    setTimeout(() => { b.style.opacity = 0; }, 1300);
+  }
+  function log(t) { document.getElementById('log').textContent = t; }
+
+  function nextQ() {
+    if (over) return;
+    if (qi >= qs.length || F[0].hp <= 0 || F.slice(1).every(f => f.hp <= 0)) return endGame();
+    answered = false;
+    const c = qs[qi];
+    const wrongs = qs.filter(x => x.definition !== c.definition).map(x => x.definition);
+    const opts = [c.definition].concat(wrongs.sort(() => Math.random() - 0.5).slice(0, 3)).sort(() => Math.random() - 0.5);
+    document.getElementById('qTerm').innerHTML = '<span class="kick">ROUND ' + (qi + 1) + ' / ' + qs.length + '</span>' + esc(c.term);
+    document.getElementById('qAnswers').innerHTML = opts.map(o =>
+      '<div class="qa" data-v="' + esc(o) + '">' + esc(o) + '</div>').join('');
+    Array.prototype.forEach.call(document.querySelectorAll('.qa'), el => {
+      el.onclick = () => answer(el, el.getAttribute('data-v') === c.definition);
+    });
+    timeLeft = timeMax;
+    clearInterval(timerIv);
+    timerIv = setInterval(() => {
+      timeLeft -= 0.1;
+      document.getElementById('timerF').style.width = Math.max(0, timeLeft / timeMax * 100) + '%';
+      if (timeLeft <= 0 && !answered) { answered = true; clearInterval(timerIv); miss('TIME UP'); }
+    }, 100);
+  }
+
+  function answer(el, ok) {
+    if (answered) return; answered = true; clearInterval(timerIv);
+    Array.prototype.forEach.call(document.querySelectorAll('.qa'), q => {
+      q.classList.add(q === el ? (ok ? 'correct' : 'wrong') : 'dim');
+      if (ok === false && q.getAttribute('data-v') === qs[qi].definition) q.classList.remove('dim'), q.classList.add('correct');
+    });
+    if (ok) { correct++; streak++; bestStreak = Math.max(bestStreak, streak); strike(); }
+    else { wrong++; streak = 0; miss('OPENING EXPOSED'); }
+  }
+
+  function strike() {
+    const me = F[0];
+    const targets = F.slice(1).filter(f => f.hp > 0);
+    if (!targets.length) return endGame();
+    const t = targets.sort((a, b) => b.hp - a.hp)[0]; // hit the strongest
+    let dmg = (16 + streak * 3) * powMult(me) * grdMult(t);
+    const crit = Math.random() < critCh(me);
+    if (crit) dmg *= 1.5;
+    dmg = Math.round(dmg);
+    t.hp -= dmg; me.dealt += dmg; score += dmg;
+    if (t.hp <= 0) { me.kos++; score += 50; banner('💥 ' + t.name.toUpperCase() + ' DOWN!', '#00e676'); }
+    else if (crit) banner('CRIT! −' + dmg, '#ffd740');
+    od = clamp(od + 18 + hackBon(me), 0, 100);
+    updateOd();
+    anim(me, 'strike'); anim(t, 'hit'); floatDmg(t, '−' + dmg, crit ? '#ffd740' : '#ff4d6d');
+    log((crit ? 'CRITICAL STRIKE — ' : 'STRIKE LANDED — ') + '−' + dmg + ' TO ' + t.name.toUpperCase() + (streak > 1 ? ' · STREAK x' + streak : ''));
+    drawRing(); afterBeat();
+  }
+
+  function miss(why) {
+    const me = F[0];
+    const alive = F.slice(1).filter(f => f.hp > 0);
+    // Each surviving rival gets a free swing at whoever's strongest (often you)
+    alive.forEach(r => {
+      if (Math.random() < r.ai.acc) {
+        const pool = [F[0]].concat(alive.filter(x => x.id !== r.id)).filter(x => x.hp > 0);
+        const t = pool.sort((a, b) => b.hp - a.hp)[0];
+        let dmg = Math.round(r.ai.dmg * powMult(r) * grdMult(t));
+        t.hp -= dmg; r.dealt += dmg;
+        if (t.me) { anim(t, 'hit'); floatDmg(t, '−' + dmg); }
+        if (t.hp <= 0 && !t.me) r.kos++;
+      }
+    });
+    log(why + ' — RIVALS COUNTERATTACK');
+    drawRing(); afterBeat();
+  }
+
+  function afterBeat() { qi++; setTimeout(nextQ, 1000); }
+
+  EC.overdrive = function () {
+    if (od < 100 || over) return;
+    od = 0; updateOd();
+    const me = F[0];
+    banner('⚡ OVERDRIVE ⚡', '#b388ff');
+    F.slice(1).forEach(t => {
+      if (t.hp <= 0) return;
+      const dmg = Math.round(24 * powMult(me) * grdMult(t));
+      t.hp -= dmg; me.dealt += dmg; score += dmg;
+      if (t.hp <= 0) { me.kos++; score += 50; }
+      anim(t, 'hit'); floatDmg(t, '−' + dmg, '#b388ff');
+    });
+    anim(me, 'strike'); drawRing();
+    if (F.slice(1).every(f => f.hp <= 0)) endGame();
+  };
+  function updateOd() {
+    document.getElementById('odFill').style.width = od + '%';
+    const btn = document.getElementById('odBtn');
+    if (od >= 100) { btn.classList.add('ready'); odReady = true; } else { btn.classList.remove('ready'); odReady = false; }
+  }
+
+  function endGame() {
+    if (over) return; over = true; clearInterval(timerIv);
+    const me = F[0];
+    const rivalsDown = F.slice(1).every(f => f.hp <= 0);
+    const topDealt = F.slice().sort((a, b) => b.dealt - a.dealt)[0];
+    const won = me.hp > 0 && (rivalsDown || topDealt.me);
+    if (won) score += 100;
+    score += Math.max(0, me.hp);
+    document.getElementById('wrap').style.display = 'none';
+    document.getElementById('endScr').style.display = 'flex';
+    document.getElementById('endAv').innerHTML = me.svg;
+    document.getElementById('endTitle').textContent = won ? '🏆 CLASH CHAMPION' : me.hp <= 0 ? '💥 EXO DOWN' : '🥈 OUTDAMAGED';
+    document.getElementById('endTitle').style.color = won ? '#ffd740' : '#8f8ab8';
+    document.getElementById('endSub').textContent = won
+      ? (me.name + ' ruled the ring — ' + me.kos + ' KO' + (me.kos === 1 ? '' : 's') + ', ' + me.dealt + ' damage dealt.')
+      : 'The ring was ruled by ' + topDealt.name + '. Gear up in THE VAULT and run it back.';
+    document.getElementById('endStats').innerHTML =
+      '<div class="stat"><b>' + score + '</b><span>SCORE</span></div>' +
+      '<div class="stat"><b>' + me.dealt + '</b><span>DAMAGE</span></div>' +
+      '<div class="stat"><b>' + me.kos + '</b><span>KOS</span></div>' +
+      '<div class="stat"><b>' + correct + '/' + (correct + wrong) + '</b><span>ANSWERS</span></div>' +
+      '<div class="stat"><b>x' + bestStreak + '</b><span>BEST STREAK</span></div>';
+    EC._result = { score: score, won: won };
+  }
+  EC.finish = function () {
+    const r = EC._result || { score: score, won: false };
+    try { parent.postMessage(JSON.stringify({ type: 'pflx_arena_game_result', game: 'exo-clash', deckId: DECK && DECK.id, score: r.score, won: r.won }), '*'); } catch (e) {}
+    document.getElementById('endSub').textContent = 'Result sent to the Arena. XC + Sync XP incoming.';
+  };
+  EC.exit = function () {
+    try { parent.postMessage(JSON.stringify({ type: 'pflx_arena_game_exit' }), '*'); } catch (e) {}
+  };
+})();
+</script>
+</body>
+</html>
