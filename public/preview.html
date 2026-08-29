@@ -1440,6 +1440,816 @@ function arenaStudioChip(sid) {
     `<span style="font-family:Orbitron,monospace;font-size:0.42rem;font-weight:800;color:#fff;letter-spacing:0.06em;">${m.name}</span></span>`;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// EXO AVATAR SYSTEM — Phase 1 (Design Spec v1.1, approved 2026-08-27)
+// One persistent studio-affiliated companion per player. Stage-1 Cores are
+// procedural SVG (no art assets needed); stages 2+ unlock via Sync XP in
+// Phase 2. Data lives in the dedicated `player_avatars` table (row per
+// player) — deliberately NOT an app_data KV row (oversized-row lesson).
+// ═══════════════════════════════════════════════════════════════════════════
+
+const EXO_LINES = {
+  ironwright: {
+    id: 'ironwright', studio: 'studio-gentech', name: 'IRONWRIGHT', stat: 'GUARD',
+    flavor: 'Constructor mech — plating, servos, tools that become weapons.',
+    stages: ['Cogling', 'Gearframe', 'Forgeguard', 'Titanwright', 'Omniforge'],
+    colorways: {
+      default: { label: 'Foundry',  a: '#06b6d4', b: '#155e75', glow: '#67e8f9' },
+      magma:   { label: 'Magma',    a: '#f97316', b: '#7c2d12', glow: '#fdba74' },
+      titan:   { label: 'Titan',    a: '#94a3b8', b: '#334155', glow: '#e2e8f0' },
+      verdant: { label: 'Verdant',  a: '#22c55e', b: '#14532d', glow: '#86efac' }
+    }
+  },
+  resonant: {
+    id: 'resonant', studio: 'studio-mindforge', name: 'RESONANT', stat: 'SYNC',
+    flavor: 'Living resonance — light, sound and pattern; wears culture as glyphs.',
+    stages: ['Emberling', 'Pulseframe', 'Chorusguard', 'Soulbeacon', 'Luminarch'],
+    colorways: {
+      default: { label: 'Pulse',   a: '#f43f5e', b: '#881337', glow: '#fda4af' },
+      aurora:  { label: 'Aurora',  a: '#2dd4bf', b: '#134e4a', glow: '#99f6e4' },
+      solar:   { label: 'Solar',   a: '#f59e0b', b: '#78350f', glow: '#fcd34d' },
+      violet:  { label: 'Violet',  a: '#a78bfa', b: '#4c1d95', glow: '#ddd6fe' }
+    }
+  },
+  mythweaver: {
+    id: 'mythweaver', studio: 'studio-emagination', name: 'MYTHWEAVER', stat: 'LUCK',
+    flavor: 'Story-creature — ink, paint and fable made solid.',
+    stages: ['Sketchling', 'Fableframe', 'Dreamguard', 'Mythmaker', 'Worldsmith'],
+    colorways: {
+      default: { label: 'Fable',   a: '#2563eb', b: '#1e3a8a', glow: '#93c5fd' },
+      inkgold: { label: 'Inkgold', a: '#eab308', b: '#713f12', glow: '#fde047' },
+      rose:    { label: 'Rose',    a: '#ec4899', b: '#831843', glow: '#f9a8d4' },
+      forest:  { label: 'Forest',  a: '#10b981', b: '#064e3b', glow: '#6ee7b7' }
+    }
+  },
+  neonborn: {
+    id: 'neonborn', studio: 'studio-innov8', name: 'NEONBORN', stat: 'HACK',
+    flavor: 'Glitchcore synthetic — neon noir, scanlines, cyberpunk chrome.',
+    stages: ['Bitling', 'Glitchframe', 'Neonguard', 'Cipher', 'Singularity'],
+    colorways: {
+      default:     { label: 'Neon',        a: '#9333ea', b: '#3b0764', glow: '#d8b4fe' },
+      ultraviolet: { label: 'Ultraviolet', a: '#7c3aed', b: '#2e1065', glow: '#c4b5fd' },
+      acid:        { label: 'Acid',        a: '#84cc16', b: '#365314', glow: '#d9f99d' },
+      chrome:      { label: 'Chrome',      a: '#e11d48', b: '#4c0519', glow: '#fecdd3' }
+    }
+  }
+};
+const EXO_STAGE_XP = [0, 500, 2500, 8000, 20000];
+const EXO_ACCENTS = { '': 'None', antenna: 'Antenna', visor: 'Visor', halo: 'Halo', fins: 'Fins' };
+
+function exoLineForStudio(sid) {
+  for (var k in EXO_LINES) { if (EXO_LINES[k].studio === sid) return k; }
+  return '';
+}
+function exoEscape(s) {
+  return String(s || '').replace(/[<>&"']/g, '').slice(0, 20);
+}
+
+// ── State + Supabase I/O (dedicated table, same anon REST pattern) ──
+const EXO_STATE = { byPlayer: {}, loaded: false };
+
+async function exoLoadAll() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/player_avatars?select=*', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    if (!res.ok) return;
+    const rows = await res.json();
+    (rows || []).forEach(function (r) { EXO_STATE.byPlayer[r.player_id] = r; });
+    EXO_STATE.loaded = true;
+    if (state.screen === 'exo_bay' || state.screen === 'leaderboard' || state.screen === 'home' || state.screen === 'lobby') render();
+  } catch (e) { console.warn('EXO load failed:', e.message); }
+}
+
+async function exoSaveRow(row) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/player_avatars?on_conflict=player_id', {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(row)
+    });
+    return res.ok;
+  } catch (e) { console.warn('EXO save failed:', e.message); return false; }
+}
+
+function exoGet(pid) { return EXO_STATE.byPlayer[pid] || null; }
+
+// ── Procedural Stage-1 Core renderer (SVG, no assets) ──
+function exoCoreSVG(exo, size) {
+  const line = EXO_LINES[exo.line]; if (!line) return '';
+  const cw = line.colorways[exo.colorway] || line.colorways.default;
+  const gid = 'exog-' + exo.line + '-' + (exo.colorway || 'default');
+  const accent = (exo.cosmetics && exo.cosmetics.accent) || '';
+  let motif = '';
+  if (exo.line === 'ironwright') {
+    motif = '<polygon points="50,36 62,43 62,57 50,64 38,57 38,43" fill="none" stroke="' + cw.glow + '" stroke-width="2.5" opacity="0.9"/>' +
+            '<circle cx="50" cy="50" r="5" fill="' + cw.glow + '"/>' +
+            '<g stroke="' + cw.glow + '" stroke-width="3" opacity="0.55">' +
+            '<line x1="50" y1="24" x2="50" y2="30"/><line x1="50" y1="70" x2="50" y2="76"/>' +
+            '<line x1="24" y1="50" x2="30" y2="50"/><line x1="70" y1="50" x2="76" y2="50"/></g>';
+  } else if (exo.line === 'resonant') {
+    motif = '<g fill="none" stroke="' + cw.glow + '" stroke-linecap="round">' +
+            '<path d="M38,50 a12,12 0 0 1 24,0" stroke-width="2.5" opacity="0.9"/>' +
+            '<path d="M32,52 a18,18 0 0 1 36,0" stroke-width="2" opacity="0.6"/>' +
+            '<path d="M26,54 a24,24 0 0 1 48,0" stroke-width="1.5" opacity="0.35"/></g>' +
+            '<circle cx="50" cy="56" r="4.5" fill="' + cw.glow + '"/>';
+  } else if (exo.line === 'mythweaver') {
+    motif = '<path d="M50,30 c14,4 16,20 4,26 c10,2 14,12 6,18 c-2,-8 -12,-10 -16,-4 c-6,-10 0,-18 8,-20 c-10,-4 -10,-16 -2,-20z" fill="' + cw.glow + '" opacity="0.85"/>' +
+            '<circle cx="63" cy="36" r="3" fill="#fff" opacity="0.9"/>';
+  } else {
+    motif = '<g fill="' + cw.glow + '">' +
+            '<rect x="34" y="40" width="24" height="5" opacity="0.9"/>' +
+            '<rect x="42" y="49" width="24" height="5" opacity="0.65"/>' +
+            '<rect x="36" y="58" width="18" height="5" opacity="0.8"/></g>' +
+            '<line x1="28" y1="34" x2="72" y2="34" stroke="' + cw.glow + '" stroke-width="1" opacity="0.4"/>' +
+            '<line x1="28" y1="68" x2="72" y2="68" stroke="' + cw.glow + '" stroke-width="1" opacity="0.4"/>';
+  }
+  let acc = '';
+  if (accent === 'antenna') acc = '<line x1="50" y1="14" x2="50" y2="24" stroke="' + cw.a + '" stroke-width="2.5"/><circle cx="50" cy="11" r="3.5" fill="' + cw.glow + '"/>';
+  else if (accent === 'visor') acc = '<rect x="32" y="42" width="36" height="9" rx="4.5" fill="#0b1020" stroke="' + cw.glow + '" stroke-width="1.5" opacity="0.95"/>';
+  else if (accent === 'halo') acc = '<ellipse cx="50" cy="16" rx="16" ry="4.5" fill="none" stroke="' + cw.glow + '" stroke-width="2.5" opacity="0.9"/>';
+  else if (accent === 'fins') acc = '<polygon points="20,50 30,42 30,58" fill="' + cw.a + '" opacity="0.85"/><polygon points="80,50 70,42 70,58" fill="' + cw.a + '" opacity="0.85"/>';
+  return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '" style="display:block;overflow:visible">' +
+    '<defs><radialGradient id="' + gid + '" cx="50%" cy="42%" r="60%">' +
+    '<stop offset="0%" stop-color="' + cw.a + '"/><stop offset="100%" stop-color="' + cw.b + '"/></radialGradient></defs>' +
+    '<circle cx="50" cy="50" r="30" fill="url(#' + gid + ')" stroke="' + cw.glow + '" stroke-width="1.5"/>' +
+    '<circle cx="50" cy="50" r="36" fill="none" stroke="' + cw.a + '" stroke-width="1" opacity="0.35"/>' +
+    motif + acc + '</svg>';
+}
+
+function exoMini(pid, size) {
+  const ex = exoGet(pid); if (!ex) return '';
+  const line = EXO_LINES[ex.line]; if (!line) return '';
+  const nm = exoEscape(ex.exo_name) || line.stages[0];
+  return '<span title="' + nm + ' — ' + line.name + '" style="display:inline-flex;vertical-align:middle;filter:drop-shadow(0 0 4px rgba(0,229,255,0.35))">' + exoSVG(ex, size) + '</span>';
+}
+
+// ── EXO BAY screen ──
+function goExoBay() {
+  const p = state.player; if (!p) return;
+  const ex = exoGet(p.id);
+  state.exoDraft = ex
+    ? { line: ex.line, colorway: ex.colorway || 'default', accent: (ex.cosmetics && ex.cosmetics.accent) || '', exo_name: ex.exo_name || '' }
+    : { line: exoLineForStudio(p.studioId), colorway: 'default', accent: '', exo_name: '' };
+  state.exoSaved = false;
+  SFX.navigate(); state.screen = 'exo_bay'; render();
+}
+
+function exoSetDraft(k, v) {
+  if (!state.exoDraft) return;
+  const inp = document.getElementById('exoNameInput');
+  if (inp) state.exoDraft.exo_name = inp.value;
+  state.exoDraft[k] = v;
+  if (k === 'line') { state.exoDraft.colorway = 'default'; }
+  SFX.click(); render();
+}
+
+async function exoSaveBay() {
+  const p = state.player; if (!p || !state.exoDraft) return;
+  const d = state.exoDraft;
+  const inp = document.getElementById('exoNameInput');
+  if (inp) d.exo_name = inp.value;
+  if (!d.line || !EXO_LINES[d.line]) return;
+  const prev = exoGet(p.id) || {};
+  const row = {
+    player_id: p.id, line: d.line,
+    stage: prev.stage || 1, sync_xp: prev.sync_xp || 0,
+    exo_name: exoEscape(d.exo_name) || EXO_LINES[d.line].stages[0],
+    colorway: d.colorway || 'default',
+    equipped: prev.equipped || {},
+    cosmetics: { accent: d.accent || '' },
+    stats_cache: prev.stats_cache || {},
+    updated_at: new Date().toISOString()
+  };
+  const ok = await exoSaveRow(row);
+  if (ok) { EXO_STATE.byPlayer[p.id] = row; state.exoSaved = true; SFX.victory ? SFX.victory() : SFX.click(); }
+  render();
+}
+
+function renderExoBay() {
+  const p = state.player;
+  const d = state.exoDraft || { line: exoLineForStudio(p.studioId), colorway: 'default', accent: '', exo_name: '' };
+  state.exoDraft = d;
+  const hasStudio = !!exoLineForStudio(p.studioId);
+  const line = EXO_LINES[d.line];
+  const existing = exoGet(p.id);
+  const stage = (existing && existing.stage) || 1;
+  const syncXp = (existing && existing.sync_xp) || 0;
+
+  const linePicker = Object.keys(EXO_LINES).map(function (k) {
+    const L = EXO_LINES[k];
+    const sel = d.line === k;
+    const lockedToStudio = hasStudio && exoLineForStudio(p.studioId) !== k;
+    const cw = L.colorways.default;
+    return '<div onclick="' + (lockedToStudio ? '' : "exoSetDraft('line','" + k + "')") + '" style="cursor:' + (lockedToStudio ? 'not-allowed' : 'pointer') + ';opacity:' + (lockedToStudio ? '0.35' : '1') + ';padding:12px;border-radius:12px;border:1px solid ' + (sel ? cw.a : 'rgba(255,255,255,0.12)') + ';background:' + (sel ? cw.a + '18' : 'rgba(255,255,255,0.03)') + ';text-align:center">' +
+      exoSVG({ line: k, colorway: 'default', cosmetics: {} }, 54) +
+      '<div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:800;color:' + cw.glow + ';letter-spacing:0.08em;margin-top:6px">' + L.name + '</div>' +
+      '<div style="font-size:8.5px;color:#8a92b0;margin-top:2px">' + (ARENA_STUDIOS[L.studio] ? ARENA_STUDIOS[L.studio].name : '') + '</div></div>';
+  }).join('');
+
+  let body = '';
+  if (line) {
+    const cwKeys = Object.keys(line.colorways);
+    const swatches = cwKeys.map(function (k) {
+      const c = line.colorways[k]; const sel = d.colorway === k;
+      return '<div onclick="exoSetDraft(\'colorway\',\'' + k + '\')" title="' + c.label + '" style="cursor:pointer;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,' + c.a + ',' + c.b + ');border:2px solid ' + (sel ? '#fff' : 'rgba(255,255,255,0.15)') + ';box-shadow:' + (sel ? '0 0 12px ' + c.glow : 'none') + '"></div>';
+    }).join('');
+    const accents = Object.keys(EXO_ACCENTS).map(function (k) {
+      const sel = d.accent === k;
+      return '<button onclick="exoSetDraft(\'accent\',\'' + k + '\')" style="cursor:pointer;padding:7px 12px;border-radius:8px;font-family:Orbitron,monospace;font-size:0.55rem;letter-spacing:0.08em;border:1px solid ' + (sel ? '#00e5ff' : 'rgba(255,255,255,0.15)') + ';background:' + (sel ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.04)') + ';color:' + (sel ? '#00e5ff' : '#aab') + '">' + EXO_ACCENTS[k].toUpperCase() + '</button>';
+    }).join('');
+    const stageTrack = line.stages.map(function (nm, i) {
+      const unlocked = i < stage;
+      return '<div style="flex:1;min-width:90px;text-align:center;padding:10px 6px;border-radius:10px;border:1px solid ' + (unlocked ? line.colorways[d.colorway || 'default'].a : 'rgba(255,255,255,0.08)') + ';background:' + (unlocked ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)') + ';opacity:' + (unlocked ? '1' : '0.5') + '">' +
+        '<div style="font-family:Orbitron,monospace;font-size:0.55rem;font-weight:800;color:' + (unlocked ? '#fff' : '#667') + ';letter-spacing:0.05em">' + (unlocked ? '' : '🔒 ') + nm.toUpperCase() + '</div>' +
+        '<div style="font-size:8px;color:#778;margin-top:3px">' + (i === 4 ? EXO_STAGE_XP[i].toLocaleString() + '+ SYNC + FEAT' : EXO_STAGE_XP[i].toLocaleString() + ' SYNC') + '</div></div>';
+    }).join('');
+    const cw = line.colorways[d.colorway || 'default'];
+    body =
+      '<div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:22px;align-items:start">' +
+      '<div class="glass-panel" style="padding:22px;text-align:center">' +
+        '<div style="filter:drop-shadow(0 0 24px ' + cw.glow + '55);display:flex;justify-content:center">' + exoSVG({ line: d.line, colorway: d.colorway, cosmetics: { accent: d.accent } }, 170) + '</div>' +
+        '<input id="exoNameInput" maxlength="20" placeholder="' + line.stages[0] + '" value="' + exoEscape(d.exo_name) + '" style="margin-top:14px;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(0,229,255,0.25);border-radius:10px;padding:10px;color:#fff;font-family:Orbitron,monospace;font-size:0.75rem;text-align:center;letter-spacing:0.08em" />' +
+        '<div style="font-size:9px;color:#778;margin-top:6px">STAGE ' + stage + ' · ' + line.stages[stage - 1].toUpperCase() + ' · ' + syncXp.toLocaleString() + ' SYNC XP</div>' +
+        '<div style="font-size:9px;color:' + cw.glow + ';margin-top:2px">SIGNATURE STAT: ' + line.stat + '</div>' +
+        '<button class="btn-arena btn-arena-gold" style="width:100%;justify-content:center;margin-top:14px;padding:12px" onclick="exoSaveBay()">' + (existing ? '💾 UPDATE EXO' : '⚡ ACTIVATE EXO') + '</button>' +
+        (state.exoSaved ? '<div style="margin-top:10px;font-size:10px;color:#00e676;font-family:Orbitron,monospace;letter-spacing:0.1em">✓ SAVED — YOUR EXO IS LIVE</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:16px">' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">' + line.name + ' LINE</div><div style="font-size:12px;color:#99a">' + line.flavor + '</div></div>' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Colorway</div><div style="display:flex;gap:10px;flex-wrap:wrap">' + swatches + '</div></div>' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Accent</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + accents + '</div></div>' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Evolution Track</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + stageTrack + '</div><div style="font-size:9px;color:#667;margin-top:10px">Sync XP is earned by playing — matches, Side Quests and Live games. Evolution can never be bought.</div></div>' +
+      '</div></div>';
+  } else {
+    body = '<div class="glass-panel" style="padding:22px;text-align:center;color:#99a;font-size:12px">Choose your line to begin — your Startup Studio decides your EXO\'s nature.</div>';
+  }
+
+  return '<div style="max-width:1000px;margin:0 auto;padding:32px 24px;position:relative;z-index:10">' +
+    '<div style="text-align:center;margin-bottom:24px"><h2 style="font-family:Orbitron,monospace;font-size:1.5rem;font-weight:700;color:#00e5ff;text-transform:uppercase;letter-spacing:0.1em" class="text-glow-cyan">EXO BAY</h2>' +
+    '<p style="font-size:12px;color:#888;margin-top:4px">Your evolving companion — one EXO, every arena, every game.</p></div>' +
+    (hasStudio ? '' : '<div style="margin-bottom:16px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Choose your line</div></div>') +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px">' + linePicker + '</div>' +
+    body +
+    '<div style="text-align:center;margin-top:28px"><button class="btn-arena btn-arena-gold" onclick="goExoVault()">🛒 THE VAULT</button> <button class="btn-arena" onclick="goHome()">← Back to Arena</button></div></div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXO ECONOMY — Phase 2 (Design Spec v1.1). Shop, Data Vaults (full-luck,
+// disclosed odds, pity, scrap), inventory + equip + bounded stats, Sync XP
+// earning + evolution. XC debits ride the SAME PflxDataBus path as wagers
+// (arenaPostAward with negative xc — the Console clamps balance at 0 and
+// never decrements totalXcoin, so spending can never demote a rank).
+// Every XC movement writes an avatar_ledger row.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const EXO_PREMIUM_COLORWAYS = {
+  ironwright: { gilded:  { label: 'Gilded',  a: '#fbbf24', b: '#78350f', glow: '#fef3c7' } },
+  resonant:   { nova:    { label: 'Nova',    a: '#f8fafc', b: '#475569', glow: '#ffffff' } },
+  mythweaver: { starlit: { label: 'Starlit', a: '#818cf8', b: '#1e1b4b', glow: '#c7d2fe' } },
+  neonborn:   { inferno: { label: 'Inferno', a: '#f97316', b: '#7f1d1d', glow: '#fdba74' } }
+};
+const EXO_RARITY = {
+  standard:  { label: 'STANDARD',  color: '#9aa4b8', scrap: 25,   craft: 100 },
+  refined:   { label: 'REFINED',   color: '#35d07f', scrap: 60,   craft: 240 },
+  prototype: { label: 'PROTOTYPE', color: '#38b6ff', scrap: 150,  craft: 600 },
+  relic:     { label: 'RELIC',     color: '#b06bff', scrap: 400,  craft: 1600 },
+  anomaly:   { label: 'ANOMALY',   color: '#ffd740', scrap: 1000, craft: 4000 }
+};
+const EXO_SLOT_ICONS = { visor: '🥽', core: '💠', actuators: '🦾', chassis: '🦿', aura: '🌀' };
+const EXO_VAULTS = {
+  bronze: { label: 'BRONZE VAULT', price: 100,  icon: '🥉', odds: { standard: 70, refined: 25, prototype: 5 } },
+  silver: { label: 'SILVER VAULT', price: 400,  icon: '🥈', odds: { refined: 45, prototype: 40, relic: 12, anomaly: 3 } },
+  gold:   { label: 'GOLD VAULT',   price: 1000, icon: '🥇', odds: { prototype: 55, relic: 35, anomaly: 10 } }
+};
+const EXO_STAT_KEYS = ['POWER', 'GUARD', 'SPEED', 'HACK', 'LUCK'];
+
+const EXO_CATALOG = { items: [], loaded: false };
+const EXO_CONFIG = { vaultsEnabled: true, priceMult: 1, dailyCap: 2000, odds: null, loaded: false };
+const EXO_ECON = { inv: {}, invLoadedFor: null, todaySpend: 0, pendingReveal: null };
+
+// ── Loads ──
+async function exoCatalogLoad() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/avatar_catalog?active=eq.true&select=*', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    if (!res.ok) return;
+    EXO_CATALOG.items = await res.json() || [];
+    EXO_CATALOG.loaded = true;
+    if (state.screen === 'exo_vault') render();
+  } catch (e) { console.warn('EXO catalog load failed:', e.message); }
+}
+async function exoConfigLoad() {
+  try {
+    const d = await supabaseLoad('pflx_exo_config');
+    if (d && typeof d === 'object') {
+      if (typeof d.vaultsEnabled === 'boolean') EXO_CONFIG.vaultsEnabled = d.vaultsEnabled;
+      if (typeof d.priceMult === 'number' && d.priceMult > 0) EXO_CONFIG.priceMult = d.priceMult;
+      if (typeof d.dailyCap === 'number' && d.dailyCap >= 0) EXO_CONFIG.dailyCap = d.dailyCap;
+      if (d.odds && typeof d.odds === 'object') EXO_CONFIG.odds = d.odds;
+    }
+    EXO_CONFIG.loaded = true;
+  } catch (e) {}
+}
+function exoConfigSave() {
+  supabaseSave('pflx_exo_config', {
+    vaultsEnabled: EXO_CONFIG.vaultsEnabled, priceMult: EXO_CONFIG.priceMult,
+    dailyCap: EXO_CONFIG.dailyCap, odds: EXO_CONFIG.odds, updatedAt: Date.now()
+  });
+}
+function exoEconBoot() { exoCatalogLoad(); exoConfigLoad(); }
+
+async function exoInvLoad(pid, force) {
+  if (!pid) return;
+  if (EXO_ECON.invLoadedFor === pid && !force) return;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/avatar_inventory?player_id=eq.' + encodeURIComponent(pid) + '&select=item_id,qty', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    if (!res.ok) return;
+    const rows = await res.json() || [];
+    EXO_ECON.inv = {};
+    rows.forEach(function (r) { EXO_ECON.inv[r.item_id] = r.qty; });
+    EXO_ECON.invLoadedFor = pid;
+    exoApplyPremiumUnlocks(pid);
+    // Today's spend (Bangkok-day approximation: local midnight UTC ISO)
+    const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+    const res2 = await fetch(SUPABASE_URL + '/rest/v1/avatar_ledger?player_id=eq.' + encodeURIComponent(pid) +
+      '&ts=gte.' + midnight.toISOString() + '&xc_delta=lt.0&select=xc_delta', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    if (res2.ok) {
+      const led = await res2.json() || [];
+      EXO_ECON.todaySpend = led.reduce(function (s, r) { return s + Math.abs(r.xc_delta || 0); }, 0);
+    }
+    if (state.screen === 'exo_vault' || state.screen === 'exo_bay') render();
+  } catch (e) { console.warn('EXO inv load failed:', e.message); }
+}
+function exoApplyPremiumUnlocks(pid) {
+  // Owned premium colorways become selectable in the EXO Bay builder.
+  EXO_CATALOG.items.forEach(function (it) {
+    if (it.kind !== 'cosmetic' || !it.asset_ref || it.asset_ref.indexOf('colorway:') !== 0) return;
+    if (!EXO_ECON.inv[it.item_id]) return;
+    const key = it.asset_ref.split(':')[1];
+    const line = it.line_restrict;
+    if (line && EXO_LINES[line] && EXO_PREMIUM_COLORWAYS[line] && EXO_PREMIUM_COLORWAYS[line][key]) {
+      EXO_LINES[line].colorways[key] = EXO_PREMIUM_COLORWAYS[line][key];
+    }
+  });
+}
+function exoOwned(itemId) { return (EXO_ECON.inv[itemId] || 0) > 0; }
+function exoScrap() { return EXO_ECON.inv['scrap'] || 0; }
+function exoCatItem(id) { return EXO_CATALOG.items.find(function (i) { return i.item_id === id; }) || null; }
+
+// ── Writes ──
+async function exoInvSet(pid, itemId, qty, via) {
+  EXO_ECON.inv[itemId] = qty;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/avatar_inventory?on_conflict=player_id,item_id', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ player_id: pid, item_id: itemId, qty: qty, acquired_via: via || 'shop' })
+    });
+  } catch (e) { console.warn('EXO inv save failed:', e.message); }
+}
+async function exoLedger(pid, kind, xcDelta, itemId, meta) {
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/avatar_ledger', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: pid, kind: kind, xc_delta: xcDelta || 0, item_id: itemId || null, meta: meta || {} })
+    });
+  } catch (e) { console.warn('EXO ledger write failed:', e.message); }
+}
+
+// ── Spending (rides the PflxDataBus, mirrors the wager-settle pattern) ──
+function exoPrice(baseXc) { return Math.max(0, Math.round((baseXc || 0) * (EXO_CONFIG.priceMult || 1))); }
+function exoSpend(amount, reason) {
+  const p = state.player;
+  if (!p || !amount || amount <= 0) return false;
+  if ((p.xc || 0) < amount) { exoToastMsg('Not enough XC — you have ' + (p.xc || 0).toLocaleString()); return false; }
+  if (EXO_CONFIG.dailyCap > 0 && EXO_ECON.todaySpend + amount > EXO_CONFIG.dailyCap) {
+    exoToastMsg('Daily spend cap reached (' + EXO_CONFIG.dailyCap.toLocaleString() + ' XC/day — set by your host)');
+    return false;
+  }
+  const inPlatform = (typeof window !== 'undefined' && window.parent !== window);
+  if (inPlatform) arenaPostAward(p.id, { xc: -amount, reason: 'exo.' + reason });
+  // Local mirror for instant UI; the Platform round-trip corrects within ~5ms.
+  p.xc = Math.max(0, (p.xc || 0) - amount);
+  EXO_ECON.todaySpend += amount;
+  return true;
+}
+function exoToastMsg(t) {
+  state.exoToast = t;
+  clearTimeout(state._exoToastTimer);
+  state._exoToastTimer = setTimeout(function () { state.exoToast = null; if (state.screen === 'exo_vault' || state.screen === 'exo_bay') render(); }, 3000);
+  render();
+}
+
+// ── Buy / craft ──
+async function exoBuy(itemId) {
+  const p = state.player; if (!p) return;
+  const it = exoCatItem(itemId); if (!it || it.price_xc == null) return;
+  if (exoOwned(itemId) && it.kind !== 'cosmetic') { exoToastMsg('Already owned'); return; }
+  if (exoOwned(itemId)) { exoToastMsg('Already owned'); return; }
+  const price = exoPrice(it.price_xc);
+  if (price > 0 && !exoSpend(price, 'purchase.' + itemId)) return;
+  await exoInvSet(p.id, itemId, 1, 'shop');
+  exoLedger(p.id, 'purchase', -price, itemId, { rarity: it.rarity });
+  exoApplyPremiumUnlocks(p.id);
+  SFX.correct ? SFX.correct() : SFX.click();
+  exoToastMsg('✓ ' + exoItemName(it) + ' acquired');
+}
+async function exoCraft(itemId) {
+  const p = state.player; if (!p) return;
+  const it = exoCatItem(itemId); if (!it) return;
+  if (exoOwned(itemId)) { exoToastMsg('Already owned'); return; }
+  const cost = (EXO_RARITY[it.rarity] || EXO_RARITY.standard).craft;
+  if (exoScrap() < cost) { exoToastMsg('Need ' + cost + ' scrap (you have ' + exoScrap() + ')'); return; }
+  await exoInvSet(p.id, 'scrap', exoScrap() - cost, 'craft');
+  await exoInvSet(p.id, itemId, 1, 'craft');
+  exoLedger(p.id, 'craft', 0, itemId, { scrapSpent: cost });
+  exoApplyPremiumUnlocks(p.id);
+  SFX.correct ? SFX.correct() : SFX.click();
+  exoToastMsg('✓ Crafted ' + exoItemName(it) + ' for ' + cost + ' scrap');
+}
+function exoItemName(it) {
+  if (it.item_id.indexOf('cw-') === 0) {
+    const key = (it.asset_ref || '').split(':')[1] || '';
+    return (key.charAt(0).toUpperCase() + key.slice(1)) + ' Colorway';
+  }
+  return it.item_id.replace(/^(gear|trail|banner|accent)-/, '').split('-').map(function (w) {
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
+
+// ── Data Vaults (full-luck, disclosed odds, pity at 10, dupes → scrap) ──
+function exoVaultOdds(tier) {
+  const base = (EXO_CONFIG.odds && EXO_CONFIG.odds[tier]) || EXO_VAULTS[tier].odds;
+  const odds = {}; Object.keys(base).forEach(function (k) { odds[k] = base[k]; });
+  // LUCK nudge: shift up to 5 points from the lowest band to the highest.
+  const luck = exoStatTotal(state.player && state.player.id).LUCK || 0;
+  const shift = Math.min(5, luck * 0.2);
+  if (shift > 0) {
+    const keys = Object.keys(odds);
+    const lo = keys[0], hi = keys[keys.length - 1];
+    const real = Math.min(shift, Math.max(0, odds[lo] - 1));
+    odds[lo] = +(odds[lo] - real).toFixed(1);
+    odds[hi] = +(odds[hi] + real).toFixed(1);
+  }
+  return odds;
+}
+function exoBestRarity(tier) { const o = EXO_VAULTS[tier].odds; return Object.keys(o)[Object.keys(o).length - 1]; }
+function exoPity(pid) {
+  const ex = exoGet(pid); if (!ex) return {};
+  return (ex.stats_cache && ex.stats_cache.pity) || {};
+}
+async function exoOpenCache(tier) {
+  const p = state.player; if (!p) return;
+  if (!EXO_CONFIG.vaultsEnabled) { exoToastMsg('Data Vaults are disabled by your host'); return; }
+  const ex = exoGet(p.id);
+  if (!ex) { exoToastMsg('Activate your EXO first — visit the EXO Bay'); return; }
+  const v = EXO_VAULTS[tier]; if (!v) return;
+  const price = exoPrice(v.price);
+  if (!exoSpend(price, 'cache.' + tier)) return;
+  exoLedger(p.id, 'cache_open', -price, null, { tier: tier });
+
+  // Roll rarity (with pity)
+  const pity = exoPity(p.id); const best = exoBestRarity(tier);
+  let rolled;
+  if ((pity[tier] || 0) >= 9) {
+    rolled = best; // guaranteed on the 10th open
+  } else {
+    const odds = exoVaultOdds(tier);
+    let r = Math.random() * 100, acc = 0;
+    const keys = Object.keys(odds);
+    rolled = keys[0];
+    for (let i = 0; i < keys.length; i++) { acc += odds[keys[i]]; if (r <= acc) { rolled = keys[i]; break; } }
+  }
+  // Update pity on the avatar row
+  const newPity = Object.assign({}, pity);
+  newPity[tier] = (rolled === best) ? 0 : (newPity[tier] || 0) + 1;
+  ex.stats_cache = Object.assign({}, ex.stats_cache, { pity: newPity });
+  exoSaveRow(ex);
+
+  // Pick an item of that rarity from the pool
+  const line = ex.line;
+  const pool = EXO_CATALOG.items.filter(function (it) {
+    return it.rarity === rolled && it.item_id !== 'scrap' && (it.price_xc == null || it.price_xc > 0) &&
+      (!it.line_restrict || it.line_restrict === line);
+  });
+  if (!pool.length) { exoToastMsg('Vault glitched — no item in pool (host: check catalog)'); return; }
+  const item = pool[Math.floor(Math.random() * pool.length)];
+
+  let scrapped = 0;
+  if (exoOwned(item.item_id)) {
+    scrapped = (EXO_RARITY[rolled] || EXO_RARITY.standard).scrap;
+    await exoInvSet(p.id, 'scrap', exoScrap() + scrapped, 'cache');
+  } else {
+    await exoInvSet(p.id, item.item_id, 1, 'cache');
+    exoApplyPremiumUnlocks(p.id);
+  }
+  exoLedger(p.id, 'cache_result', 0, item.item_id, { tier: tier, rarity: rolled, duplicate: scrapped > 0, scrap: scrapped });
+  EXO_ECON.pendingReveal = { item: item, rarity: rolled, scrapped: scrapped, tier: tier };
+  SFX.battleStart ? SFX.battleStart() : SFX.click();
+  render();
+}
+function exoRevealClose() { EXO_ECON.pendingReveal = null; SFX.click(); render(); }
+
+// ── Equip + stats (gear needs Stage 2; ≤12% match swing, enforced here) ──
+async function exoEquip(itemId) {
+  const p = state.player; if (!p) return;
+  const ex = exoGet(p.id); if (!ex) return;
+  const it = exoCatItem(itemId); if (!it || !exoOwned(itemId)) return;
+  if (it.kind === 'gear') {
+    if ((ex.stage || 1) < 2) { exoToastMsg('Gear unlocks at Stage 2 — earn Sync XP by playing'); return; }
+    ex.equipped = Object.assign({}, ex.equipped);
+    ex.equipped[it.slot] = (ex.equipped[it.slot] === itemId) ? null : itemId;
+  } else {
+    const ref = (it.asset_ref || '').split(':');
+    ex.cosmetics = Object.assign({}, ex.cosmetics);
+    if (ref[0] === 'trail') ex.cosmetics.trail = (ex.cosmetics.trail === ref[1]) ? '' : ref[1];
+    else if (ref[0] === 'banner') ex.cosmetics.banner = (ex.cosmetics.banner === ref[1]) ? '' : ref[1];
+    else if (ref[0] === 'colorway') { ex.colorway = ref[1]; }
+  }
+  ex.stats_cache = Object.assign({}, ex.stats_cache, { stats: exoComputeStats(ex) });
+  await exoSaveRow(ex);
+  EXO_STATE.byPlayer[p.id] = ex;
+  SFX.click(); render();
+}
+function exoComputeStats(ex) {
+  const out = {}; EXO_STAT_KEYS.forEach(function (k) { out[k] = 0; });
+  const eq = ex.equipped || {};
+  Object.keys(eq).forEach(function (slot) {
+    const it = eq[slot] && exoCatItem(eq[slot]); if (!it || !it.stats) return;
+    EXO_STAT_KEYS.forEach(function (k) { out[k] += (it.stats[k] || 0); });
+  });
+  return out;
+}
+function exoStatTotal(pid) {
+  const ex = pid && exoGet(pid);
+  if (!ex) { const z = {}; EXO_STAT_KEYS.forEach(function (k) { z[k] = 0; }); return z; }
+  return (ex.stats_cache && ex.stats_cache.stats) || exoComputeStats(ex);
+}
+// POWER → bounded XC bonus on game earnings (cap 12%)
+function exoApplyPower(xc, pid) {
+  if (!pid || !xc || xc <= 0) return xc;
+  const pow = exoStatTotal(pid).POWER || 0;
+  return Math.round(xc * (1 + Math.min(0.12, pow * 0.01)));
+}
+
+// ── Sync XP + evolution ──
+function exoSyncFromAward(pid, xcDelta) {
+  if (!pid) return;
+  const amt = (typeof xcDelta === 'number' && xcDelta > 0) ? Math.max(10, Math.min(300, Math.round(xcDelta))) : 10;
+  exoGrantSync(pid, amt, 'award');
+}
+async function exoGrantSync(pid, amount, reason) {
+  const ex = exoGet(pid); if (!ex || !amount) return;
+  ex.sync_xp = (ex.sync_xp || 0) + amount;
+  let leveled = false;
+  while ((ex.stage || 1) < 4 && ex.sync_xp >= EXO_STAGE_XP[(ex.stage || 1)]) {
+    ex.stage = (ex.stage || 1) + 1; leveled = true;
+  }
+  // Stage 5 (Paragon) is feat-gated — never auto-granted here (spec D-4).
+  ex.updated_at = new Date().toISOString();
+  EXO_STATE.byPlayer[pid] = ex;
+  exoSaveRow(ex);
+  if (leveled) {
+    exoLedger(pid, 'grant', 0, null, { evolved: true, stage: ex.stage, reason: reason });
+    if (state.player && state.player.id === pid) exoEvolutionShow(ex);
+  }
+}
+function exoEvolutionShow(ex) {
+  state.exoEvolution = { line: ex.line, stage: ex.stage, at: Date.now() };
+  try { SFX.victory ? SFX.victory() : SFX.click(); } catch (e) {}
+  render();
+  setTimeout(function () { if (state.exoEvolution && Date.now() - state.exoEvolution.at > 5800) { state.exoEvolution = null; render(); } }, 6000);
+}
+function exoEvolutionDismiss() { state.exoEvolution = null; SFX.click(); render(); }
+function exoEvolutionOverlayHTML() {
+  const ev = state.exoEvolution; if (!ev) return '';
+  const line = EXO_LINES[ev.line]; if (!line) return '';
+  const ex = exoGet(state.player && state.player.id) || { line: ev.line, colorway: 'default', stage: ev.stage, cosmetics: {} };
+  const cw = line.colorways[ex.colorway] || line.colorways.default;
+  return '<div onclick="exoEvolutionDismiss()" style="position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(circle at 50% 45%,' + cw.b + 'ee, #02060fee);cursor:pointer;animation:exoEvoIn 0.6s ease">' +
+    '<div style="font-family:Orbitron,monospace;font-size:0.8rem;letter-spacing:0.5em;color:' + cw.glow + ';margin-bottom:18px;animation:exoEvoPulse 1.2s infinite">EVOLUTION</div>' +
+    '<div style="filter:drop-shadow(0 0 60px ' + cw.glow + ');animation:exoEvoGrow 1.4s ease">' + exoSVG(ex, 240) + '</div>' +
+    '<div style="font-family:Orbitron,monospace;font-size:1.6rem;font-weight:800;color:#fff;letter-spacing:0.15em;margin-top:22px;text-shadow:0 0 24px ' + cw.glow + '">' + line.stages[(ev.stage || 1) - 1].toUpperCase() + '</div>' +
+    '<div style="font-family:Orbitron,monospace;font-size:0.6rem;color:' + cw.glow + ';letter-spacing:0.3em;margin-top:8px">STAGE ' + ev.stage + ' · ' + line.name + '</div>' +
+    '<div style="font-size:10px;color:#8a92b0;margin-top:26px">tap to continue</div>' +
+    '<style>@keyframes exoEvoIn{from{opacity:0}to{opacity:1}}@keyframes exoEvoGrow{0%{transform:scale(0.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1)}}@keyframes exoEvoPulse{0%,100%{opacity:1}50%{opacity:0.4}}</style></div>';
+}
+
+// ── Stage-aware EXO renderer. Stage 1 = the Phase-1 Core (exoCoreSVG);
+//    Stage 2+ composes a procedural body per line under the Core-as-head. ──
+function exoSVG(exo, size) {
+  const stage = exo.stage || 1;
+  if (stage < 2) return exoCoreSVG(exo, size);
+  const line = EXO_LINES[exo.line]; if (!line) return '';
+  const cw = line.colorways[exo.colorway] || line.colorways.default;
+  const gid = 'exogb-' + exo.line + '-' + (exo.colorway || 'default');
+  const eq = exo.equipped || {};
+  let body = '';
+  if (exo.line === 'ironwright') {
+    body = '<rect x="36" y="46" width="28" height="26" rx="4" fill="url(#' + gid + ')" stroke="' + cw.glow + '" stroke-width="1.5"/>' +
+      '<rect x="24" y="48" width="10" height="14" rx="3" fill="' + cw.b + '" stroke="' + cw.a + '" stroke-width="1.5"/>' +
+      '<rect x="66" y="48" width="10" height="14" rx="3" fill="' + cw.b + '" stroke="' + cw.a + '" stroke-width="1.5"/>' +
+      '<rect x="39" y="74" width="8" height="16" rx="2" fill="' + cw.b + '" stroke="' + cw.a + '" stroke-width="1.2"/>' +
+      '<rect x="53" y="74" width="8" height="16" rx="2" fill="' + cw.b + '" stroke="' + cw.a + '" stroke-width="1.2"/>' +
+      '<circle cx="50" cy="59" r="5" fill="' + cw.glow + '" opacity="0.9"/>';
+  } else if (exo.line === 'resonant') {
+    body = '<path d="M50,44 C34,52 32,70 40,88 C46,80 54,80 60,88 C68,70 66,52 50,44z" fill="url(#' + gid + ')" stroke="' + cw.glow + '" stroke-width="1.5" opacity="0.95"/>' +
+      '<path d="M40,58 a10,10 0 0 1 20,0" fill="none" stroke="' + cw.glow + '" stroke-width="2" opacity="0.8"/>' +
+      '<path d="M36,64 a14,14 0 0 1 28,0" fill="none" stroke="' + cw.glow + '" stroke-width="1.5" opacity="0.5"/>';
+  } else if (exo.line === 'mythweaver') {
+    body = '<path d="M50,46 C42,54 40,68 44,86 C48,80 52,80 56,86 C60,68 58,54 50,46z" fill="url(#' + gid + ')" stroke="' + cw.glow + '" stroke-width="1.5"/>' +
+      '<path d="M42,52 C28,48 22,58 26,70 C32,62 38,60 42,62z" fill="' + cw.b + '" stroke="' + cw.glow + '" stroke-width="1.2" opacity="0.9"/>' +
+      '<path d="M58,52 C72,48 78,58 74,70 C68,62 62,60 58,62z" fill="' + cw.b + '" stroke="' + cw.glow + '" stroke-width="1.2" opacity="0.9"/>' +
+      '<circle cx="50" cy="58" r="3.5" fill="#fff" opacity="0.85"/>';
+  } else {
+    body = '<polygon points="50,44 64,56 58,86 42,86 36,56" fill="url(#' + gid + ')" stroke="' + cw.glow + '" stroke-width="1.5"/>' +
+      '<rect x="26" y="52" width="8" height="4" fill="' + cw.glow + '" opacity="0.8"/>' +
+      '<rect x="66" y="58" width="8" height="4" fill="' + cw.glow + '" opacity="0.6"/>' +
+      '<line x1="42" y1="66" x2="58" y2="66" stroke="' + cw.glow + '" stroke-width="2" opacity="0.7"/>' +
+      '<line x1="44" y1="73" x2="56" y2="73" stroke="' + cw.glow + '" stroke-width="1.4" opacity="0.45"/>';
+  }
+  // Stage 3+: aura halo; Stage 4: crown spikes
+  let extras = '';
+  if (stage >= 3) extras += '<ellipse cx="50" cy="88" rx="26" ry="5" fill="none" stroke="' + cw.a + '" stroke-width="1.2" opacity="0.5"/>';
+  if (stage >= 4) extras += '<path d="M40,12 L44,20 L50,10 L56,20 L60,12" fill="none" stroke="' + cw.glow + '" stroke-width="2" stroke-linejoin="round" opacity="0.95"/>';
+  if (eq.aura) extras += '<circle cx="50" cy="52" r="44" fill="none" stroke="' + cw.glow + '" stroke-width="1.2" stroke-dasharray="4 6" opacity="0.55"/>';
+  // Head = the Phase-1 core, shrunk and raised
+  const headExo = { line: exo.line, colorway: exo.colorway, cosmetics: exo.cosmetics, };
+  const head = exoCoreSVG(headExo, 44);
+  return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '" style="display:block;overflow:visible">' +
+    '<defs><radialGradient id="' + gid + '" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="' + cw.a + '"/><stop offset="100%" stop-color="' + cw.b + '"/></radialGradient></defs>' +
+    body + extras +
+    '<g transform="translate(28,4)"><g transform="scale(0.44)">' + head.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '') + '</g></g>' +
+    '</svg>';
+}
+
+// ── VAULT screen (shop · data vaults · gear · host controls) ──
+function goExoVault(tab) {
+  if (!state.player) return;
+  state.exoVaultTab = tab || state.exoVaultTab || 'shop';
+  exoInvLoad(state.player.id);
+  if (!EXO_CATALOG.loaded) exoCatalogLoad();
+  SFX.navigate(); state.screen = 'exo_vault'; render();
+}
+function exoVaultSetTab(t) { state.exoVaultTab = t; SFX.click(); render(); }
+
+function exoRarityChip(r) {
+  const R = EXO_RARITY[r] || EXO_RARITY.standard;
+  return '<span style="font-family:Orbitron,monospace;font-size:0.5rem;font-weight:800;letter-spacing:0.1em;color:' + R.color + ';border:1px solid ' + R.color + '66;border-radius:6px;padding:2px 7px;background:' + R.color + '12">' + R.label + '</span>';
+}
+function exoStatLine(stats) {
+  if (!stats) return '';
+  const parts = [];
+  EXO_STAT_KEYS.forEach(function (k) { if (stats[k]) parts.push(k + ' +' + stats[k]); });
+  return parts.join(' · ');
+}
+function exoItemCard(it, ex) {
+  const owned = exoOwned(it.item_id);
+  const equippedIds = ex ? Object.keys(ex.equipped || {}).map(function (s) { return (ex.equipped || {})[s]; }) : [];
+  const isEquipped = equippedIds.indexOf(it.item_id) !== -1 ||
+    (it.asset_ref === 'trail:' + ((ex && ex.cosmetics && ex.cosmetics.trail) || '_')) ||
+    (it.asset_ref === 'banner:' + ((ex && ex.cosmetics && ex.cosmetics.banner) || '_')) ||
+    (it.asset_ref === 'colorway:' + ((ex && ex.colorway) || '_'));
+  const R = EXO_RARITY[it.rarity] || EXO_RARITY.standard;
+  const price = it.price_xc != null ? exoPrice(it.price_xc) : null;
+  const icon = it.kind === 'gear' ? (EXO_SLOT_ICONS[it.slot] || '🔧') : (it.asset_ref || '').indexOf('colorway') === 0 ? '🎨' : (it.asset_ref || '').indexOf('trail') === 0 ? '✨' : (it.asset_ref || '').indexOf('banner') === 0 ? '🚩' : '🎁';
+  let btn;
+  if (owned) {
+    if (it.kind === 'gear' || (it.asset_ref || '').match(/^(trail|banner|colorway):/)) {
+      btn = '<button class="btn-arena" style="width:100%;justify-content:center;font-size:0.55rem;padding:8px;' + (isEquipped ? 'border-color:#00e676;color:#00e676' : '') + '" onclick="exoEquip(\'' + it.item_id + '\')">' + (isEquipped ? '✓ EQUIPPED' : 'EQUIP') + '</button>';
+    } else btn = '<div style="text-align:center;font-size:9px;color:#00e676;font-family:Orbitron,monospace">✓ OWNED</div>';
+  } else if (price != null && price >= 0) {
+    btn = '<button class="btn-arena btn-arena-gold" style="width:100%;justify-content:center;font-size:0.55rem;padding:8px" onclick="exoBuy(\'' + it.item_id + '\')">' + (price === 0 ? 'CLAIM FREE' : price.toLocaleString() + ' XC') + '</button>';
+  } else {
+    btn = '<div style="text-align:center;font-size:8.5px;color:#8a92b0;font-family:Orbitron,monospace;letter-spacing:0.05em;margin-bottom:6px">🔒 VAULT ONLY</div>' +
+      '<button class="btn-arena" style="width:100%;justify-content:center;font-size:0.5rem;padding:7px" onclick="exoCraft(\'' + it.item_id + '\')">CRAFT · ' + R.craft.toLocaleString() + ' SCRAP</button>';
+  }
+  return '<div style="border:1px solid ' + R.color + '33;background:rgba(255,255,255,0.03);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:20px">' + icon + '</span>' + exoRarityChip(it.rarity) + '</div>' +
+    '<div style="font-family:Orbitron,monospace;font-size:0.62rem;font-weight:800;color:#fff;letter-spacing:0.04em">' + exoItemName(it) + '</div>' +
+    (it.kind === 'gear' ? '<div style="font-size:9px;color:' + R.color + '">' + exoStatLine(it.stats) + '</div>' : '<div style="font-size:9px;color:#8a92b0">' + (it.line_restrict && EXO_LINES[it.line_restrict] ? EXO_LINES[it.line_restrict].name + ' only' : 'Cosmetic') + '</div>') +
+    '<div style="margin-top:auto">' + btn + '</div></div>';
+}
+
+function renderExoVault() {
+  const p = state.player;
+  const ex = exoGet(p.id);
+  const tab = state.exoVaultTab || 'shop';
+  const isHost = isHostUser(p);
+  const line = ex && EXO_LINES[ex.line];
+  const tabs = [['shop', '🛒 SHOP'], ['vaults', '🎰 DATA VAULTS'], ['gear', '⚙️ MY GEAR']];
+  if (isHost) tabs.push(['host', '🛠️ HOST']);
+  const tabBar = tabs.map(function (t) {
+    return '<button onclick="exoVaultSetTab(\'' + t[0] + '\')" style="cursor:pointer;padding:9px 16px;border-radius:10px;font-family:Orbitron,monospace;font-size:0.6rem;font-weight:800;letter-spacing:0.08em;border:1px solid ' + (tab === t[0] ? '#00e5ff' : 'rgba(255,255,255,0.12)') + ';background:' + (tab === t[0] ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.03)') + ';color:' + (tab === t[0] ? '#00e5ff' : '#99a') + '">' + t[1] + '</button>';
+  }).join('');
+
+  let body = '';
+  if (!ex) {
+    body = '<div class="glass-panel" style="padding:28px;text-align:center"><div style="font-size:26px;margin-bottom:8px">🤖</div><div style="font-size:12px;color:#99a">Activate your EXO first — the Vault outfits your companion.</div><button class="btn-arena btn-arena-gold" style="margin-top:14px" onclick="goExoBay()">⚡ GO TO EXO BAY</button></div>';
+  } else if (tab === 'shop') {
+    const items = EXO_CATALOG.items.filter(function (it) {
+      return it.item_id !== 'scrap' && (!it.line_restrict || it.line_restrict === ex.line) && (it.price_xc == null || it.price_xc > 0);
+    }).sort(function (a, b) {
+      const ra = Object.keys(EXO_RARITY).indexOf(a.rarity), rb = Object.keys(EXO_RARITY).indexOf(b.rarity);
+      return (a.price_xc == null ? 1 : 0) - (b.price_xc == null ? 1 : 0) || ra - rb;
+    });
+    body = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px">' + items.map(function (it) { return exoItemCard(it, ex); }).join('') + '</div>' +
+      '<div style="font-size:9px;color:#667;margin-top:14px">Buying never raises rank — Evo Ranks read lifetime earned XC, and gear sways a match by 12% at most. Relic & Anomaly drop from Data Vaults only (or craft them with scrap).</div>';
+  } else if (tab === 'vaults') {
+    if (!EXO_CONFIG.vaultsEnabled) {
+      body = '<div class="glass-panel" style="padding:28px;text-align:center;color:#99a;font-size:12px">🔒 Data Vaults are currently disabled by your host.</div>';
+    } else {
+      const pity = exoPity(p.id);
+      body = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">' +
+        Object.keys(EXO_VAULTS).map(function (k) {
+          const v = EXO_VAULTS[k]; const odds = exoVaultOdds(k); const price = exoPrice(v.price);
+          const oddsRows = Object.keys(odds).map(function (r) {
+            const R = EXO_RARITY[r];
+            return '<div style="display:flex;justify-content:space-between;font-size:9.5px"><span style="color:' + R.color + '">' + R.label + '</span><span style="color:#aab;font-variant-numeric:tabular-nums">' + odds[r] + '%</span></div>';
+          }).join('');
+          const pc = pity[k] || 0;
+          return '<div class="glass-panel" style="padding:18px;display:flex;flex-direction:column;gap:10px">' +
+            '<div style="text-align:center;font-size:34px">' + v.icon + '</div>' +
+            '<div style="text-align:center;font-family:Orbitron,monospace;font-size:0.7rem;font-weight:800;color:#fff;letter-spacing:0.1em">' + v.label + '</div>' +
+            '<div style="display:flex;flex-direction:column;gap:4px;background:rgba(255,255,255,0.03);border-radius:8px;padding:9px">' + oddsRows + '</div>' +
+            '<div style="font-size:8.5px;color:#778;text-align:center">PITY: top pull guaranteed in ' + (10 - (pc % 10)) + ' opens · dupes → scrap</div>' +
+            '<button class="btn-arena btn-arena-gold" style="width:100%;justify-content:center;padding:11px" onclick="exoOpenCache(\'' + k + '\')">OPEN — ' + price.toLocaleString() + ' XC</button></div>';
+        }).join('') + '</div>' +
+        '<div style="font-size:9px;color:#667;margin-top:14px">Odds shown are live (your LUCK nudges them up to 5 points toward the top band). Every 10th open without a top pull guarantees one. Duplicates convert to scrap for crafting. Earned XC only — nothing here touches real money, ranks, coins or badges.</div>';
+    }
+  } else if (tab === 'gear') {
+    const stats = exoStatTotal(p.id);
+    const totalPts = EXO_STAT_KEYS.reduce(function (s, k) { return s + stats[k]; }, 0);
+    const powBonus = Math.min(12, (stats.POWER || 0) * 1);
+    const owned = EXO_CATALOG.items.filter(function (it) { return exoOwned(it.item_id) && it.item_id !== 'scrap'; });
+    const statBar = EXO_STAT_KEYS.map(function (k) {
+      return '<div style="text-align:center"><div style="font-family:Orbitron,monospace;font-size:0.75rem;font-weight:800;color:' + (stats[k] ? '#00e5ff' : '#556') + '">' + stats[k] + '</div><div style="font-size:8px;color:#778;letter-spacing:0.1em">' + k + '</div></div>';
+    }).join('');
+    body = '<div class="glass-panel" style="padding:16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">' +
+      exoSVG(ex, 84) +
+      '<div style="display:flex;gap:18px">' + statBar + '</div>' +
+      '<div style="margin-left:auto;text-align:right"><div style="font-size:9px;color:#8a92b0">STAGE ' + (ex.stage || 1) + ' · ' + (ex.sync_xp || 0).toLocaleString() + ' SYNC · ' + totalPts + ' STAT PTS</div>' +
+      '<div style="font-size:9px;color:#ffd740">POWER bonus: +' + powBonus + '% game XC (cap 12%)</div>' +
+      '<div style="font-size:9px;color:#b06bff">SCRAP: ' + exoScrap().toLocaleString() + '</div></div></div>' +
+      ((ex.stage || 1) < 2 ? '<div style="font-size:10px;color:#ffd740;margin:10px 0">🔒 Gear equips unlock at Stage 2 (500 Sync XP) — play matches to evolve.</div>' : '') +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-top:14px">' +
+      (owned.length ? owned.map(function (it) { return exoItemCard(it, ex); }).join('') : '<div style="grid-column:1/-1;text-align:center;color:#778;font-size:11px;padding:26px">Nothing owned yet — hit the Shop or crack a Data Vault.</div>') + '</div>';
+  } else if (tab === 'host' && isHost) {
+    body = '<div class="glass-panel" style="padding:20px;max-width:520px;display:flex;flex-direction:column;gap:14px">' +
+      '<div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:800;color:#aaa;letter-spacing:0.1em">EXO ECONOMY CONTROLS</div>' +
+      '<label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#ccc">Data Vaults enabled <input type="checkbox" ' + (EXO_CONFIG.vaultsEnabled ? 'checked' : '') + ' onchange="EXO_CONFIG.vaultsEnabled=this.checked;exoConfigSave();render()"/></label>' +
+      '<label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#ccc">Price multiplier <input id="exoCfgMult" type="number" step="0.1" min="0.1" value="' + EXO_CONFIG.priceMult + '" style="width:80px;background:rgba(255,255,255,0.06);border:1px solid rgba(0,229,255,0.25);border-radius:8px;color:#fff;padding:6px;text-align:center" onchange="EXO_CONFIG.priceMult=Math.max(0.1,parseFloat(this.value)||1);exoConfigSave();render()"/></label>' +
+      '<label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#ccc">Daily spend cap (XC, 0 = unlimited) <input id="exoCfgCap" type="number" step="100" min="0" value="' + EXO_CONFIG.dailyCap + '" style="width:100px;background:rgba(255,255,255,0.06);border:1px solid rgba(0,229,255,0.25);border-radius:8px;color:#fff;padding:6px;text-align:center" onchange="EXO_CONFIG.dailyCap=Math.max(0,parseInt(this.value)||0);exoConfigSave();render()"/></label>' +
+      '<div style="font-size:9px;color:#667">Settings save to the cloud (pflx_exo_config) and apply to every player immediately. Vault odds ship at Bronze 70/25/5, Silver 45/40/12/3, Gold 55/35/10 — odds editing lands with the Lite host dashboard.</div></div>';
+  }
+
+  const reveal = EXO_ECON.pendingReveal ? (function () {
+    const r = EXO_ECON.pendingReveal; const R = EXO_RARITY[r.rarity];
+    return '<div onclick="exoRevealClose()" style="position:fixed;inset:0;z-index:99980;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#02060fe8;cursor:pointer;animation:exoEvoIn 0.4s ease">' +
+      '<div style="font-size:52px;animation:exoEvoGrow 0.9s ease">' + (r.scrapped ? '♻️' : '🎁') + '</div>' +
+      '<div style="margin-top:14px">' + exoRarityChip(r.rarity) + '</div>' +
+      '<div style="font-family:Orbitron,monospace;font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:0.1em;margin-top:12px;text-shadow:0 0 20px ' + R.color + '">' + exoItemName(r.item) + '</div>' +
+      (r.scrapped ? '<div style="font-size:11px;color:#b06bff;margin-top:8px">Duplicate → +' + r.scrapped + ' scrap</div>' : '<div style="font-size:11px;color:#00e676;margin-top:8px">Added to your gear</div>') +
+      '<div style="font-size:10px;color:#8a92b0;margin-top:22px">tap to continue</div>' +
+      '<style>@keyframes exoEvoIn{from{opacity:0}to{opacity:1}}@keyframes exoEvoGrow{0%{transform:scale(0.3) rotate(-12deg)}70%{transform:scale(1.15)}100%{transform:scale(1)}}</style></div>';
+  })() : '';
+  const toast = state.exoToast ? '<div style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:99970;background:rgba(0,20,40,0.95);border:1px solid rgba(0,229,255,0.4);border-radius:10px;padding:10px 18px;font-family:Orbitron,monospace;font-size:0.6rem;color:#00e5ff;letter-spacing:0.05em">' + state.exoToast + '</div>' : '';
+
+  return '<div style="max-width:1040px;margin:0 auto;padding:32px 24px;position:relative;z-index:10">' +
+    '<div style="text-align:center;margin-bottom:20px"><h2 style="font-family:Orbitron,monospace;font-size:1.5rem;font-weight:700;color:#00e5ff;text-transform:uppercase;letter-spacing:0.1em" class="text-glow-cyan">THE VAULT</h2>' +
+    '<p style="font-size:12px;color:#888;margin-top:4px">Outfit your EXO — deterministic shop, luck-driven Data Vaults. ' + (p.xc || 0).toLocaleString() + ' XC available' + (EXO_CONFIG.dailyCap > 0 ? ' · ' + Math.max(0, EXO_CONFIG.dailyCap - EXO_ECON.todaySpend).toLocaleString() + ' left under today\'s cap' : '') + '</p></div>' +
+    '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px">' + tabBar + '</div>' +
+    body + reveal + toast +
+    '<div style="text-align:center;margin-top:28px"><button class="btn-arena" onclick="goExoBay()">🤖 EXO BAY</button> <button class="btn-arena" onclick="goHome()">← Back to Arena</button></div></div>';
+}
+
+
+// ── EXO → game cartridge payload (spec §4.3: descriptor + stats + rendered SVG) ──
+function exoGamePayloadFor(pid) {
+  const ex = exoGet(pid); if (!ex) return null;
+  const line = EXO_LINES[ex.line];
+  return {
+    name: exoEscape(ex.exo_name) || (line ? line.stages[(ex.stage || 1) - 1] : 'EXO'),
+    line: line ? line.name : String(ex.line || '').toUpperCase(),
+    stage: ex.stage || 1, stats: exoStatTotal(pid), svg: exoSVG(ex, 64)
+  };
+}
+function exoGameRivals(excludeId) {
+  const ids = Object.keys(EXO_STATE.byPlayer).filter(function (id) { return id !== excludeId; });
+  ids.sort(function () { return Math.random() - 0.5; });
+  return ids.slice(0, 3).map(exoGamePayloadFor).filter(Boolean);
+}
+
 // Fallback roster in case fetch fails
 const FALLBACK_ROSTER = [
   { id: "admin-0", name: "PrototypeFLX", brandName: "PrototypeFLX", role: "admin", avatar: "PF", cohort: "N/A", pathway: "Host", email: "host@prototypeflx.com", pin: "0000", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
@@ -1525,6 +2335,8 @@ async function loadRoster() {
 // Initialize with fallback immediately, then fetch live data
 buildPlayers(FALLBACK_ROSTER);
 loadRoster();
+exoLoadAll();
+exoEconBoot();
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BATTLE ARENA PLAYER RECORDS — built from the X-Coin roster
@@ -2565,7 +3377,9 @@ window.addEventListener('message', function (e) {
       type: 'pflx_arena_deck',
       deck: { id: d.id, name: d.name, subject: d.subject || '', cards: d.cards.map(function (c) { return { term: c.term, definition: c.definition }; }) },
       player: { id: (state.player && state.player.id) || 'p', brand: (state.player && state.player.brand) || 'Challenger', studioId: (state.player && state.player.studioId) || '' },
-      config: (arenaGame.opts && arenaGame.opts.config) || null
+      config: (arenaGame.opts && arenaGame.opts.config) || null,
+      exo: (state.player ? exoGamePayloadFor(state.player.id) : null),
+      rivals: (state.player ? exoGameRivals(state.player.id) : [])
     }, '*');
   } else if (m.type === 'pflx_arena_game_result' && arenaGame.open) {
     // Season sessions: a WIN advances this player's level for that session
@@ -2575,13 +3389,13 @@ window.addEventListener('message', function (e) {
     if (arenaGame.opts && arenaGame.opts.liveId) {
       try { baLiveReportScore(arenaGame.opts.liveId, m.score || 0, !!m.won); } catch (e) {}
     }
-    const xc = arenaGameXcFor(m.score);
+    const xc = exoApplyPower(arenaGameXcFor(m.score), state.player && state.player.id);
     const note = document.getElementById('arenaGameXcNote');
     if (window.parent !== window && state.player) {
       arenaPostAward(state.player.id, { xc: xc, reason: 'arena.duel.' + (m.deckId || 'deck') + (m.won ? '.win' : '.loss') });
       if (note) note.textContent = '⚡ +' + xc + ' XC PROPOSED — SCORE ' + (m.score || 0);
     } else {
-      if (state.player) state.player.xc += xc;
+      if (state.player) { state.player.xc += xc; try { exoSyncFromAward(state.player.id, xc); } catch (e) {} }
       if (note) note.textContent = '⚡ +' + xc + ' XC — SCORE ' + (m.score || 0);
     }
     try { SFX.click(); } catch (er) {}
@@ -2689,6 +3503,9 @@ function renderDecks() {
 // createdByName, createdAt, plays } in Supabase row `pflx_ba_games`.
 // ═══════════════════════════════════════════════════════════════════
 const STUDIO_TEMPLATES = [
+  { id: 'exo-clash', name: 'EXO Clash', icon: '🤖', file: 'games/exo-clash.html', ready: true,
+    img: 'games/covers/exo-clash.png',
+    desc: 'The EXO showcase brawler: your EXO and three rival EXOs on one platform — correct answers land strikes, gear stats are live (max 12% swing), OVERDRIVE hits everyone.' },
   { id: 'quiz-card-duel', name: 'Quiz Card Duel', icon: '⚔', file: 'games/quiz-card-duel.html', ready: true,
     img: 'games/covers/quiz-card-duel.png',
     desc: 'HP battle vs a rival AI. Answer fast to hit harder; streaks stack damage.' },
@@ -3624,6 +4441,9 @@ function render() {
   else if (state.screen === "lobby") { app.innerHTML = bg + panel + renderNav() + renderLobby(); }
   else if (state.screen === "esports") { app.innerHTML = bg + panel + renderNav() + renderEsportsScreen(); }
   else if (state.screen === "settings") { app.innerHTML = bg + panel + renderNav() + renderSettings(); }
+  else if (state.screen === "exo_bay") { app.innerHTML = bg + panel + renderNav() + renderExoBay(); }
+  else if (state.screen === "exo_vault") { app.innerHTML = bg + panel + renderNav() + renderExoVault(); }
+  if (state.exoEvolution) { try { app.innerHTML += exoEvolutionOverlayHTML(); } catch (e) {} }
   bindEvents();
   // Restore focus to active input after re-render
   if (state._focusId) {
@@ -3677,6 +4497,7 @@ function renderNav() {
       <a href="#" onclick="goScreen('decks')" class="${state.screen==='decks'?'active':''}">Decks</a>
     </div>
     <div class="player-info">
+      <div onclick="goExoBay()" title="EXO Bay" style="cursor:pointer;display:flex;align-items:center;gap:4px">${exoMini(p.id, 30) || '<span style="font-size:8px;font-family:Orbitron,monospace;color:#00e5ff;border:1px dashed rgba(0,229,255,0.4);border-radius:8px;padding:4px 7px;letter-spacing:0.08em">+ EXO</span>'}</div>
       <div class="xc-bal">${p.xc.toLocaleString()} XC</div>
       <div class="rank-badge" style="background:${ri.color}15;border:1px solid ${ri.color}40;color:${ri.color}">${ri.icon} ${ri.tier}</div>
       <div class="avatar-wrap" style="cursor:pointer" onclick="togglePanel()">
@@ -3718,6 +4539,7 @@ function renderSidePanel() {
         <div style="text-align:center;margin-top:6px">
           <div class="rank-badge" style="background:${ri.color}15;border:1px solid ${ri.color}40;color:${ri.color};font-size:9px;display:inline-flex">${ri.icon} ${ri.tier}</div>
         </div>
+        ${(function(){ var ex = exoGet(p.id); if (!ex) return '<div style="text-align:center;margin-top:10px"><button class="btn-arena" style="font-size:0.55rem;padding:7px 12px" onclick="goExoBay();togglePanel()">⚡ ACTIVATE YOUR EXO</button></div>'; var L = EXO_LINES[ex.line]; return '<div onclick="goExoBay();togglePanel()" style="cursor:pointer;display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(0,229,255,0.15)">' + exoSVG(ex, 40) + '<div style="text-align:left"><div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:800;color:#fff;letter-spacing:0.05em">' + (exoEscape(ex.exo_name) || L.stages[0]) + '</div><div style="font-size:8.5px;color:#8a92b0">' + L.name + ' · STAGE ' + (ex.stage||1) + ' · ' + (ex.sync_xp||0).toLocaleString() + ' SYNC</div></div></div>'; })()}
 
         <!-- Quick Stats -->
         <div class="panel-stats">
@@ -3758,6 +4580,8 @@ function renderSidePanel() {
           <a href="#" onclick="goHome();togglePanel()" class="${state.screen==='home'||state.screen==='side_quests'?'active':''}"><span class="nav-icon">⚔️</span> Arena</a>
           <a href="#" onclick="goLobby();togglePanel()" class="${state.screen==='lobby'?'active':''}"><span class="nav-icon">🏛️</span> Battle Lobby</a>
           <a href="#" onclick="goLeaderboard();togglePanel()" class="${state.screen==='leaderboard'?'active':''}"><span class="nav-icon">🏆</span> Leaderboard</a>
+          <a href="#" onclick="goExoBay();togglePanel()" class="${state.screen==='exo_bay'?'active':''}"><span class="nav-icon">🤖</span> EXO Bay</a>
+          <a href="#" onclick="goExoVault();togglePanel()" class="${state.screen==='exo_vault'?'active':''}"><span class="nav-icon">🛒</span> The Vault</a>
           <a href="#" onclick="goScreen('esports');togglePanel()" class="${state.screen==='esports'?'active':''}"><span class="nav-icon">🏟️</span> Creator Showdown</a>
           ${isHost ? `<a href="#" onclick="goSettings();togglePanel()" class="${state.screen==='settings'?'active':''}"><span class="nav-icon">⚙️</span> Settings <span style="font-size:8px;color:var(--pflx-gold);margin-left:4px">HOST</span></a>` : ''}
         </div>
@@ -5026,7 +5850,7 @@ function renderLeaderboard() {
     const isMe = p.id === state.player.id;
     return `<div class="podium-slot">
       <div class="podium-avatar" style="border:2px solid ${borderGlows[i]};box-shadow:0 0 20px ${borderGlows[i]};background:linear-gradient(135deg,rgba(0,229,255,0.12),rgba(124,77,255,0.12))">${avatarHTML(p)}</div>
-      <div class="name" style="${isMe?'color:#ffd740':''}">${p.brand}</div>
+      <div class="name" style="${isMe?'color:#ffd740':''}">${p.brand} ${exoMini(p.id, 18)}</div>
       <div class="pathway">${p.pathway}</div>
       <div class="ap">${p.stats.ap.toLocaleString()} AP</div>
       <div class="podium-bar" style="height:${heights[i]}px;background:linear-gradient(to top,${colors[i]}33,${colors[i]}08);border:1px solid ${colors[i]}44;border-bottom:none">${medals[i]}</div>
@@ -5044,7 +5868,7 @@ function renderLeaderboard() {
       <div class="player">
         <div class="lb-avatar">${avatarHTML(p)}</div>
         <div class="info">
-          <div class="pname" style="${isMe?'color:#ffd740':'color:#ccc'}">${p.brand}</div>
+          <div class="pname" style="${isMe?'color:#ffd740':'color:#ccc'}">${p.brand} ${exoMini(p.id, 16)}</div>
           <div class="ppath">${p.pathway}</div>
         </div>
       </div>
@@ -7290,6 +8114,7 @@ function arenaPostAward(playerId, awardObj) {
       }), '*');
     }
   } catch (e) { console.warn('[arena] award post failed', e); }
+  try { if (awardObj && typeof awardObj.xc === 'number' && String(awardObj.reason || '').indexOf('exo.') !== 0) exoSyncFromAward(playerId, awardObj.xc); } catch (e) {}
 }
 
 function cipherEndGame(outcome) {
@@ -7331,6 +8156,7 @@ function cipherEndGame(outcome) {
       });
     } else {
       state.player.xc += totalXC;
+      try { exoSyncFromAward(state.player.id, totalXC); } catch (e) {}
     }
   }
 
@@ -7426,6 +8252,7 @@ function answerQuestion(idx) {
             // overwrite state.player via the identity listener with the
             // authoritative number, so any double-count is corrected within ~5ms.
             state.player.xc = Math.max(0, (state.player.xc || 0) + delta);
+            if (!inPlatform) { try { exoSyncFromAward(state.player.id, delta); } catch (e) {} }
           }
         } catch (e) { console.warn('[arena] wager settle failed', e); }
 
