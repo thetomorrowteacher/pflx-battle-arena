@@ -1353,6 +1353,13 @@ nav .avatar-sub{font-size:9px;color:#666}
 .es-save-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
 .es-save-bar .save-status{font-family:'Orbitron',monospace;font-size:0.6rem;color:#00e676;font-weight:600}
 
+  /* ANNOUNCER voice picker */
+  .ann-seg { display:inline-flex; border:1px solid rgba(0,229,255,0.3); border-radius:8px; overflow:hidden; flex-wrap:wrap; }
+  .ann-seg button { cursor:pointer; padding:6px 10px; font-family:Orbitron,monospace; font-size:0.5rem; letter-spacing:0.08em; color:#8fb3c8; background:rgba(0,0,0,0.35); border:0; border-right:1px solid rgba(0,229,255,0.18); }
+  .ann-seg button:last-child { border-right:0; }
+  .ann-seg button.on { color:#02121a; background:#00e5ff; }
+  .ann-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .ann-row .ann-k { font-family:Orbitron,monospace; font-size:0.52rem; letter-spacing:0.12em; color:#8a9ab8; }
 </style>
 </head>
 <body>
@@ -2509,7 +2516,7 @@ const SFX = (() => {
   function gain(val) {
     const c = getCtx();
     const g = c.createGain();
-    g.gain.value = muted ? 0 : val * volume;
+    g.gain.value = (muted || window.__baAudioHere === false) ? 0 : val * volume;   // announcer patch: PFLX sound window only
     g.connect(c.destination);
     return g;
   }
@@ -2776,6 +2783,148 @@ const SFX = (() => {
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ANNOUNCER — a gameshow voice for the big moments (Kenney Voiceover Pack,
+// CC0, served by the PFLX Platform). The HOST picks the voice per session:
+// a default for the whole Arena (Settings), per Creator Showdown mode, and
+// per LIVE event (launch form + event card). Every player can switch it
+// off from the side panel. Inside PFLX only the person's sound window talks.
+// ═══════════════════════════════════════════════════════════════════════════
+window.__baAudioHere = true;
+const ANN = (() => {
+  const ROOT = 'https://www.prototypeflx.com/public/sounds/pflx-announcer/';
+  const PREF = 'pflx_ba_ann_on';
+  const KEY = 'arena_announcer';
+  const LINES = {
+    battleStart: ['ready', 'set', 'go'], go: ['go'], goGoGo: ['war_go_go_go'],
+    correct: ['correct'], wrong: ['wrong'], timeout: ['time_over'],
+    win: ['you_win'], lose: ['you_lose'], tie: ['its_a_tie'],
+    key: ['power_up'], terminal: ['objective_achieved'], sabotage: ['war_look_out'],
+    vote: ['war_hold'], eject: ['war_target_destroyed'], kill: ['war_target_engaged'],
+    crisis: ['hurry_up'], crisisDone: ['objective_achieved'], crisisFail: ['mission_failed'],
+    missionWin: ['mission_completed'], missionLose: ['mission_failed'],
+    hurry: ['hurry_up'], highscore: ['new_highscore'], levelup: ['level_up'],
+    congrats: ['congratulations'], finalRound: ['final_round'], gameOver: ['game_over'], backup: ['war_call_for_backup']
+  };
+  const PAD = [['battleStart', 'READY · SET · GO'], ['finalRound', 'FINAL ROUND'], ['hurry', 'HURRY UP'], ['correct', 'CORRECT'], ['wrong', 'WRONG'],
+    ['win', 'YOU WIN'], ['lose', 'YOU LOSE'], ['tie', "IT'S A TIE"], ['highscore', 'NEW HIGH SCORE'], ['levelup', 'LEVEL UP'],
+    ['missionWin', 'MISSION COMPLETE'], ['gameOver', 'GAME OVER']];
+  let arenaVoice = 'female';
+  try { const c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (c && c.voice) arenaVoice = c.voice; } catch (e) {}
+  const pool = {};
+  let timers = [], playing = 0, last = {};
+  function norm(v) { return v === 'male' || v === 'off' ? v : 'female'; }
+  function on() { try { return localStorage.getItem(PREF) !== '0'; } catch (e) { return true; } }
+  function contextVoice() {
+    try {
+      if (arenaGame.open && arenaGame.opts && arenaGame.opts.liveId) {
+        const ev = baLive.byId(arenaGame.opts.liveId);
+        if (ev && ev.announcer) return norm(ev.announcer);
+      }
+    } catch (e) {}
+    try {
+      if (state.screen === 'esports' && esportsState.activeMatch) {
+        const m = esportsState.matches.find(x => x.id === esportsState.activeMatch);
+        if (m && m.announcer) return norm(m.announcer);
+      }
+    } catch (e) {}
+    return norm(arenaVoice);
+  }
+  function duck(onOff) { window.__baAnnDuck = !!onOff; try { MUSIC.refresh(); } catch (e) {} }
+  function stop() {
+    timers.forEach(t => clearTimeout(t)); timers = [];
+    Object.keys(pool).forEach(k => { try { pool[k].pause(); } catch (e) {} });
+    if (playing) { playing = 0; duck(false); }
+  }
+  function clip(voice, name) {
+    const url = ROOT + voice + '/' + name + '.mp3';
+    if (!pool[url]) { const a = new Audio(url); a.preload = 'auto'; pool[url] = a; }
+    return pool[url];
+  }
+  // clips: clip names; opts: { voice, force, throttle, gap }
+  function say(clips, opts) {
+    opts = opts || {};
+    if (!Array.isArray(clips) || !clips.length || typeof Audio === 'undefined') return false;
+    const voice = opts.voice ? norm(opts.voice) : contextVoice();
+    if (voice === 'off' || !on() || window.__baAudioHere === false || SFX.isMuted()) return false;
+    const key = clips.join('+'), now = Date.now();
+    if (!opts.force && last[key] && now - last[key] < (opts.throttle || 1500)) return false;
+    last[key] = now;
+    stop();
+    const vol = Math.max(0.2, Math.min(1, 0.3 + SFX.getVolume() * 1.2));
+    playing = clips.length; duck(true);
+    const done = () => { playing = Math.max(0, playing - 1); if (!playing) duck(false); };
+    clips.forEach((name, i) => {
+      timers.push(setTimeout(() => {
+        const a = clip(voice, name);
+        try {
+          a.currentTime = 0; a.volume = vol; a.onended = done; a.onerror = done;
+          const p = a.play(); if (p && p.catch) p.catch(done);
+        } catch (e) { done(); }
+      }, i * (opts.gap || 800)));
+    });
+    window.__baAnnLog = (window.__baAnnLog || []).concat([{ voice: voice, clips: clips.slice(), at: now }]).slice(-40);
+    return true;
+  }
+  function line(name, opts) { return say(LINES[name] || [], opts); }
+  function count(n, opts) { return n >= 1 && n <= 10 ? say([String(n)], Object.assign({ throttle: 600 }, opts || {})) : false; }
+  function toggle() {
+    const next = !on();
+    try { localStorage.setItem(PREF, next ? '1' : '0'); } catch (e) {}
+    if (next) say(['ready'], { force: true }); else stop();
+    try { render(); } catch (e) {}
+  }
+  async function setArenaVoice(v) {
+    arenaVoice = norm(v);
+    const row = { voice: arenaVoice, updatedAt: Date.now(), by: (state.player && state.player.id) || '' };
+    try { localStorage.setItem(KEY, JSON.stringify(row)); } catch (e) {}
+    if (arenaVoice !== 'off') say(['ready'], { voice: arenaVoice, force: true });
+    try { render(); } catch (e) {}
+    try { await supabaseSave(KEY, row); } catch (e) {}
+  }
+  async function load() {
+    try {
+      const d = await supabaseLoad(KEY);
+      if (d && d.voice) {
+        let loc = null; try { loc = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+        if (!loc || (d.updatedAt || 0) >= (loc.updatedAt || 0)) {
+          arenaVoice = norm(d.voice);
+          try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+  }
+  // host-facing voice picker (3 buttons); fn = global function name taking the voice
+  function pickerHtml(current, fn, extra) {
+    const cur = current || '';
+    const opts = (extra ? [['', 'ARENA DEFAULT']] : []).concat([['female', '♀ FEMALE'], ['male', '♂ MALE'], ['off', 'OFF']]);
+    return '<span class="ann-seg">' + opts.map(o => '<button type="button" class="' + (cur === o[0] ? 'on' : '') + '" onclick="' + fn + '(\'' + o[0] + '\')">' + o[1] + '</button>').join('') + '</span>';
+  }
+  function padHtml() {
+    return '<div class="sfx-test-grid">' + PAD.map(p => '<button class="sfx-test-btn" onclick="ANN.line(\'' + p[0] + '\',{force:true,voice:ANN.arenaVoice()===\'off\'?\'female\':ANN.arenaVoice()})">' + p[1] + '</button>').join('') + '</div>';
+  }
+  // PFLX sound window (platform v223): only one window per person makes sound
+  window.addEventListener('message', function (e) {
+    let m = e && e.data;
+    if (typeof m === 'string') { if (m.indexOf('pflx_audio_owner') < 0) return; try { m = JSON.parse(m); } catch (er) { return; } }
+    if (!m || m.type !== 'pflx_audio_owner') return;
+    const h = m.here !== false;
+    if (h === window.__baAudioHere) return;
+    window.__baAudioHere = h;
+    if (!h) stop();
+    try { MUSIC.refresh(); } catch (er) {}
+  });
+  if (window.parent !== window) {
+    const post = (t) => { try { window.parent.postMessage(JSON.stringify({ type: t }), '*'); } catch (e) {} };
+    const use = () => { if (window.__baAudioHere === false) post('pflx_audio_use'); };
+    document.addEventListener('pointerdown', use, true);
+    document.addEventListener('keydown', use, true);
+    post('pflx_audio_query');
+  }
+  return { say, line, count, stop, on, toggle, voice: contextVoice, arenaVoice: () => arenaVoice, setArenaVoice, load, pickerHtml, padHtml, LINES };
+})();
+window.ANN = ANN;
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MUSIC ENGINE — Procedural ambient tracks via Web Audio API
 // ═══════════════════════════════════════════════════════════════════════════
 const MUSIC = (() => {
@@ -2793,7 +2942,7 @@ const MUSIC = (() => {
     if (!masterGain) { masterGain = ctx.createGain(); masterGain.gain.value = volume; masterGain.connect(ctx.destination); }
     return ctx;
   }
-  function vol() { return muted ? 0 : volume; }
+  function vol() { return (muted || window.__baAudioHere === false) ? 0 : volume * (window.__baAnnDuck ? 0.35 : 1); }   // announcer patch
   function updateGain() { if (masterGain) masterGain.gain.setTargetAtTime(vol(), ctx.currentTime, 0.1); }
 
   function stopAll() {
@@ -2835,6 +2984,7 @@ const MUSIC = (() => {
     getVolume() { return volume; },
     setMuted(m) { muted = m; updateGain(); },
     isMuted() { return muted; },
+    refresh() { try { updateGain(); } catch (e) {} },
     isPlaying() { return currentTrack !== null; },
     getTrack() { return currentTrack; },
 
@@ -3356,6 +3506,7 @@ function arenaGameLaunch(deckId, gameFile, opts) {
   document.body.appendChild(ov);
   arenaGame.frame = document.getElementById('arenaGameFrame');
   SFX.click();
+  ANN.line('battleStart', { gap: 900 });
 }
 
 function arenaGameClose() {
@@ -3382,6 +3533,14 @@ window.addEventListener('message', function (e) {
       rivals: (state.player ? exoGameRivals(state.player.id) : [])
     }, '*');
   } else if (m.type === 'pflx_arena_game_result' && arenaGame.open) {
+    try {
+      let best = 0;
+      const lid = arenaGame.opts && arenaGame.opts.liveId;
+      if (lid) { const lev = baLive.byId(lid); const mine = lev && (lev.players || []).find(function (x) { return state.player && x.id === state.player.id; }); best = (mine && mine.score) || 0; }
+      if (m.won && arenaGame.opts && arenaGame.opts.seasonMode && arenaGame.opts.sessionId) ANN.line('levelup', { force: true });
+      else if (lid && best > 0 && (m.score || 0) > best) ANN.line('highscore', { force: true });
+      else ANN.line(m.won ? 'win' : 'lose', { force: true });
+    } catch (e) {}
     // Season sessions: a WIN advances this player's level for that session
     if (m.won && arenaGame.opts && arenaGame.opts.seasonMode && arenaGame.opts.sessionId) {
       sessionLevelUp(arenaGame.opts.sessionId);
@@ -3761,6 +3920,7 @@ async function baLiveLaunch() {
     hostId: state.player ? state.player.id : 'host', hostName: state.player ? state.player.brand : 'Host',
     code: baLiveCode(), open: false,
     teams: (function () { var v = (document.getElementById('lpTeams') || {}).value; return v === 'duo' || v === 'studios' ? v : false; })(),
+    announcer: (function () { var v = (document.getElementById('lpAnn') || {}).value; return v === 'male' || v === 'off' ? v : 'female'; })(),
     startsAt: Date.now(), endsAt: Date.now() + mins * 60000,
     players: [], updatedAt: Date.now()
   };
@@ -3793,6 +3953,17 @@ async function baLiveToggleOpen(id) {
   await baLive.upsert(ev);
   render();
 }
+async function baLiveSetAnnouncer(id) {
+  const ev = baLive.byId(id);
+  if (!ev) return;
+  const order = ['female', 'male', 'off'];
+  ev.announcer = order[(order.indexOf(ev.announcer || 'female') + 1) % order.length];
+  ev.updatedAt = Date.now();
+  if (ev.announcer !== 'off') ANN.say(['ready'], { voice: ev.announcer, force: true });
+  render();
+  await baLive.upsert(ev);
+}
+window.baLiveSetAnnouncer = baLiveSetAnnouncer;
 async function baLiveEnd(id) {
   if (!confirm('End this live event for everyone?')) return;
   await baLive.remove(id);
@@ -4583,6 +4754,7 @@ function renderSidePanel() {
           <a href="#" onclick="goExoBay();togglePanel()" class="${state.screen==='exo_bay'?'active':''}"><span class="nav-icon">🤖</span> EXO Bay</a>
           <a href="#" onclick="goExoVault();togglePanel()" class="${state.screen==='exo_vault'?'active':''}"><span class="nav-icon">🛒</span> The Vault</a>
           <a href="#" onclick="goScreen('esports');togglePanel()" class="${state.screen==='esports'?'active':''}"><span class="nav-icon">🏟️</span> Creator Showdown</a>
+          <a href="#" onclick="ANN.toggle();return false;" id="annNavToggle" title="Gameshow announcer voice"><span class="nav-icon">${ANN.on() ? '🎙' : '🔇'}</span> Announcer voice <span style="font-size:8px;margin-left:4px;color:${ANN.on() ? 'var(--pflx-green,#00e676)' : '#888'}">${ANN.on() ? 'ON' : 'OFF'}</span></a>
           ${isHost ? `<a href="#" onclick="goSettings();togglePanel()" class="${state.screen==='settings'?'active':''}"><span class="nav-icon">⚙️</span> Settings <span style="font-size:8px;color:var(--pflx-gold);margin-left:4px">HOST</span></a>` : ''}
         </div>
       </div>
@@ -4890,6 +5062,7 @@ function lpEventCard(ev) {
     ? '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">' +
         '<span style="font-family:Orbitron,monospace;font-size:0.9rem;letter-spacing:0.3em;color:#ffd740;background:rgba(0,0,0,0.4);border:1px dashed rgba(255,215,64,0.5);border-radius:8px;padding:8px 14px">' + ev.code + '</span>' +
         '<button class="btn-arena" style="font-size:0.5rem;padding:8px 12px" onclick="baLiveToggleOpen(\'' + ev.id + '\')">' + (ev.open ? '🔓 OPEN JOIN — CLICK TO HIDE' : '🔒 PRIVATE (CODE ONLY) — CLICK TO OPEN') + '</button>' +
+        '<button class="btn-arena" style="font-size:0.5rem;padding:8px 12px" title="Announcer voice for this event — click to change" onclick="baLiveSetAnnouncer(\'' + ev.id + '\')">🎙 VOICE: ' + ({ female: '♀ FEMALE', male: '♂ MALE', off: 'OFF' })[ev.announcer || 'female'] + '</button>' +
         '<button class="btn-arena btn-arena-red" style="font-size:0.5rem;padding:8px 12px" onclick="baLiveEnd(\'' + ev.id + '\')">✕ END EVENT</button>' +
       '</div>'
     : '';
@@ -4938,6 +5111,9 @@ function renderLivePlay() {
           '<option value="off" selected>Solo scores — everyone for themselves</option>' +
           '<option value="duo">🔵🔴 TEAM BATTLE — auto-split into NOVA vs ION squads</option>' +
           '<option value="studios">🏢 STUDIO WAR — squads are the Startup Studios (your real house)</option>' +
+        '</select>' +
+        '<select id="lpAnn" class="deck-input" style="width:100%;margin-top:10px">' +
+          ['female', 'male', 'off'].map(function (v) { return '<option value="' + v + '"' + ((ANN.arenaVoice() === v) ? ' selected' : '') + '>' + ({ female: '🎙 Announcer: ♀ female voice', male: '🎙 Announcer: ♂ male voice', off: '🔇 No announcer' })[v] + '</option>'; }).join('') +
         '</select>' +
         '<div style="font-size:0.6rem;color:#8a9ab8;margin:10px 0">Starts 🔒 PRIVATE: players need your 6-letter invite code. Flip to 🔓 OPEN JOIN anytime from the event card.</div>' +
         '<button class="btn-arena btn-arena-gold" style="font-size:0.6rem;padding:10px 20px" onclick="baLiveLaunch()">🔴 GO LIVE</button>' +
@@ -5980,6 +6156,35 @@ function renderSettings() {
       </div>
     </div>
 
+    <!-- ANNOUNCER -->
+    <div class="settings-section">
+      <div class="settings-section-title">Announcer Voice</div>
+      ${isHost ? `<div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div class="setting-label">
+          <span class="sl-title">Arena announcer (host)</span>
+          <span class="sl-desc">The voice every player hears in battles, Cipher, Rift and cartridge games. Showdown modes and LIVE events can pick their own.</span>
+        </div>
+        <div class="ann-row" id="annArenaRow">${ANN.pickerHtml(ANN.arenaVoice(), 'ANN.setArenaVoice')}</div>
+      </div>` : ''}
+      <div class="setting-row">
+        <div class="setting-label">
+          <span class="sl-title">Announcer on this device</span>
+          <span class="sl-desc">Turn the gameshow voice on or off for you</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" ${ANN.on() ? 'checked' : ''} id="annToggle" onclick="ANN.toggle()" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:10px">
+        <div class="setting-label">
+          <span class="sl-title">Test announcer lines</span>
+          <span class="sl-desc">Voice clips: Kenney Voiceover Pack (CC0)</span>
+        </div>
+        ${ANN.padHtml()}
+      </div>
+    </div>
+
     <!-- MUSIC -->
     <div class="settings-section">
       <div class="settings-section-title">In-Game Music</div>
@@ -6849,6 +7054,7 @@ function cipherStartFromRules() {
   // Show role reveal
   state.screen = "cipher_role";
   SFX.roleReveal();
+  ANN.line('battleStart', { gap: 900 });
   MUSIC.play('hunt');
   render();
 
@@ -6880,6 +7086,7 @@ function cipherInlineSabotage() {
   if (c.myRole !== 'saboteur' || c.saboteurInlineCooldown) return;
   c.saboteurInlineCooldown = true;
   SFX.sabotageAlert();
+  ANN.line('sabotage', { throttle: 5000 });
 
   // Pick a random sabotage type
   const actions = ['corrupt', 'malfunction', 'falseclue'];
@@ -7054,6 +7261,7 @@ function cipherStartDiscussion() {
 function cipherHandleCorrectAnswer() {
   const c = state.cipher;
   SFX.keyCollect();
+  ANN.line('key', { throttle: 2500 });
   if (c.myRole !== 'saboteur') {
     c.totalKeys++;
     c.keysThisTerminal++;
@@ -7072,6 +7280,7 @@ function cipherHandleCorrectAnswer() {
     c.terminalsUnlocked++;
     c.keysThisTerminal = 0;
     SFX.terminalUnlock();
+    ANN.line('terminal', { force: true });
     cipherPushEvent(`🔓 Terminal ${TERMINAL_NAMES[c.terminalsUnlocked-1]} UNLOCKED!`, 'success');
     if (c.terminalsUnlocked >= CIPHER_CONFIG.terminalCount) {
       render();
@@ -7132,6 +7341,7 @@ function cipherPostAnswer() {
         // Brief sabotage alert then go to discussion
         state.screen = "cipher_sabotage";
         SFX.sabotageAlert();
+        ANN.line('sabotage', { throttle: 5000 });
         render();
         c.phaseTimer = setTimeout(() => {
           cipherStartDiscussion();
@@ -7140,6 +7350,7 @@ function cipherPostAnswer() {
         // Saboteur chooses their action
         state.screen = "cipher_sabotage";
         SFX.sabotageAlert();
+        ANN.line('sabotage', { throttle: 5000 });
         MUSIC.play('sabotage');
         render();
       }
@@ -7280,6 +7491,7 @@ function cipherBodyReported(victim, discoverer) {
   if (c.outcome !== null) return;
   c.bodyReported = true;
   SFX.sabotageAlert();
+  ANN.line('vote');
   cipherPushEvent(`☠️ ${discoverer.brand.split(' ')[0]} found ${victim.brand.split(' ')[0]}'s body in ${SHIP_ROOMS.find(r=>r.id===(c.deadBodies.find(b=>b.id===victim.id)?.room))?.name || 'unknown'}!`, 'danger');
 
   // Show body reported overlay
@@ -7319,6 +7531,7 @@ function cipherTriggerCrisis() {
   }
 
   SFX.sabotageAlert();
+  ANN.line('crisis', { force: true });
   cipherPushEvent(`🚨 CRISIS: ${crisis.name}!`, 'danger');
   render();
 
@@ -7367,6 +7580,7 @@ function cipherCrisisResolved() {
   c.crisisActive = false;
   clearInterval(c.crisisInterval);
   SFX.terminalUnlock();
+  ANN.line('crisisDone');
   cipherPushEvent('✅ Crisis averted!', 'success');
   const el = document.querySelector('.power-outage-mask');
   if (el) el.remove();
@@ -7380,6 +7594,7 @@ function cipherCrisisFailed() {
   clearInterval(c.crisisInterval);
   c.timeRemaining = Math.max(0, c.timeRemaining - penalty);
   SFX.wrong();
+  ANN.line('crisisFail');
   cipherPushEvent(`⚠️ Crisis failed! -${penalty}s penalty!`, 'danger');
   const el = document.querySelector('.power-outage-mask');
   if (el) el.remove();
@@ -7967,6 +8182,7 @@ function cipherConfirmSabotage() {
   const c = state.cipher;
   const action = c.sabotageChoice;
   SFX.sabotageAlert();
+  ANN.line('sabotage', { throttle: 5000 });
 
   let message = '';
   if (action === 'corrupt') {
@@ -8014,6 +8230,7 @@ function cipherCallVote() {
   if (c.votesUsed >= CIPHER_CONFIG.voteLimit) return;
   clearInterval(c.discussionInterval);
   SFX.voteCall();
+  ANN.line('vote');
   MUSIC.play('vote');
   c.voteActive = true;
   c.selectedVoteTarget = null;
@@ -8048,6 +8265,7 @@ function cipherConfirmVote() {
     target.alive = false;
     target.ejected = true;
     SFX.eject();
+    ANN.line('eject');
     c.voteResults = {
       ejected: true, ejectedName: target.brand, ejectedRole: target.role,
     };
@@ -8162,12 +8380,14 @@ function cipherEndGame(outcome) {
 
   clearInterval(c.discussionInterval);
   if (won) { SFX.victory(); MUSIC.play('victory'); } else { SFX.defeat(); MUSIC.play('defeat'); }
+  ANN.line(won ? 'missionWin' : 'missionLose', { force: true });
   state.screen = "cipher_result";
   render();
 }
 
 function startBattle() {
   SFX.battleStart();
+  ANN.line('battleStart');
   // Pick random opponent
   const others = PLAYERS.filter(p => p.id !== state.player.id && p.role === "player");
   state.opponent = others[Math.floor(Math.random() * others.length)];
@@ -8191,7 +8411,7 @@ function startTimer() {
     if (state.timeLeft <= 5 && state.timeLeft > 0) SFX.timerTick();
     if (state.timeLeft <= 0) {
       clearInterval(state.timerInterval);
-      if (!state.answered) { SFX.timeout(); answerQuestion(-1); }
+      if (!state.answered) { SFX.timeout(); ANN.line('timeout'); answerQuestion(-1); }
     }
     render();
   }, 1000);
@@ -8208,9 +8428,11 @@ function answerQuestion(idx) {
     // Timeout — SFX already played
   } else if (correct) {
     SFX.correct();
+    ANN.line('correct');
     state.myScore += 100 + Math.max(0, state.timeLeft * 5);
   } else {
     SFX.wrong();
+    ANN.line('wrong');
   }
   // Simulate opponent
   const oppCorrect = Math.random() > 0.4;
@@ -8224,10 +8446,12 @@ function answerQuestion(idx) {
 
     setTimeout(() => {
       state.round++;
+      if (state.round === state.totalRounds - 1 && state.totalRounds > 2) setTimeout(() => ANN.line('finalRound'), 400);
       if (state.round >= state.totalRounds) {
         // Battle over — play victory or defeat + settle wager
         const won = state.myScore > state.oppScore;
         if (won) SFX.victory(); else SFX.defeat();
+        ANN.line(state.myScore === state.oppScore ? 'tie' : (won ? 'win' : 'lose'), { force: true });
 
         // ── Settle the wager through PflxDataBus when iframed by Platform.
         // Wager-based: winner takes 2x wager (net +wager), loser -wager.
@@ -8874,6 +9098,7 @@ function riftLaunchArena() {
   const r = state.rift;
   if (!r.myClass) return;
   SFX.battleStart();
+  ANN.line('battleStart');
   MUSIC.play('hunt');
 
   const cls = r.myClass;
@@ -9062,6 +9287,7 @@ function riftGameTick() {
         r.projectiles = [];
         MUSIC.play('sabotage');
         SFX.sabotageAlert();
+        ANN.line('finalRound', { force: true });
         render();
       }, 1500);
     } else {
@@ -9193,7 +9419,7 @@ function riftUseAbility(key) {
           t.hp -= ability.dmg;
           r.dmgDealt += ability.dmg;
           r.effects.push({ x:t.x, y:t.y-10, text:`-${ability.dmg}`, color:r.myClass.color, life:25 });
-          if (t.hp <= 0) { t.hp=0; t.alive=false; r.kills++; r.score += (t.xp||50); SFX.eject(); }
+          if (t.hp <= 0) { t.hp=0; t.alive=false; r.kills++; r.score += (t.xp||50); SFX.eject(); ANN.line('kill', { throttle: 3000 }); }
         }
       });
     }
@@ -9208,7 +9434,7 @@ function riftUseAbility(key) {
         t.hp -= ability.dmg;
         r.dmgDealt += ability.dmg;
         r.effects.push({ x:t.x, y:t.y-12, text:`-${ability.dmg}`, color:'#ffd740', life:30 });
-        if (t.hp <= 0) { t.hp=0; t.alive=false; r.kills++; r.score += (t.xp||50); SFX.eject(); }
+        if (t.hp <= 0) { t.hp=0; t.alive=false; r.kills++; r.score += (t.xp||50); SFX.eject(); ANN.line('kill', { throttle: 3000 }); }
       }
     });
     r.effects.push({ x:me.x, y:me.y-20, text:'✦ ULTIMATE ✦', color:'#ffd740', life:50 });
@@ -9230,6 +9456,7 @@ function riftEndMatch(outcome) {
 
   if (won) { SFX.victory(); MUSIC.play('victory'); }
   else { SFX.defeat(); MUSIC.play('defeat'); }
+  ANN.line(won ? 'win' : 'lose', { force: true });
 
   state.screen = 'rift_arena';
   render();
@@ -9736,6 +9963,7 @@ function getDefaultEsportsConfig() {
       maxContestantsCoop: 10,
       bgMusic: '',
       coverImage: '',
+      announcer: '',   // '' = Arena default voice
       // Keep legacy single-badge keys for backward compat
       participationBadge: 'positive_participant',
       winnerBadge: 'arena_champion',
@@ -9837,6 +10065,7 @@ async function saveEsportsConfig() {
 
 // Load on startup
 loadEsportsConfig();
+ANN.load();
 
 // Active settings tab
 let esportsSettingsTab = 'beat_lab';
@@ -10401,6 +10630,7 @@ function esportsCreateMatch(title) {
     winnerXC: esportsHostConfig[mode.id]?.winnerXC || cfgBaseXC,
     bgMusic: esportsHostConfig[mode.id]?.bgMusic || '',
     coverImage: esportsHostConfig[mode.id]?.coverImage || '',
+    announcer: esportsHostConfig[mode.id]?.announcer || '',
   };
 
   esportsState.matches.unshift(match);
@@ -10449,6 +10679,8 @@ function esportsStartMatch(matchId) {
     const m = esportsState.matches.find(x => x.id === matchId);
     if (!m || m.status !== 'in_progress') { clearInterval(esportsState.matchTimer); return; }
     m.timeLeft--;
+    if (m.timeLeft === 30 && m.timeMins * 60 >= 60) ANN.line('hurry', { voice: m.announcer || undefined });
+    else if (m.timeLeft >= 1 && m.timeLeft <= 5) ANN.count(m.timeLeft, { voice: m.announcer || undefined });
     if (m.timeLeft <= 0) {
       m.timeLeft = 0;
       clearInterval(esportsState.matchTimer);
@@ -10471,6 +10703,7 @@ function esportsStartMatch(matchId) {
   }, 1000);
 
   SFX.battleStart();
+  ANN.line('battleStart', { voice: match.announcer || undefined });
   render();
 }
 
@@ -10535,6 +10768,7 @@ function esportsEndSubmissions(matchId) {
   }
   saveEsportsState();
   SFX.timeout();
+  ANN.line('timeout', { voice: (match && match.announcer) || undefined, force: true });
   render();
 }
 
@@ -10578,6 +10812,7 @@ function esportsFinalizeMatch(matchId) {
   esportsState.view = 'results';
   saveEsportsState();
   SFX.victory();
+  ANN.line(state.player && match.winner === state.player.id ? 'win' : 'congrats', { voice: match.announcer || undefined, force: true });
   render();
 }
 
@@ -10618,6 +10853,15 @@ function closeModeSettings() {
   if (overlay) overlay.remove();
 }
 
+function mspSetAnnouncer(v) {
+  const modeId = modeSettingsOpen;
+  const cfg = esportsHostConfig[modeId]; if (!cfg) return;
+  cfg.announcer = (v === 'female' || v === 'male' || v === 'off') ? v : '';
+  const row = document.getElementById('msp_ann_row');
+  if (row) row.innerHTML = ANN.pickerHtml(cfg.announcer, 'mspSetAnnouncer', true);
+  if (cfg.announcer !== 'off') ANN.say(['ready'], { voice: cfg.announcer || ANN.arenaVoice(), force: true });
+}
+window.mspSetAnnouncer = mspSetAnnouncer;
 async function saveModeSettings(modeId) {
   const cfg = esportsHostConfig[modeId];
   const mode = ESPORTS_MODES.find(m => m.id === modeId);
@@ -10799,6 +11043,13 @@ function renderModeSettingsOverlay() {
             <input type="file" accept="audio/*" onchange="mspUploadMusic('${modeId}',this)" />
           </div>
         </div>
+      </div>
+
+      <!-- Announcer -->
+      <div class="msp-section">
+        <h4>🎙 Announcer Voice</h4>
+        <div class="ann-row" id="msp_ann_row">${ANN.pickerHtml(cfg.announcer || '', 'mspSetAnnouncer', true)}</div>
+        <div style="font-size:0.55rem;color:#666;margin-top:6px">Calls GO, HURRY UP, the last 5 seconds and the winner in this mode's matches. Arena default = the voice picked in Settings.</div>
       </div>
 
       <!-- Timers -->
