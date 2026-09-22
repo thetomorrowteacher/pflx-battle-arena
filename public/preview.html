@@ -2054,7 +2054,28 @@ function exoEvolutionOverlayHTML() {
 
 // ── Stage-aware EXO renderer. Stage 1 = the Phase-1 Core (exoCoreSVG);
 //    Stage 2+ composes a procedural body per line under the Core-as-head. ──
-function exoSVG(exo, size) {
+
+// ── Evo art (PATCH evo-art v1): real card art from assets/exo when it exists, procedural SVG otherwise ──
+const EXO_ART_BASE = 'assets/exo/';
+function exoArtFile(exo, cw) {
+  const st = exo.stage || 1;
+  const build = String(exo.build || (st === 1 ? 'base' : st < 4 ? 'a' : 'a1')).toLowerCase();
+  return exo.line + '/' + st + '-' + build + '-' + cw + '-' + (exo.form || 'standard');
+}
+function exoArtHTML(exo, size, fallback) {
+  if (!exo || !exo.line) return fallback;
+  const ext = size <= 96 ? '.thumb.jpg' : '.png';
+  const src = EXO_ART_BASE + exoArtFile(exo, exo.colorway || 'default') + ext;
+  const alt = EXO_ART_BASE + exoArtFile(exo, 'default') + ext;
+  const fb = String(fallback || '').replace(/"/g, '&quot;');
+  return '<span class="exo-art" style="display:inline-block;width:' + size + 'px;height:' + size + 'px;position:relative;vertical-align:middle">' +
+    '<img src="' + src + '" data-alt="' + alt + '" alt="" draggable="false" style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;object-fit:cover;object-position:center 22%;display:block;box-shadow:0 0 0 1.5px rgba(120,220,255,.45)" ' +
+    'onerror="if(!this.dataset.f&&this.src!==this.dataset.alt){this.dataset.f=1;this.src=this.dataset.alt}else{this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'}">' +
+    '<span style="display:none">' + (fallback || '') + '</span></span>';
+}
+
+function exoSVG(exo, size) { return exoArtHTML(exo, size, exoSVGProcedural(exo, size)); }
+function exoSVGProcedural(exo, size) {
   const stage = exo.stage || 1;
   if (stage < 2) return exoCoreSVG(exo, size);
   const line = EXO_LINES[exo.line]; if (!line) return '';
