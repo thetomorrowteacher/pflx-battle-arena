@@ -64,6 +64,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/mythweaver/1-base-default-standard.png",
+   "web": "assets/exo/mythweaver/1-base-default-standard.web.jpg",
    "thumb": "assets/exo/mythweaver/1-base-default-standard.thumb.jpg",
    "evoPath": "emagination/stage-01/EVO-EM-S1-BASE-DF-S.png"
   },
@@ -78,6 +79,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/mythweaver/2-a-default-standard.png",
+   "web": "assets/exo/mythweaver/2-a-default-standard.web.jpg",
    "thumb": "assets/exo/mythweaver/2-a-default-standard.thumb.jpg",
    "evoPath": "emagination/stage-02/EVO-EM-S2-A-DF-S.png"
   },
@@ -92,6 +94,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/mythweaver/2-b-default-standard.png",
+   "web": "assets/exo/mythweaver/2-b-default-standard.web.jpg",
    "thumb": "assets/exo/mythweaver/2-b-default-standard.thumb.jpg",
    "evoPath": "emagination/stage-02/EVO-EM-S2-B-DF-S.png"
   },
@@ -106,6 +109,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/mythweaver/2-c-default-standard.png",
+   "web": "assets/exo/mythweaver/2-c-default-standard.web.jpg",
    "thumb": "assets/exo/mythweaver/2-c-default-standard.thumb.jpg",
    "evoPath": "emagination/stage-02/EVO-EM-S2-C-DF-S.png"
   },
@@ -120,6 +124,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/mythweaver/4-a1-default-standard.png",
+   "web": "assets/exo/mythweaver/4-a1-default-standard.web.jpg",
    "thumb": "assets/exo/mythweaver/4-a1-default-standard.thumb.jpg",
    "evoPath": "emagination/stage-04/EVO-EM-S4-A1-DF-S.png"
   },
@@ -134,6 +139,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/ironwright/1-base-default-standard.png",
+   "web": "assets/exo/ironwright/1-base-default-standard.web.jpg",
    "thumb": "assets/exo/ironwright/1-base-default-standard.thumb.jpg",
    "evoPath": "gentech/stage-01/EVO-GT-S1-BASE-DF-S.png"
   },
@@ -148,6 +154,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/ironwright/2-a-default-standard.png",
+   "web": "assets/exo/ironwright/2-a-default-standard.web.jpg",
    "thumb": "assets/exo/ironwright/2-a-default-standard.thumb.jpg",
    "evoPath": "gentech/stage-02/EVO-GT-S2-A-DF-S.png"
   },
@@ -162,6 +169,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/ironwright/2-b-default-standard.png",
+   "web": "assets/exo/ironwright/2-b-default-standard.web.jpg",
    "thumb": "assets/exo/ironwright/2-b-default-standard.thumb.jpg",
    "evoPath": "gentech/stage-02/EVO-GT-S2-B-DF-S.png"
   },
@@ -176,6 +184,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/ironwright/2-c-default-standard.png",
+   "web": "assets/exo/ironwright/2-c-default-standard.web.jpg",
    "thumb": "assets/exo/ironwright/2-c-default-standard.thumb.jpg",
    "evoPath": "gentech/stage-02/EVO-GT-S2-C-DF-S.png"
   },
@@ -190,6 +199,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/ironwright/4-a1-default-standard.png",
+   "web": "assets/exo/ironwright/4-a1-default-standard.web.jpg",
    "thumb": "assets/exo/ironwright/4-a1-default-standard.thumb.jpg",
    "evoPath": "gentech/stage-04/EVO-GT-S4-A1-DF-S.png"
   },
@@ -204,6 +214,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/neonborn/1-base-default-standard.png",
+   "web": "assets/exo/neonborn/1-base-default-standard.web.jpg",
    "thumb": "assets/exo/neonborn/1-base-default-standard.thumb.jpg",
    "evoPath": "innov8/stage-01/EVO-IN-S1-BASE-DF-S.png"
   },
@@ -218,6 +229,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/neonborn/2-a-default-standard.png",
+   "web": "assets/exo/neonborn/2-a-default-standard.web.jpg",
    "thumb": "assets/exo/neonborn/2-a-default-standard.thumb.jpg",
    "evoPath": "innov8/stage-02/EVO-IN-S2-A-DF-S.png"
   },
@@ -232,6 +244,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/neonborn/2-b-default-standard.png",
+   "web": "assets/exo/neonborn/2-b-default-standard.web.jpg",
    "thumb": "assets/exo/neonborn/2-b-default-standard.thumb.jpg",
    "evoPath": "innov8/stage-02/EVO-IN-S2-B-DF-S.png"
   },
@@ -246,6 +259,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/neonborn/2-c-default-standard.png",
+   "web": "assets/exo/neonborn/2-c-default-standard.web.jpg",
    "thumb": "assets/exo/neonborn/2-c-default-standard.thumb.jpg",
    "evoPath": "innov8/stage-02/EVO-IN-S2-C-DF-S.png"
   },
@@ -260,6 +274,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/neonborn/4-a1-default-standard.png",
+   "web": "assets/exo/neonborn/4-a1-default-standard.web.jpg",
    "thumb": "assets/exo/neonborn/4-a1-default-standard.thumb.jpg",
    "evoPath": "innov8/stage-04/EVO-IN-S4-A1-DF-S.png"
   },
@@ -274,6 +289,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/resonant/1-base-default-standard.png",
+   "web": "assets/exo/resonant/1-base-default-standard.web.jpg",
    "thumb": "assets/exo/resonant/1-base-default-standard.thumb.jpg",
    "evoPath": "mindforge/stage-01/EVO-MF-S1-BASE-DF-S.png"
   },
@@ -288,6 +304,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/resonant/2-a-default-standard.png",
+   "web": "assets/exo/resonant/2-a-default-standard.web.jpg",
    "thumb": "assets/exo/resonant/2-a-default-standard.thumb.jpg",
    "evoPath": "mindforge/stage-02/EVO-MF-S2-A-DF-S.png"
   },
@@ -302,6 +319,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/resonant/2-b-default-standard.png",
+   "web": "assets/exo/resonant/2-b-default-standard.web.jpg",
    "thumb": "assets/exo/resonant/2-b-default-standard.thumb.jpg",
    "evoPath": "mindforge/stage-02/EVO-MF-S2-B-DF-S.png"
   },
@@ -316,6 +334,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/resonant/2-c-default-standard.png",
+   "web": "assets/exo/resonant/2-c-default-standard.web.jpg",
    "thumb": "assets/exo/resonant/2-c-default-standard.thumb.jpg",
    "evoPath": "mindforge/stage-02/EVO-MF-S2-C-DF-S.png"
   },
@@ -330,6 +349,7 @@
    "colorway": "default",
    "form": "standard",
    "src": "assets/exo/resonant/4-a1-default-standard.png",
+   "web": "assets/exo/resonant/4-a1-default-standard.web.jpg",
    "thumb": "assets/exo/resonant/4-a1-default-standard.thumb.jpg",
    "evoPath": "mindforge/stage-04/EVO-MF-S4-A1-DF-S.png"
   }
