@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>X-Rush — PFLX Battle Arena</title>
+<style>
+  :root{--pflx-dark:#0a0e17;--pflx-darker:#060a12;--pflx-cyan:#00e5ff;--pflx-gold:#ffd740;--pflx-red:#ff1744;--pflx-green:#00e676}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--pflx-dark);color:#eaf0ff;font-family:'Courier New',monospace;min-height:100vh}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 18px}
+  h1{font-size:26px;letter-spacing:.08em;text-align:center;color:var(--pflx-cyan);text-shadow:0 0 18px rgba(0,229,255,.5);margin:0 0 6px}
+  .sub{text-align:center;color:#8a93b8;font-size:13px;margin-bottom:26px}
+  .panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:22px;margin-bottom:16px}
+  .label{font-size:11px;letter-spacing:.1em;color:var(--pflx-gold);text-transform:uppercase;margin-bottom:8px;display:block}
+  select,input[type=text]{width:100%;background:#000814;border:1px solid #2a3350;border-radius:8px;padding:10px;color:#fff;font-family:inherit;font-size:14px}
+  .btn{background:rgba(255,255,255,.06);border:1px solid #2a3350;border-radius:10px;color:#eaf0ff;padding:11px 18px;font-family:inherit;font-size:13px;cursor:pointer;letter-spacing:.03em}
+  .btn:hover{background:rgba(255,255,255,.12)}
+  .btn.gold{background:var(--pflx-gold);color:#100;border-color:var(--pflx-gold);font-weight:700}
+  .btn.gold:hover{filter:brightness(1.1)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .btn-row{display:flex;flex-wrap:wrap;gap:8px}
+  .len-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .lenbtn{background:#000814;border:1px solid #2a3350;border-radius:8px;color:#eaf0ff;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer}
+  .lenbtn.on{background:var(--pflx-gold);color:#100;border-color:var(--pflx-gold);font-weight:700}
+  .err{color:var(--pflx-red);font-size:13px;margin:10px 0}
+  .center{text-align:center}
+  .standings-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .team-name{width:110px;font-size:12px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-track{flex:1;height:8px;background:#000814;border-radius:4px;overflow:hidden}
+  .bar-fill{height:100%;background:var(--pflx-cyan);transition:width .3s}
+  .pct{width:38px;text-align:right;font-size:11px;color:#8a93b8}
+  .term{font-size:20px;font-weight:700;text-align:center;margin-bottom:22px;color:#fff}
+  .opt-btn{display:block;width:100%;text-align:left;background:#000814;border:1px solid #2a3350;border-radius:10px;color:#eaf0ff;padding:14px 16px;font-family:inherit;font-size:14px;cursor:pointer;margin-bottom:10px}
+  .opt-btn:hover{border-color:var(--pflx-cyan);background:rgba(0,229,255,.06)}
+  .myprog{text-align:center;color:#8a93b8;font-size:12px;margin-bottom:14px}
+  .chip{display:inline-block;background:rgba(255,255,255,.06);border:1px solid #2a3350;border-radius:8px;padding:5px 10px;font-size:12px;margin:3px}
+  .pulse{animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// X-Rush -- a Mario-Kart/Quizlet-Live-style team quiz race (Battle
+// Arena Games Expansion Phase D). This is a self-contained static
+// page (matches this project's ACTUAL deployed architecture: vercel
+// .json disables the Next.js framework build entirely -- framework:
+// null, buildCommand: "" -- so the app/*.tsx pages are NOT served in
+// production; public/preview.html and files like this one are what
+// actually deploy). The pure race-engine logic below is a direct,
+// behavior-identical port of app/lib/xrush.ts (already unit-tested,
+// 63/63 passing, test_xrush_v1.js) -- types stripped, logic unchanged.
+//
+// Identity: this page has NO login of its own. It is only ever opened
+// from an X-Live session tab (new tab per player, per the confirmed
+// launch decision), which already knows who the player is -- X-Live
+// passes ?pid=<playerId>&pname=<displayName> on every link it opens
+// here. A direct visit with no pid is refused with a clear message
+// rather than silently doing something wrong.
+// ═══════════════════════════════════════════════════════════════════
+
+var SUPABASE_URL = 'https://hyxiagexyptzvetqjmnj.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eGlhZ2V4eXB0enZldHFqbW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODM4MTYsImV4cCI6MjA4OTY1OTgxNn0.hqHVlRu775dZfJrKxSFMNEPhANu5EFm7gJpaJ3RnbnY';
+var SB_HEADERS = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+var XRUSH_RACES_KEY = 'pflx_xrush_races';
+var XRUSH_ACTIVE_KEY = 'pflx_xrush_active';
+var DECKS_KEY = 'pflx_ba_decks';
+var MAX_OPTIONS = 4, MAX_ROUNDS = 60;
+var XRUSH_LENGTH_OPTIONS = [3, 5, 7, 10, 12, 15, 20, 30];
+var XCOIN_BRIDGE = 'https://pflx-xcoin-app.vercel.app/api/pflx-bridge';
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function uid(prefix) { return prefix + '_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36); }
+
+// ── Pure engine (behavior-identical port of app/lib/xrush.ts) ───────
+function seedFromString(s) {
+  var h = 1779033703 ^ s.length;
+  for (var i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  return h >>> 0;
+}
+function mulberry32(seed) {
+  var a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function seededShuffle(arr, seed) {
+  var rng = mulberry32(seed), out = arr.slice();
+  for (var i = out.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)); var tmp = out[i]; out[i] = out[j]; out[j] = tmp; }
+  return out;
+}
+function buildCardOrder(cards, count, seed) {
+  var ids = cards.map(function (c) { return c.id; });
+  var shuffled = seededShuffle(ids, seed);
+  var n = Math.max(1, Math.min(count, shuffled.length, MAX_ROUNDS));
+  return shuffled.slice(0, n);
+}
+function newRace(opts) {
+  var now = Date.now();
+  var cardOrder = buildCardOrder(opts.cards, opts.totalRounds, seedFromString(opts.deckId + ':' + now));
+  return { id: uid('race'), deckId: opts.deckId, deckName: opts.deckName, cardOrder: cardOrder, totalRounds: cardOrder.length,
+    teams: (opts.teams || []).filter(Boolean), status: 'lobby', createdBy: opts.createdBy, createdAt: now, updatedAt: now, progress: {} };
+}
+function joinRace(race, playerId, playerName, team) {
+  if (race.progress[playerId]) return race;
+  var now = Date.now();
+  var progress = Object.assign({}, race.progress);
+  progress[playerId] = { playerId: playerId, playerName: playerName, team: team || '', roundIndex: 0, correct: 0, wrong: 0, updatedAt: now };
+  return Object.assign({}, race, { updatedAt: now, progress: progress });
+}
+function xrushBuildQuestion(cards, cardOrder, roundIndex, raceId, playerId) {
+  if (roundIndex < 0 || roundIndex >= cardOrder.length) return null;
+  var cardId = cardOrder[roundIndex];
+  var byId = {}; cards.forEach(function (c) { byId[c.id] = c; });
+  var correctCard = byId[cardId]; if (!correctCard) return null;
+  var seed = seedFromString(raceId + ':' + playerId + ':' + roundIndex + ':' + cardId);
+  var others = cards.filter(function (c) { return c.id !== cardId; });
+  var shuffledOthers = seededShuffle(others, seed);
+  var distractorCount = Math.min(MAX_OPTIONS - 1, shuffledOthers.length);
+  var distractors = shuffledOthers.slice(0, distractorCount);
+  var options = [{ cardId: correctCard.id, text: correctCard.definition, correct: true }]
+    .concat(distractors.map(function (c) { return { cardId: c.id, text: c.definition, correct: false }; }));
+  var shuffledOptions = seededShuffle(options, seed ^ 0x9e3779b9);
+  return { cardId: cardId, term: correctCard.term, options: shuffledOptions };
+}
+function xrushRecordAnswer(race, playerId, chosenCardId) {
+  var p = race.progress[playerId]; if (!p) return race;
+  if (race.status !== 'active') return race;
+  var expectedCardId = race.cardOrder[p.roundIndex];
+  var correct = !!expectedCardId && chosenCardId === expectedCardId;
+  var now = Date.now();
+  var next = correct
+    ? Object.assign({}, p, { roundIndex: p.roundIndex + 1, correct: p.correct + 1, updatedAt: now, finishedAt: (p.roundIndex + 1 >= race.totalRounds) ? now : p.finishedAt })
+    : Object.assign({}, p, { roundIndex: 0, wrong: p.wrong + 1, updatedAt: now });
+  var progress = Object.assign({}, race.progress); progress[playerId] = next;
+  return Object.assign({}, race, { updatedAt: now, progress: progress });
+}
+function xrushStartRace(race) { var now = Date.now(); return Object.assign({}, race, { status: 'active', startedAt: now, updatedAt: now }); }
+function xrushIsRaceComplete(race) { var entries = Object.keys(race.progress).map(function (k) { return race.progress[k]; }); if (!entries.length) return false; return entries.every(function (p) { return !!p.finishedAt; }); }
+function xrushEndRace(race) { var now = Date.now(); return Object.assign({}, race, { status: 'ended', endedAt: now, updatedAt: now }); }
+function xrushTeamStandings(race) {
+  var byTeam = {};
+  Object.keys(race.progress).forEach(function (k) { var p = race.progress[k]; var key = p.team || '(no team)'; (byTeam[key] = byTeam[key] || []).push(p); });
+  var totalRounds = Math.max(1, race.totalRounds);
+  return Object.keys(byTeam).map(function (team) {
+    var members = byTeam[team]; var sum = members.reduce(function (s, m) { return s + m.roundIndex; }, 0); var avg = sum / members.length;
+    return { team: team, memberCount: members.length, avgRoundIndex: avg, progressPct: Math.min(100, Math.round((avg / totalRounds) * 100)), finished: members.every(function (m) { return !!m.finishedAt; }) };
+  }).sort(function (a, b) { return b.avgRoundIndex - a.avgRoundIndex; });
+}
+function xrushMergeRaceProgress(local, incoming) {
+  var out = Object.assign({}, local);
+  Object.keys(incoming || {}).forEach(function (pid) {
+    var inc = incoming[pid], cur = out[pid];
+    if (!cur) { out[pid] = inc; return; }
+    var finishedAt = cur.finishedAt || inc.finishedAt;
+    var winner = (inc.updatedAt || 0) > (cur.updatedAt || 0) ? inc : cur;
+    out[pid] = Object.assign({}, winner, { finishedAt: finishedAt });
+  });
+  return out;
+}
+function xrushMergeRace(local, incoming) {
+  var statusRank = { lobby: 0, active: 1, ended: 2 };
+  var status = statusRank[incoming.status] > statusRank[local.status] ? incoming.status : local.status;
+  var base = (incoming.updatedAt || 0) > (local.updatedAt || 0) ? incoming : local;
+  return Object.assign({}, base, { status: status, startedAt: local.startedAt || incoming.startedAt, endedAt: local.endedAt || incoming.endedAt,
+    progress: xrushMergeRaceProgress(local.progress, incoming.progress), updatedAt: Math.max(local.updatedAt || 0, incoming.updatedAt || 0) });
+}
+function xrushMergeRaceList(local, incoming) {
+  var byId = {};
+  (local || []).forEach(function (r) { byId[r.id] = r; });
+  (incoming || []).forEach(function (r) { byId[r.id] = byId[r.id] ? xrushMergeRace(byId[r.id], r) : r; });
+  return Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+}
+
+// ── Persistence (plain fetch port of app/lib/xrush-store.ts) ───────
+function kvLoad(key) {
+  return fetch(SUPABASE_URL + '/rest/v1/app_data?key=eq.' + key + '&select=data', { headers: SB_HEADERS })
+    .then(function (r) { return r.ok ? r.json() : []; }).then(function (rows) { return rows.length ? rows[0].data : null; }).catch(function () { return null; });
+}
+function kvSave(key, value) {
+  return fetch(SUPABASE_URL + '/rest/v1/app_data', { method: 'POST',
+    headers: Object.assign({ 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' }, SB_HEADERS),
+    body: JSON.stringify({ key: key, data: value }) }).then(function (r) { return r.ok; }).catch(function () { return false; });
+}
+function loadDecks() { return kvLoad(DECKS_KEY).then(function (d) { return (d && Array.isArray(d.decks)) ? d.decks : []; }); }
+function loadXLiveTeams() {
+  return kvLoad('pflx_lite_config').then(function (cfg) {
+    if (cfg && cfg.teams && Array.isArray(cfg.teams.names)) return { names: cfg.teams.names, assign: cfg.teams.assign || {} };
+    return { names: [], assign: {} };
+  });
+}
+function loadRaces() { return kvLoad(XRUSH_RACES_KEY).then(function (d) { return (d && Array.isArray(d.races)) ? d.races : []; }); }
+function loadRace(raceId) { return loadRaces().then(function (races) { return races.filter(function (r) { return r.id === raceId; })[0] || null; }); }
+function saveRace(race) {
+  return loadRaces().then(function (cloudRaces) {
+    var cloudMatch = cloudRaces.filter(function (r) { return r.id === race.id; })[0];
+    var merged = cloudMatch ? xrushMergeRace(cloudMatch, race) : race;
+    var mergedList = xrushMergeRaceList(cloudRaces, [merged]).slice(0, 40);
+    return kvSave(XRUSH_RACES_KEY, { races: mergedList, updatedAt: Date.now() }).then(function () { return merged; });
+  });
+}
+function setActiveRacePointer(ptr) { return kvSave(XRUSH_ACTIVE_KEY, ptr); }
+function awardXC(playerId, amount, reason) {
+  return fetch(XCOIN_BRIDGE, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'xc_update', playerId: playerId, delta: amount, reason: '[Battle Arena] ' + reason, app: 'battle-arena' }) })
+    .catch(function () {});
+}
+
+// ── App state / identity from the URL (set by X-Live's launch/join links) ──
+var qs = new URLSearchParams(location.search);
+var MY_ID = qs.get('pid') || '';
+var MY_NAME = qs.get('pname') || 'Player';
+var RACE_ID = qs.get('race') || '';
+
+var state = { decks: [], selectedDeckId: '', length: 10, useTeams: true, creating: false, error: null, race: null, question: null, rewardGiven: false };
+var pollTimer = null;
+
+function render() {
+  var app = document.getElementById('app');
+  app.innerHTML = viewHTML();
+}
+
+function viewHTML() {
+  if (!MY_ID) {
+    return '<div class="wrap"><h1>🏁 X-Rush</h1><div class="panel center"><p class="err">This page opens from an X-Live session -- go to Archive Battle or the Teams tab in X-Live and use the LAUNCH / JOIN button there.</p></div></div>';
+  }
+  if (state.error) {
+    return headerHTML() + '<div class="panel center"><p class="err">' + esc(state.error) + '</p></div>';
+  }
+  if (!state.race) {
+    if (RACE_ID) return headerHTML() + '<div class="panel center"><p class="pulse">Loading race…</p></div>';
+    return headerHTML() + setupHTML();
+  }
+  var race = state.race;
+  if (race.status === 'lobby') return headerHTML() + lobbyHTML(race);
+  var mine = race.progress[MY_ID];
+  if (race.status === 'ended' || (mine && mine.finishedAt)) return headerHTML() + finishedHTML(race, mine);
+  return headerHTML() + activeHTML(race, mine);
+}
+
+function headerHTML() {
+  return '<div class="wrap"><h1>🏁 X-Rush</h1><div class="sub">Racing as ' + esc(MY_NAME) + '</div>';
+}
+
+function setupHTML() {
+  var deck = state.decks.filter(function (d) { return d.id === state.selectedDeckId; })[0];
+  var deckOptions = state.decks.length
+    ? '<select id="deckSel">' + '<option value="">Choose a deck…</option>' +
+      state.decks.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === state.selectedDeckId ? ' selected' : '') + '>' + esc(d.name) + ' (' + d.cards.length + ' cards)</option>'; }).join('') + '</select>'
+    : '<p style="color:#8a93b8;font-size:13px">No decks yet -- import one from the Decks tab first.</p>';
+  return '<div class="panel">' +
+    '<span class="label">Deck</span>' + deckOptions +
+    '<div style="height:16px"></div><span class="label">Race length</span>' +
+    '<div class="len-row">' + XRUSH_LENGTH_OPTIONS.map(function (n) { return '<button class="lenbtn' + (n === state.length ? ' on' : '') + '" data-len="' + n + '">' + n + '</button>'; }).join('') + '</div>' +
+    '<div style="height:16px"></div><label style="font-size:13px;color:#c8d0f0"><input type="checkbox" id="useTeams"' + (state.useTeams ? ' checked' : '') + ' style="margin-right:8px"/>Use X-Live\'s current teams (falls back to free-for-all if none are set)</label>' +
+    (state.error ? '<p class="err">' + esc(state.error) + '</p>' : '') +
+    '<div style="height:18px"></div><button class="btn gold" id="createBtn" style="width:100%;padding:14px"' + (!deck || state.creating ? ' disabled' : '') + '>' + (state.creating ? 'Starting…' : '🏁 CREATE RACE') + '</button>' +
+    '</div></div>';
+}
+
+function lobbyHTML(race) {
+  var racers = Object.keys(race.progress).map(function (k) { return race.progress[k]; });
+  var isHost = race.createdBy === MY_ID;
+  return '<div class="panel center">' +
+    '<div class="label">' + esc(race.deckName) + ' · ' + race.totalRounds + ' rounds</div>' +
+    '<div style="margin:14px 0">' + racers.map(function (p) { return '<span class="chip">' + esc(p.playerName) + (p.team ? ' (' + esc(p.team) + ')' : '') + '</span>'; }).join('') + '</div>' +
+    (isHost ? '<button class="btn gold" id="startBtn" style="padding:12px 28px">🏁 START RACE</button>' : '<p class="pulse" style="color:var(--pflx-cyan)">Waiting for the host to start…</p>') +
+    '</div></div>';
+}
+
+function finishedHTML(race, mine) {
+  var standings = xrushTeamStandings(race);
+  var isHost = race.createdBy === MY_ID;
+  return '<div class="panel center">' +
+    '<h2 style="color:var(--pflx-gold)">🏆 Race ' + (race.status === 'ended' ? 'Ended' : 'Finished') + '</h2>' +
+    '<p style="color:#8a93b8">' + (mine && mine.finishedAt ? 'You finished the deck! +25 XC' : 'This race has ended.') + '</p>' +
+    '</div><div class="panel">' + standings.map(standingRowHTML).join('') + '</div>' +
+    '<div class="center">' + (isHost && race.status !== 'ended' ? '<button class="btn" id="endBtn">END RACE FOR EVERYONE</button> ' : '') + '</div></div>';
+}
+
+function standingRowHTML(s) {
+  return '<div class="standings-row"><span class="team-name">' + esc(s.team) + (s.finished ? ' ✅' : '') + '</span>' +
+    '<div class="bar-track"><div class="bar-fill" style="width:' + s.progressPct + '%"></div></div><span class="pct">' + s.progressPct + '%</span></div>';
+}
+
+function activeHTML(race, mine) {
+  var standings = xrushTeamStandings(race);
+  var isHost = race.createdBy === MY_ID;
+  var body = '<div class="panel">' + standings.map(standingRowHTML).join('') + '</div>';
+  if (mine) body += '<div class="myprog">Your progress: ' + mine.roundIndex + '/' + race.totalRounds + ' · ' + mine.correct + ' correct · ' + mine.wrong + ' wrong</div>';
+  var q = state.question;
+  if (q) {
+    body += '<div class="panel"><div class="term">' + esc(q.term) + '</div>' +
+      q.options.map(function (o) { return '<button class="opt-btn" data-card="' + esc(o.cardId) + '">' + esc(o.text) + '</button>'; }).join('') + '</div>';
+  } else {
+    body += '<div class="panel center pulse">Loading your question…</div>';
+  }
+  if (isHost) body += '<div class="center"><button class="btn" id="endBtn">END RACE FOR EVERYONE</button></div>';
+  return body + '</div>';
+}
+
+// ── Actions ───────────────────────────────────────────────────────
+function refreshQuestion() {
+  var race = state.race;
+  if (!race) { state.question = null; return; }
+  var mine = race.progress[MY_ID];
+  if (!mine || race.status !== 'active' || mine.finishedAt) { state.question = null; return; }
+  var deck = state.decks.filter(function (d) { return d.id === race.deckId; })[0];
+  if (!deck) { state.question = null; return; }
+  state.question = xrushBuildQuestion(deck.cards, race.cardOrder, mine.roundIndex, race.id, MY_ID);
+}
+
+function maybeAwardReward() {
+  var race = state.race;
+  if (!race || state.rewardGiven) return;
+  var mine = race.progress[MY_ID];
+  if (mine && mine.finishedAt) { state.rewardGiven = true; awardXC(MY_ID, 25, 'arena.xrush.finish'); }
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(function () {
+    if (!RACE_ID) return;
+    loadRace(RACE_ID).then(function (r) { if (r) { state.race = r; refreshQuestion(); maybeAwardReward(); render(); wireEvents(); } });
+  }, 2500);
+}
+
+function wireEvents() {
+  var createBtn = document.getElementById('createBtn');
+  if (createBtn) createBtn.onclick = function () {
+    var deck = state.decks.filter(function (d) { return d.id === state.selectedDeckId; })[0];
+    if (!deck || !MY_ID) return;
+    state.creating = true; state.error = null; render(); wireEvents();
+    var teamsP = state.useTeams ? loadXLiveTeams() : Promise.resolve({ names: [], assign: {} });
+    teamsP.then(function (teamsCfg) {
+      var r = newRace({ deckId: deck.id, deckName: deck.name, cards: deck.cards, totalRounds: state.length, teams: teamsCfg.names, createdBy: MY_ID });
+      return saveRace(r).then(function () { return setActiveRacePointer({ raceId: r.id, deckName: deck.name, startedAt: Date.now() }); }).then(function () { return r; });
+    }).then(function (r) {
+      var url = new URL(location.href); url.searchParams.set('race', r.id); location.href = url.toString();
+    }).catch(function () { state.creating = false; state.error = "Couldn't create the race -- check your connection and try again."; render(); wireEvents(); });
+  };
+
+  var deckSel = document.getElementById('deckSel');
+  if (deckSel) deckSel.onchange = function (e) { state.selectedDeckId = e.target.value; render(); wireEvents(); };
+  var useTeamsEl = document.getElementById('useTeams');
+  if (useTeamsEl) useTeamsEl.onchange = function (e) { state.useTeams = e.target.checked; };
+  Array.prototype.forEach.call(document.querySelectorAll('.lenbtn'), function (btn) {
+    btn.onclick = function () { state.length = parseInt(btn.getAttribute('data-len'), 10); render(); wireEvents(); };
+  });
+
+  var startBtn = document.getElementById('startBtn');
+  if (startBtn) startBtn.onclick = function () {
+    saveRace(xrushStartRace(state.race)).then(function (r) { state.race = r; refreshQuestion(); render(); wireEvents(); });
+  };
+  var endBtn = document.getElementById('endBtn');
+  if (endBtn) endBtn.onclick = function () {
+    saveRace(xrushEndRace(state.race)).then(function (r) { state.race = r; setActiveRacePointer(null); render(); wireEvents(); });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('.opt-btn'), function (btn) {
+    btn.onclick = function () {
+      var cardId = btn.getAttribute('data-card');
+      saveRace(xrushRecordAnswer(state.race, MY_ID, cardId)).then(function (r) { state.race = r; refreshQuestion(); maybeAwardReward(); render(); wireEvents(); });
+    };
+  });
+}
+
+function boot() {
+  if (!MY_ID) { render(); return; }
+  loadDecks().then(function (d) { state.decks = d; if (!RACE_ID) { render(); wireEvents(); } });
+  if (RACE_ID) {
+    loadRace(RACE_ID).then(function (found) {
+      if (!found) { state.error = "That race doesn't exist (or has ended)."; render(); return; }
+      var r = found;
+      if (!r.progress[MY_ID]) {
+        loadXLiveTeams().then(function (teams) {
+          var myTeam = r.teams.length ? (teams.assign[MY_ID] || '') : '';
+          var joined = joinRace(r, MY_ID, MY_NAME, myTeam);
+          saveRace(joined).then(function (saved) { state.race = saved; refreshQuestion(); render(); wireEvents(); startPolling(); });
+        });
+      } else {
+        state.race = r; refreshQuestion(); render(); wireEvents(); startPolling();
+      }
+    });
+  } else {
+    render();
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

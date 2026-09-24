@@ -12,6 +12,10 @@
       "destination": "/public/creator.html"
     },
     {
+      "source": "/xrush",
+      "destination": "/public/xrush.html"
+    },
+    {
       "source": "/games/:path*",
       "destination": "/public/games/:path*"
     },
