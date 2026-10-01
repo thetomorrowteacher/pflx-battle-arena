@@ -91,7 +91,7 @@
       "H"
     ]
   },
-  "count": 75,
+  "count": 89,
   "cards": {
     "mythweaver/4/A/default/standard": {
       "id": "EVO-EM-L04-A-DF-S",
@@ -244,6 +244,108 @@
       "thumb": "assets/exo/mythweaver/l05-c2-default-standard.thumb.jpg",
       "web": "assets/exo/mythweaver/l05-c2-default-standard.web.jpg",
       "evoPath": "emagination/level-05/EVO-EM-L05-C2-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "mythweaver/6/A1/default/standard": {
+      "id": "EVO-EM-L06-A1-DF-S",
+      "studio": "emagination",
+      "line": "mythweaver",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "A1",
+      "buildName": "Quillblade 1",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/mythweaver/l06-a1-default-standard.png",
+      "thumb": "assets/exo/mythweaver/l06-a1-default-standard.thumb.jpg",
+      "web": "assets/exo/mythweaver/l06-a1-default-standard.web.jpg",
+      "evoPath": "emagination/level-06/EVO-EM-L06-A1-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "mythweaver/6/A2/default/standard": {
+      "id": "EVO-EM-L06-A2-DF-S",
+      "studio": "emagination",
+      "line": "mythweaver",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "A2",
+      "buildName": "Quillblade 2",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/mythweaver/l06-a2-default-standard.png",
+      "thumb": "assets/exo/mythweaver/l06-a2-default-standard.thumb.jpg",
+      "web": "assets/exo/mythweaver/l06-a2-default-standard.web.jpg",
+      "evoPath": "emagination/level-06/EVO-EM-L06-A2-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "mythweaver/6/B1/default/standard": {
+      "id": "EVO-EM-L06-B1-DF-S",
+      "studio": "emagination",
+      "line": "mythweaver",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "B1",
+      "buildName": "Mirage 1",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/mythweaver/l06-b1-default-standard.png",
+      "thumb": "assets/exo/mythweaver/l06-b1-default-standard.thumb.jpg",
+      "web": "assets/exo/mythweaver/l06-b1-default-standard.web.jpg",
+      "evoPath": "emagination/level-06/EVO-EM-L06-B1-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "mythweaver/6/B2/default/standard": {
+      "id": "EVO-EM-L06-B2-DF-S",
+      "studio": "emagination",
+      "line": "mythweaver",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "B2",
+      "buildName": "Mirage 2",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/mythweaver/l06-b2-default-standard.png",
+      "thumb": "assets/exo/mythweaver/l06-b2-default-standard.thumb.jpg",
+      "web": "assets/exo/mythweaver/l06-b2-default-standard.web.jpg",
+      "evoPath": "emagination/level-06/EVO-EM-L06-B2-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "mythweaver/6/C1/default/standard": {
+      "id": "EVO-EM-L06-C1-DF-S",
+      "studio": "emagination",
+      "line": "mythweaver",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "C1",
+      "buildName": "Starweaver 1",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/mythweaver/l06-c1-default-standard.png",
+      "thumb": "assets/exo/mythweaver/l06-c1-default-standard.thumb.jpg",
+      "web": "assets/exo/mythweaver/l06-c1-default-standard.web.jpg",
+      "evoPath": "emagination/level-06/EVO-EM-L06-C1-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "mythweaver/6/C2/default/standard": {
+      "id": "EVO-EM-L06-C2-DF-S",
+      "studio": "emagination",
+      "line": "mythweaver",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "C2",
+      "buildName": "Starweaver 2",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/mythweaver/l06-c2-default-standard.png",
+      "thumb": "assets/exo/mythweaver/l06-c2-default-standard.thumb.jpg",
+      "web": "assets/exo/mythweaver/l06-c2-default-standard.web.jpg",
+      "evoPath": "emagination/level-06/EVO-EM-L06-C2-DF-S.png",
       "productionStatus": "complete"
     },
     "mythweaver/1/BASE/default/standard": {
@@ -533,7 +635,7 @@
       "thumb": "assets/exo/ironwright/l06-a1-default-standard.thumb.jpg",
       "web": "assets/exo/ironwright/l06-a1-default-standard.web.jpg",
       "evoPath": "gentech/level-06/EVO-GT-L06-A1-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "ironwright/6/A2/default/standard": {
       "id": "EVO-GT-L06-A2-DF-S",
@@ -550,7 +652,7 @@
       "thumb": "assets/exo/ironwright/l06-a2-default-standard.thumb.jpg",
       "web": "assets/exo/ironwright/l06-a2-default-standard.web.jpg",
       "evoPath": "gentech/level-06/EVO-GT-L06-A2-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "ironwright/6/B1/default/standard": {
       "id": "EVO-GT-L06-B1-DF-S",
@@ -567,7 +669,7 @@
       "thumb": "assets/exo/ironwright/l06-b1-default-standard.thumb.jpg",
       "web": "assets/exo/ironwright/l06-b1-default-standard.web.jpg",
       "evoPath": "gentech/level-06/EVO-GT-L06-B1-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "ironwright/6/B2/default/standard": {
       "id": "EVO-GT-L06-B2-DF-S",
@@ -584,7 +686,7 @@
       "thumb": "assets/exo/ironwright/l06-b2-default-standard.thumb.jpg",
       "web": "assets/exo/ironwright/l06-b2-default-standard.web.jpg",
       "evoPath": "gentech/level-06/EVO-GT-L06-B2-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "ironwright/6/C1/default/standard": {
       "id": "EVO-GT-L06-C1-DF-S",
@@ -601,7 +703,7 @@
       "thumb": "assets/exo/ironwright/l06-c1-default-standard.thumb.jpg",
       "web": "assets/exo/ironwright/l06-c1-default-standard.web.jpg",
       "evoPath": "gentech/level-06/EVO-GT-L06-C1-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "ironwright/6/C2/default/standard": {
       "id": "EVO-GT-L06-C2-DF-S",
@@ -618,6 +720,23 @@
       "thumb": "assets/exo/ironwright/l06-c2-default-standard.thumb.jpg",
       "web": "assets/exo/ironwright/l06-c2-default-standard.web.jpg",
       "evoPath": "gentech/level-06/EVO-GT-L06-C2-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "ironwright/7/A1/default/standard": {
+      "id": "EVO-GT-L07-A1-DF-S",
+      "studio": "gentech",
+      "line": "ironwright",
+      "level": 7,
+      "stage": 7,
+      "stageName": "Level 7",
+      "build": "A1",
+      "buildName": "Forgeclaw 1",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/ironwright/l07-a1-default-standard.png",
+      "thumb": "assets/exo/ironwright/l07-a1-default-standard.thumb.jpg",
+      "web": "assets/exo/ironwright/l07-a1-default-standard.web.jpg",
+      "evoPath": "gentech/level-07/EVO-GT-L07-A1-DF-S.png",
       "productionStatus": "draft"
     },
     "ironwright/1/BASE/default/standard": {
@@ -890,6 +1009,108 @@
       "thumb": "assets/exo/neonborn/l05-c2-default-standard.thumb.jpg",
       "web": "assets/exo/neonborn/l05-c2-default-standard.web.jpg",
       "evoPath": "innov8/level-05/EVO-IN-L05-C2-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "neonborn/6/A1/default/standard": {
+      "id": "EVO-IN-L06-A1-DF-S",
+      "studio": "innov8",
+      "line": "neonborn",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "A1",
+      "buildName": "Riftfang 1",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/neonborn/l06-a1-default-standard.png",
+      "thumb": "assets/exo/neonborn/l06-a1-default-standard.thumb.jpg",
+      "web": "assets/exo/neonborn/l06-a1-default-standard.web.jpg",
+      "evoPath": "innov8/level-06/EVO-IN-L06-A1-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "neonborn/6/A2/default/standard": {
+      "id": "EVO-IN-L06-A2-DF-S",
+      "studio": "innov8",
+      "line": "neonborn",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "A2",
+      "buildName": "Riftfang 2",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/neonborn/l06-a2-default-standard.png",
+      "thumb": "assets/exo/neonborn/l06-a2-default-standard.thumb.jpg",
+      "web": "assets/exo/neonborn/l06-a2-default-standard.web.jpg",
+      "evoPath": "innov8/level-06/EVO-IN-L06-A2-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "neonborn/6/B1/default/standard": {
+      "id": "EVO-IN-L06-B1-DF-S",
+      "studio": "innov8",
+      "line": "neonborn",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "B1",
+      "buildName": "Ghostwire 1",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/neonborn/l06-b1-default-standard.png",
+      "thumb": "assets/exo/neonborn/l06-b1-default-standard.thumb.jpg",
+      "web": "assets/exo/neonborn/l06-b1-default-standard.web.jpg",
+      "evoPath": "innov8/level-06/EVO-IN-L06-B1-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "neonborn/6/B2/default/standard": {
+      "id": "EVO-IN-L06-B2-DF-S",
+      "studio": "innov8",
+      "line": "neonborn",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "B2",
+      "buildName": "Ghostwire 2",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/neonborn/l06-b2-default-standard.png",
+      "thumb": "assets/exo/neonborn/l06-b2-default-standard.thumb.jpg",
+      "web": "assets/exo/neonborn/l06-b2-default-standard.web.jpg",
+      "evoPath": "innov8/level-06/EVO-IN-L06-B2-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "neonborn/6/C1/default/standard": {
+      "id": "EVO-IN-L06-C1-DF-S",
+      "studio": "innov8",
+      "line": "neonborn",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "C1",
+      "buildName": "Voltstalker 1",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/neonborn/l06-c1-default-standard.png",
+      "thumb": "assets/exo/neonborn/l06-c1-default-standard.thumb.jpg",
+      "web": "assets/exo/neonborn/l06-c1-default-standard.web.jpg",
+      "evoPath": "innov8/level-06/EVO-IN-L06-C1-DF-S.png",
+      "productionStatus": "complete"
+    },
+    "neonborn/6/C2/default/standard": {
+      "id": "EVO-IN-L06-C2-DF-S",
+      "studio": "innov8",
+      "line": "neonborn",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "C2",
+      "buildName": "Voltstalker 2",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/neonborn/l06-c2-default-standard.png",
+      "thumb": "assets/exo/neonborn/l06-c2-default-standard.thumb.jpg",
+      "web": "assets/exo/neonborn/l06-c2-default-standard.web.jpg",
+      "evoPath": "innov8/level-06/EVO-IN-L06-C2-DF-S.png",
       "productionStatus": "complete"
     },
     "neonborn/1/BASE/default/standard": {
@@ -1179,7 +1400,7 @@
       "thumb": "assets/exo/resonant/l06-a1-default-standard.thumb.jpg",
       "web": "assets/exo/resonant/l06-a1-default-standard.web.jpg",
       "evoPath": "mindforge/level-06/EVO-MF-L06-A1-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "resonant/6/A2/default/standard": {
       "id": "EVO-MF-L06-A2-DF-S",
@@ -1196,7 +1417,7 @@
       "thumb": "assets/exo/resonant/l06-a2-default-standard.thumb.jpg",
       "web": "assets/exo/resonant/l06-a2-default-standard.web.jpg",
       "evoPath": "mindforge/level-06/EVO-MF-L06-A2-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "resonant/6/B1/default/standard": {
       "id": "EVO-MF-L06-B1-DF-S",
@@ -1213,7 +1434,7 @@
       "thumb": "assets/exo/resonant/l06-b1-default-standard.thumb.jpg",
       "web": "assets/exo/resonant/l06-b1-default-standard.web.jpg",
       "evoPath": "mindforge/level-06/EVO-MF-L06-B1-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "resonant/6/B2/default/standard": {
       "id": "EVO-MF-L06-B2-DF-S",
@@ -1230,7 +1451,7 @@
       "thumb": "assets/exo/resonant/l06-b2-default-standard.thumb.jpg",
       "web": "assets/exo/resonant/l06-b2-default-standard.web.jpg",
       "evoPath": "mindforge/level-06/EVO-MF-L06-B2-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
     },
     "resonant/6/C1/default/standard": {
       "id": "EVO-MF-L06-C1-DF-S",
@@ -1247,7 +1468,24 @@
       "thumb": "assets/exo/resonant/l06-c1-default-standard.thumb.jpg",
       "web": "assets/exo/resonant/l06-c1-default-standard.web.jpg",
       "evoPath": "mindforge/level-06/EVO-MF-L06-C1-DF-S.png",
-      "productionStatus": "draft"
+      "productionStatus": "complete"
+    },
+    "resonant/6/C2/default/standard": {
+      "id": "EVO-MF-L06-C2-DF-S",
+      "studio": "mindforge",
+      "line": "resonant",
+      "level": 6,
+      "stage": 6,
+      "stageName": "Level 6",
+      "build": "C2",
+      "buildName": "Harmonic 2",
+      "colorway": "default",
+      "form": "standard",
+      "src": "assets/exo/resonant/l06-c2-default-standard.png",
+      "thumb": "assets/exo/resonant/l06-c2-default-standard.thumb.jpg",
+      "web": "assets/exo/resonant/l06-c2-default-standard.web.jpg",
+      "evoPath": "mindforge/level-06/EVO-MF-L06-C2-DF-S.png",
+      "productionStatus": "complete"
     },
     "resonant/1/BASE/default/standard": {
       "id": "EVO-MF-S1-BASE-DF-S",

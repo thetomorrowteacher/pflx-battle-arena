@@ -1,10 +1,67 @@
 # PFLX — Evo Avatars and The Archive
 
-Story and visual production reference. Updated 2026-09-24.
+Story and visual production reference. Lore updated 2026-09-27.
 
 ## Authority and scope
 
 The user selected ten levels, four studios and a maximum of seven variations per studio. The earlier five-stage proposal is superseded. Evos, also called Evo Avatars, represent the player gaining experience through Story Mode. Their name reflects evolution. This document preserves confirmed visual requirements and identifies proposed narrative material; it does not claim that gameplay systems are implemented.
+
+## Confirmed background lore — The Nexus
+
+The story takes place in 2487. Humanity has made vast discoveries about the universe and multiverses, reaching new understanding after the Cyber War of 2077. Remembered as World War III, that conflict took place in digital space.
+
+What humanity once understood as digital space was discovered to be a plane of existence that had always existed in a higher dimension. Access to this plane was discovered in 2026 as humanity opened the door to artificial intelligence. This dimension is known as **The Nexus**. Humans discovered access to it; they did not create it.
+
+The Nexus coexists with the human plane of existence. Humanity's dependence on technology connects everyday human life to this digital dimension, making peace within the Nexus consequential to the human world.
+
+### TheTomorrowTeacher and PFLX
+
+A young innovator born in the 1980s was imprinted with a vision and a unique gift. Known as **TheTomorrowTeacher**, this innovator developed **PFLX**, a system that gave other young innovators and changemakers access to the Nexus.
+
+The founder's personal history, the nature of the gift and vision, and the details connecting that history to the future setting are reserved for the creator to supply. Do not invent these details or assume a lifespan, immortality, time travel or a specific founding date.
+
+### The four studios and the Evos
+
+Four PFLX Startup Studios—Gentech, Mindforge, eMagination and Innov8—each developed an Evo that gives its studio access to the Nexus. Evos are the players' evolving avatars and the studios' means of acting within this dimension. They battle the Archive to protect peace and harmony in the Nexus.
+
+Their evolution accompanies the player's growth through experience, projects and character development. The established ten-level visual progression expresses this journey, from the base companion to a celestial avatar. Specific individual biographies and personalities remain open; the studio lineages and approved visual identities below remain in force.
+
+### The Archive and its hidden operators
+
+After gaining access, the innovators discovered that hostile forces or organizations with harmful intentions had already entered the Nexus. These forces access it through an AI they developed called **The Archive**, regarded as rogue AI.
+
+No one knows who is behind the Archive. A visible chain of power among its entities, including higher AI beings, points to a hierarchy of control. The identities of its ultimate operators and the exact hierarchy remain mysteries. Agent Glitch may lead the visible Archive forces, but this does not establish him as the creator or ultimate power behind them.
+
+### X-Coin and experience
+
+Within this lore, **X-Coin (experience coins)** is a clean, sustainable digital currency owned by the people. It is gained through experience: work, creation and the development of one's character, both literally through the Evo avatar and figuratively through personal growth. It supports the vision of a more sustainable, functioning world.
+
+This is the fictional and educational premise, not a claim that a financial system has been implemented. Issuance, ownership mechanics, exchange rules and economic logic remain to be developed.
+
+## Nexus Narratives — educational story connection
+
+Nexus Narratives originally placed stories in futuristic cities connected to real problems in their present-day counterparts. The creator intends to redesign the existing narratives and develop the next layer of logic in Claude. This document records the direction without prescribing that redesign or changing the current application.
+
+Narrative characters serve as clients for real PFLX users' learning projects. A comic-book-style story introduces a client, their situation and a challenge, allowing learners to practice design thinking creatively. Users develop projects through the core pathways and contribute to the storylines through their work.
+
+The intended participation contexts are:
+
+- **Season pass cohorts and PFLX clubs:** story-led client projects and collaborative learning.
+- **PFLX Studio Clubs:** likely older students, with greater use of Mission Control while working through projects; this remains a tentative audience/workflow direction.
+- **PFLX X-Live campaign mode:** projects presented through storylines, with Nexus Narrative characters as target clients. Participating players access Evos and take part in the Battle Arena challenges the creator identifies as already developed.
+
+The intended story sequence is: meet a narrative client, understand the problem, develop a project through the core pathways, build experience and character, and participate as an Evo in Nexus challenges. Exact progression, rewards, battle unlocks and the relationship between project outcomes and combat remain to be defined. Do not infer that this whole connection is already implemented.
+
+### Confirmed chronology and open questions
+
+| Time | Confirmed event |
+|---|---|
+| 1980s | The innovator later known as TheTomorrowTeacher is born. |
+| 2026 | Humanity discovers access to the higher-dimensional digital plane through the opening of artificial intelligence. |
+| 2077 | The Cyber War, considered World War III, takes place in digital space. |
+| 2487 | The story's future setting; humanity has reached new understanding of the universe and multiverses. |
+
+The founding date of PFLX, the date of the studios' Evo development, and the timing of the hostile organizations' first entry are not yet specified. The founder's personal backstory, individual Evo histories, exact Archive hierarchy, X-Coin mechanics and Nexus Narratives redesign remain for further development.
 
 ## The visual universe
 
@@ -82,7 +139,9 @@ User-established entities: Base Archives; stronger and boss Archives; The Hive, 
 
 The Hack Guild is a faction/order, not yet a single illustrated character. Additional named Guild bosses and their final membership remain to be developed. Do not count the eight foundation designs as a completed full boss roster.
 
-## Proposed narrative, not yet locked canon
+## Proposed antagonist motivations, not yet locked canon
+
+The following earlier proposals are optional motivations for Archive entities; they do not replace the confirmed hidden-operator origin above.
 
 The Archive believes freedom produces corruption and enforced order preserves existence. It considers uncontrolled Evo evolution a threat. Agent Glitch may have witnessed digital worlds lost through reckless experimentation and now seeks to prevent recurrence by ending autonomous evolution. He offers safety and belonging in exchange for surrendering choice. His contradiction: he claims to preserve intelligence while erasing those who resist.
 
@@ -98,8 +157,10 @@ For flying scenes, show clear separation from any floor, legs trailing or folded
 
 Source library: `../../../Evo Avatars/` relative to this document's directory. Exact prompts and original source paths are retained there. Active Evo catalog: `../public/assets/exo/manifest.json`. All-art library: `../public/assets/art-library/manifest.json`; gallery: `../public/art-library.html`. Evo gallery: `../public/evo-gallery.html`.
 
-As of this update: Levels 1–5 have 64 completed Evo images. Eleven Level 6 working images are imported as drafts; they are not a completed level set and most still await the latest flying-space direction. Eight Archive foundation images are saved and imported in the all-art library. The all-art library contains 102 PNG artworks including legacy designs and archived revisions; those extras do not increase completed Evo progress.
+Production checkpoint 2026-10-01: Levels 1–6 have 88 completed, checked and locally imported Evo images. All 24 Level 6 images now depict flying humanoid dragon combat. Levels 7–10 remain in production. Eight Archive foundation images are saved and imported; legacy and revision artwork is additional and does not increase the 196-image target.
 
 User explicitly requested all art imported on this update, including work in progress. Draft status must remain visible. Future full level sets should be checked and immediately imported using `evo_import.py`; never use retired `exo_import.py`. Keep archived revisions out of the active avatar catalog. Verify catalog entries, files, previews and thumbnails. Local asset import is separate from deployment and from gameplay integration.
 
-Production resumes every five hours from the index and log. Stop the scheduled production only when all 196 approved Evo images are completed, checked and imported. Archive expansion is separate scope.
+The user requested scheduled production stop. Continue production only on manual instruction unless the user explicitly restarts scheduling. Archive expansion is separate scope.
+
+Celestial weapons update: Level10 Evos wield powerful signature weapons, especially energy swords and dragon-forged blades. Studio direction: Gentech greatswords, Mindforge resonance blades, eMagination constellation swords, Innov8 phase sabers. Vary weapons by branch and showcase them in flying combat poses.
