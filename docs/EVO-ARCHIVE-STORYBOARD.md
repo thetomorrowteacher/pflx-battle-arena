@@ -1,5 +1,16 @@
 # PFLX — Evo Avatars and The Archive
 
+## Confirmed server-world setting — 2026-10-03
+
+The Nexus is the AI digital universe, a higher-dimensional plane that already existed before humanity discovered access. Within it, servers can contain entire cities or worlds. A level map is stationed inside one such server-world, with a digital-space frontier appearance: circuit terrain, holographic structures, floating data platforms and cosmic data streams.
+
+The rogue Archive AI infiltrate and attack these servers. Their interference causes problems in the associated Nexus Narrative storylines. Evos track the Archive across the affected servers, entering and travelling through circuit portals and gateways. This gives game missions a direct narrative purpose: pursue the infiltrators and defend the server-world where the storyline is unfolding. Server-world names, individual city problems and the redesigned client stories will be developed with the creator; do not invent them as established canon.
+
+Each level inside a server contains seven combat areas: six sequential rooms/stations and a final main-boss area. Circuit gateways between areas remain locked until all required enemies and waves are defeated. Defeating the final boss unlocks the next stage and its onward circuit portal. Travel or flight cannot bypass progression gates. A server-world may contain multiple levels; seven areas describes a level map, not the maximum size of a city or world.
+
+Correct quiz answers power Evo attacks. Defeated Archives drop collectible orbs. This combat loop connects to the server mission without automatically granting permanent XP, X-Coin or completing a real-world client project. The specific effects of restoring a server on narrative state remain design work, not implemented behavior.
+
+
 ## 2026-10-03 — Approved Evo artwork scope complete
 All 196/196 Default Standard Evo cards are complete, visually checked and imported into local PFLX: 49 per studio. Level counts: 4, 12, 12, 12, 24, 24, 24, 28, 28, 28. All 28 Level 10 celestial forms carry powerful studio-specific swords: Gentech greatswords, Mindforge resonance blades, eMagination constellation swords and Innov8 phase sabers. Humanoid dragon-angel bodies, studio badges, distinct attack poses and digital-space Archive battles preserve the approved direction.
 
@@ -188,3 +199,45 @@ See [the current Claude Cowork handoff](<CLAUDE-EVO-GAME-SWITCHOVER.md>) for sta
 ## Archive static game tokens — 2026-10-03
 
 The eight existing enemy designs have compact static game icons, preserving dark angular armor and lime/yellow cores. See [ARCHIVE-GAME-ICONS.md](ARCHIVE-GAME-ICONS.md) and the Claude switchover for game integration. Tokens complement detailed enemy art and do not set combat stats or change established lore.
+
+
+## Archive combat progression — 2026-10-03
+
+Read [ARCHIVE-POWER-PROGRESSION.md](ARCHIVE-POWER-PROGRESSION.md) before designing encounters. User-confirmed: Agent Glitch is the strongest existing Archive; Scout is basic, Interceptor is stronger and less frequent (suggested 7:1), Sentry is a recurring larger mini-boss, and Elite is the first main-boss tier. Proposed higher-boss order: Hive → Trojan → Nightmare → Agent Glitch. Strongest combat rank does not identify the Archive creator or hidden operators. Earlier tentative encounter ordering is superseded where inconsistent. The document maps all eight powers/counters, encounter frequency, mission introductions, temporary vs persistent progression and the original action-game synthesis. Combat values are prototype proposals; no gameplay implementation is claimed.
+
+
+## Overall campaign map and final headquarters — 2026-10-03
+
+The overall map displays the current server-world locations under Archive attack and the circuit portal/gateway routes used by Evos to track the infiltration. It is a campaign atlas, separate from each level's seven-area maze. The current mapped locations are Studio Defense Grid, Nexus Swarmway and Archive Citadel; these remain concept names rather than finalized Nexus Narrative city names. Additional city/world servers may be added when their storylines are authored.
+
+The user confirmed that the final stage takes place at the Archive's mainframe headquarters. Agent Glitch is the strongest Archive and the final headquarters adversary. The headquarters is the enemy destination, distinct from the attacked server-worlds. Proposed current atlas route: Studio Defense Grid → Nexus Swarmway → Archive Citadel → Archive Mainframe HQ. The exact allocation of other bosses, number of levels per server and client/story consequences remain to be developed. A location on the atlas does not imply only one seven-area level exists there.
+
+Atlas asset: `PFLX Level Maps/04-nexus-server-campaign-v1.png`. Each local map remains an asymmetric maze with six combat areas and a final boss area. Gate completion within levels and the stage-clear circuit portal control forward travel; atlas routes do not bypass unlock requirements.
+
+
+
+## Ten server-world campaign concepts — latest direction
+
+Ten server-world concepts now appear in the campaign atlas, including Archive Mainframe HQ as Server 10 and the final stage. Servers 1–9 face Archive infiltration. Existing concept names are retained; the six new names and associated problems are proposals for the Nexus Narrative redesign. Each server may contain multiple seven-area levels. Server numbers are campaign identifiers, not automatic Evo evolution levels.
+
+| Server | Concept | Environment and narrative problem | Boss direction |
+|---|---|---|---|
+| 01 | Studio Defense Grid | Studio launch city; corrupted collaboration and access systems | Elite Archive |
+| 02 | Nexus Swarmway | Frontier routing world; swarm infiltration disrupts digital travel | The Hive |
+| 03 | Lumen Transit | Luminous transport city; sabotaged gateways strand districts | Unassigned |
+| 04 | Verdant Protocol | Holographic ecosystem world; corrupted resource balance | Unassigned |
+| 05 | Memory Harbor | Data port city; lost records and blocked knowledge access | Unassigned |
+| 06 | Forge Circuit | Industrial innovation city; compromised production networks | Hack Guild encounter proposed |
+| 07 | Prism Commons | Public communication world; manipulation fractures trust | Unassigned |
+| 08 | Archive Citadel | Corrupted stronghold; Trojan infiltration threatens linked servers | Trojan |
+| 09 | Null Horizon | Fractured frontier world; hostile illusion and failing navigation | Nightmare proposed |
+| 10 | Archive Mainframe HQ | Enemy command world; final confrontation | Agent Glitch |
+
+Agent Glitch remains the strongest final adversary. Other boss placements are proposed. Circuit portals connect the ten worlds in numbered order. Local levels remain asymmetric mazes with six combat areas then a final boss. Correct answers power attacks; defeated Archives drop orbs; cleared areas open gates and final-boss defeat opens onward travel.
+
+Atlas: `PFLX Level Maps/04-nexus-ten-server-worlds-v2.png`. The earlier four-location atlas is superseded. Studio Defense Grid, Nexus Swarmway and Archive Citadel have individual maze concepts; the other seven locations have atlas concepts, not finished individual maps. No playable map implementation or deployment is claimed.
+
+
+## Confirmed game title — 2026-10-03
+
+The user selected **PFLX: Nexus Frontiers** as the game title. Use this name for the server-world campaign, map previews and Claude development handoff. The Nexus remains the universe name; Archive Mainframe HQ remains the final campaign destination. A campaign subtitle has not been selected.

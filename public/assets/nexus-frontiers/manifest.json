@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "title": "PFLX: Nexus Frontiers",
+  "status": "visual-assets-for-integration",
+  "assets": [
+    {
+      "id": "nexus-campaign-background",
+      "kind": "campaign-background",
+      "file": "backgrounds/nexus-campaign-background.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "id": "studio-defense-background",
+      "kind": "level-background",
+      "file": "backgrounds/studio-defense-background.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "id": "nexus-swarmway-background",
+      "kind": "level-background",
+      "file": "backgrounds/nexus-swarmway-background.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "id": "archive-citadel-background",
+      "kind": "level-background",
+      "file": "backgrounds/archive-citadel-background.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB"
+    },
+    {
+      "id": "circuit-portal-open",
+      "kind": "portal-sprite",
+      "file": "sprites/circuit-portal-open.png",
+      "width": 1265,
+      "height": 1243,
+      "mode": "RGBA",
+      "hasTransparency": true,
+      "variants": [
+        {
+          "file": "sprites/circuit-portal-open-512.png",
+          "width": 512,
+          "height": 503
+        },
+        {
+          "file": "sprites/circuit-portal-open-256.png",
+          "width": 256,
+          "height": 252
+        },
+        {
+          "file": "sprites/circuit-portal-open-128.png",
+          "width": 128,
+          "height": 126
+        },
+        {
+          "file": "sprites/circuit-portal-open-64.png",
+          "width": 64,
+          "height": 63
+        }
+      ]
+    },
+    {
+      "id": "orb-energy",
+      "kind": "collectible-sprite",
+      "file": "sprites/orb-energy.png",
+      "width": 1334,
+      "height": 1179,
+      "mode": "RGBA",
+      "hasTransparency": true,
+      "proposedRole": "Energy ability recharge; balance and effect not implemented",
+      "variants": [
+        {
+          "file": "sprites/orb-energy-512.png",
+          "width": 512,
+          "height": 453
+        },
+        {
+          "file": "sprites/orb-energy-256.png",
+          "width": 256,
+          "height": 226
+        },
+        {
+          "file": "sprites/orb-energy-128.png",
+          "width": 128,
+          "height": 113
+        },
+        {
+          "file": "sprites/orb-energy-64.png",
+          "width": 64,
+          "height": 57
+        },
+        {
+          "file": "sprites/orb-energy-32.png",
+          "width": 32,
+          "height": 28
+        }
+      ]
+    },
+    {
+      "id": "training-spar-chamber",
+      "kind": "training-background",
+      "name": "Spar Chamber",
+      "purpose": "Solo drills, duels and team sparring",
+      "file": "backgrounds/training-spar-chamber.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "seasonRequired": false
+    },
+    {
+      "id": "training-circuit-labyrinth",
+      "kind": "training-background",
+      "name": "Circuit Labyrinth",
+      "purpose": "Co-op coordination, pursuit and objective defense",
+      "file": "backgrounds/training-circuit-labyrinth.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "seasonRequired": false,
+      "active": false,
+      "supersededBy": "training-rush-circuit"
+    },
+    {
+      "id": "training-overload-reactor",
+      "kind": "training-background",
+      "name": "Overload Reactor",
+      "purpose": "Escalating survival waves, elite and boss trials",
+      "file": "backgrounds/training-overload-reactor.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "seasonRequired": false
+    },
+    {
+      "id": "training-rush-circuit",
+      "name": "Rush Circuit",
+      "kind": "training-background",
+      "purpose": "X-Rush / Evo Rush racing and time trials",
+      "file": "backgrounds/training-rush-circuit.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "seasonRequired": false,
+      "active": true
+    }
+  ],
+  "worlds": [
+    {
+      "id": 1,
+      "name": "Studio Defense Grid"
+    },
+    {
+      "id": 2,
+      "name": "Nexus Swarmway"
+    },
+    {
+      "id": 3,
+      "name": "Lumen Transit"
+    },
+    {
+      "id": 4,
+      "name": "Verdant Protocol"
+    },
+    {
+      "id": 5,
+      "name": "Memory Harbor"
+    },
+    {
+      "id": 6,
+      "name": "Forge Circuit"
+    },
+    {
+      "id": 7,
+      "name": "Prism Commons"
+    },
+    {
+      "id": 8,
+      "name": "Archive Citadel"
+    },
+    {
+      "id": 9,
+      "name": "Null Horizon"
+    },
+    {
+      "id": 10,
+      "name": "Archive Mainframe HQ"
+    }
+  ],
+  "campaignLinks": [
+    {
+      "from": 1,
+      "to": 2
+    },
+    {
+      "from": 2,
+      "to": 3
+    },
+    {
+      "from": 3,
+      "to": 4
+    },
+    {
+      "from": 4,
+      "to": 5
+    },
+    {
+      "from": 5,
+      "to": 6
+    },
+    {
+      "from": 6,
+      "to": 7
+    },
+    {
+      "from": 7,
+      "to": 8
+    },
+    {
+      "from": 8,
+      "to": 9
+    },
+    {
+      "from": 9,
+      "to": 10
+    }
+  ],
+  "gameplayImplemented": false,
+  "trainingRooms": [
+    {
+      "id": "training-spar-chamber",
+      "name": "Spar Chamber",
+      "purpose": "Solo drills, duels and team sparring"
+    },
+    {
+      "id": "training-rush-circuit",
+      "name": "Rush Circuit",
+      "purpose": "X-Rush / Evo Rush racing and time trials"
+    },
+    {
+      "id": "training-overload-reactor",
+      "name": "Overload Reactor",
+      "purpose": "Escalating survival waves, elite and boss trials"
+    }
+  ]
+}

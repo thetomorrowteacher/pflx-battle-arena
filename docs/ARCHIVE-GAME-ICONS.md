@@ -15,3 +15,8 @@ The local PFLX copy is under `PFLX Overlay/pflx-arena-check/public/assets/archiv
 Load the runtime manifest, select a card by enemy ID, and use the size appropriate to the game. Move the whole token for lightweight game motion. Keep detailed Archive artwork for encounters/cinematics. Game stats, boss phases, AI behaviors, encounter difficulty, damage rules and cinematic clips still require implementation. This package adds local assets, not deployed gameplay.
 
 Created with built-in image generation using each existing Archive artwork as identity reference and an Evo game icon as style reference. Do not replace the detailed Archive artwork or use retired exo_import.py for these icons.
+
+
+## Archive combat progression — 2026-10-03
+
+Read [ARCHIVE-POWER-PROGRESSION.md](ARCHIVE-POWER-PROGRESSION.md) before designing encounters. User-confirmed: Agent Glitch is the strongest existing Archive; Scout is basic, Interceptor is stronger and less frequent (suggested 7:1), Sentry is a recurring larger mini-boss, and Elite is the first main-boss tier. Proposed higher-boss order: Hive → Trojan → Nightmare → Agent Glitch. Strongest combat rank does not identify the Archive creator or hidden operators. Earlier tentative encounter ordering is superseded where inconsistent. The document maps all eight powers/counters, encounter frequency, mission introductions, temporary vs persistent progression and the original action-game synthesis. Combat values are prototype proposals; no gameplay implementation is claimed.

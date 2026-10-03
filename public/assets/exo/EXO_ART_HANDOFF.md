@@ -1,4 +1,4 @@
-> SUPERSEDED 2026-09-22: the companions are now Evos on the five stage spine. Use `PFLX Apps/Evo Avatars/PRODUCTION-PLAN.md` and `CHATGPT_EVO_INSTRUCTIONS.md` there. Do not run exo_import.py.
+> SUPERSEDED 2026-10-03: Evos use TEN card levels, not five stages. Read [the current Claude Evo game switchover](../../../docs/CLAUDE-EVO-GAME-SWITCHOVER.md) and the workspace Evo Avatars production plan. Five icon tiers only group the ten levels for display. Do not run retired exo_import.py. Historical instructions below are retained for reference only.
 
 # EXO art handoff (for ChatGPT, Claude, or anyone dropping images)
 
