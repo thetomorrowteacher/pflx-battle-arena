@@ -1,3 +1,19 @@
 
 # Evo art working folder (ChatGPT drop zone), never deployed
 public/assets/exo/_inbox/
+
+# PATCH ARENA (evo ten levels, 4 Oct): the game loads only the small copies
+# (.web.jpg / .thumb.jpg). Full-size PNG masters stay in Evo Avatars + iCloud.
+# Already-tracked L1-L6 PNGs are left in place for older clients.
+public/assets/exo/**/*.png
+# 732 MB working library -- local only
+public/assets/art-library/
+public/art-library.html
+# local build/editor leftovers
+.next/
+node_modules/
+tsconfig.tsbuildinfo
+*.bak-*
+.fuse_hidden*
+.evo10_stage/
+.need_evo_*.txt

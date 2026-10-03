@@ -1501,7 +1501,103 @@ const EXO_LINES = {
     }
   }
 };
-const EXO_STAGE_XP = [0, 500, 2500, 8000, 20000];
+// PATCH ARENA (evo ten levels) -- Ennis, 4 Oct: ten card levels, lineage branches, L10 host granted.
+/* EVO10 -- ten-level Evo progression (Ennis, 4 Oct 2026). Shared verbatim by
+   the Battle Arena (public/preview.html) and X-Live (index.html).
+   - Sync XP to REACH level L: XP[L-1] = 0/250/500/1200/2500/4500/8000/12000/20000/30000.
+   - Levels 1-9 come from Sync XP. Level 10 also needs a host grant (l10 flag).
+   - Branches are a lineage: pick A/B/C at L2, split to A1/A2 (etc.) at L5,
+     H (hybrid) is an optional permanent path at L8+. Hosts can reset a path.
+   - `stage` (1-5) is kept as the power tier the combat code already reads:
+     L1-2 -> 1, L3-4 -> 2, L5-6 -> 3, L7-9 -> 4, L10 -> 5.
+   - Art: small copies only (.web.jpg / .thumb.jpg). Levels 1-3 keep their
+     legacy file names (<n>-<b>), levels 4-10 use l<NN>-<b>. */
+(function (root) {
+  var XP = [0, 250, 500, 1200, 2500, 4500, 8000, 12000, 20000, 30000];
+  var SUB = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  function branchesAt(level) { return level <= 1 ? ['BASE'] : level <= 4 ? ['A', 'B', 'C'] : level <= 7 ? SUB.slice() : SUB.concat(['H']); }
+  var LINE_STUDIO = { ironwright: 'gentech', resonant: 'mindforge', mythweaver: 'emagination', neonborn: 'innov8' };
+  var NAMES = {
+    ironwright: { A: 'Forgeclaw', B: 'Bulwark', C: 'Arcwright', H: 'Omniforge Prime' },
+    resonant: { A: 'Bassbreaker', B: 'Tempo', C: 'Harmonic', H: 'Luminarch Prime' },
+    mythweaver: { A: 'Quillblade', B: 'Mirage', C: 'Starweaver', H: 'Worldsmith Prime' },
+    neonborn: { A: 'Riftfang', B: 'Ghostwire', C: 'Voltstalker', H: 'Singularity Prime' }
+  };
+  function clampLevel(n) { n = Math.floor(Number(n) || 1); return Math.max(1, Math.min(10, n)); }
+  function tierOf(level) { level = clampLevel(level); return level <= 2 ? 1 : level <= 4 ? 2 : level <= 6 ? 3 : level <= 9 ? 4 : 5; }
+  // Level the XP alone earns (never 10 -- that needs the grant).
+  function levelForXp(xp) { var l = 1; for (var i = 1; i < 9; i++) { if ((xp || 0) >= XP[i]) l = i + 1; } return l; }
+  function levelOf(ex) {
+    if (!ex) return 1;
+    if (ex.level) return clampLevel(ex.level);
+    // Rows written before the ten-level switch: derive from XP, keep a granted Paragon.
+    return (ex.stage || 1) >= 5 ? 10 : levelForXp(ex.sync_xp || 0);
+  }
+  function branchOf(ex) { var b = String((ex && ex.branch) || 'BASE').toUpperCase(); return b === 'H' || b === 'BASE' || /^[ABC][12]?$/.test(b) ? b : 'BASE'; }
+  // The path step the player must choose before their card can move past it.
+  function pendingChoice(ex) {
+    var lv = levelOf(ex), b = branchOf(ex);
+    if (lv >= 2 && b === 'BASE') return ['A', 'B', 'C'];
+    if (lv >= 5 && b.length === 1 && b !== 'H') return [b + '1', b + '2'];
+    return null;
+  }
+  // Optional hybrid offer at L8+ (does not block anything).
+  function canTakeHybrid(ex) { var lv = levelOf(ex), b = branchOf(ex); return lv >= 8 && b !== 'H' && b.length === 2; }
+  // The card shown: the highest level the chosen path has art for.
+  function cardOf(ex) {
+    var lv = levelOf(ex), b = branchOf(ex);
+    for (var l = lv; l > 1; l--) { var c = cardAt(l, b); if (c) return { level: l, branch: c }; }
+    return { level: 1, branch: 'BASE' };
+  }
+  function cardAt(level, branch) { // card for any level on a given path (deck rows)
+    level = clampLevel(level); var b = String(branch || 'BASE').toUpperCase();
+    if (level === 1) return 'BASE';
+    if (b === 'BASE') return null;
+    if (level <= 4) return b === 'H' ? null : b[0];
+    if (b === 'H') return level >= 8 ? 'H' : null;
+    return b.length === 2 ? b : null;
+  }
+  function file(line, level, branch, size) {
+    level = clampLevel(level);
+    var b = String(branch || 'BASE').toLowerCase();
+    var stem = level <= 3 ? level + '-' + b : 'l' + (level < 10 ? '0' : '') + level + '-' + b;
+    return line + '/' + stem + '-default-standard' + (size === 'thumb' ? '.thumb.jpg' : '.web.jpg');
+  }
+  function branchName(line, b) {
+    b = String(b || 'BASE').toUpperCase(); if (b === 'BASE') return 'Base';
+    var n = (NAMES[line] || {})[b[0]] || b; if (b === 'H') return (NAMES[line] || {}).H || 'Hybrid';
+    return n + (b.length > 1 ? ' ' + b[1] : '');
+  }
+  function nextXp(ex) { var lv = levelOf(ex); return lv >= 10 ? null : XP[lv]; }
+  // Apply a new Sync XP total. Returns the patch to save (sync_xp, level, stage) and whether it levelled.
+  function applyXp(ex, newXp) {
+    var before = levelOf(ex), lv = before;
+    if (lv < 9) lv = Math.max(lv, levelForXp(newXp));
+    return { patch: { sync_xp: newXp, level: lv, stage: tierOf(lv) }, leveled: lv > before, from: before, to: lv };
+  }
+  // Path choice: only the options pendingChoice offers (or H when canTakeHybrid). Returns a patch or null.
+  function choose(ex, b) {
+    b = String(b || '').toUpperCase();
+    var opts = pendingChoice(ex);
+    if (opts && opts.indexOf(b) >= 0) return { branch: b };
+    if (b === 'H' && canTakeHybrid(ex)) return { branch: 'H' };
+    return null;
+  }
+  // Host grant for Level 10: needs Level 9, the XP and a path.
+  function canGrantL10(ex) { return levelOf(ex) === 9 && (ex.sync_xp || 0) >= XP[9] && !pendingChoice(ex); }
+  function grantL10(ex) { return canGrantL10(ex) ? { level: 10, stage: 5 } : null; }
+  // Host path reset: back to the start of the current path step.
+  function resetPath(ex) { return { branch: 'BASE' }; }
+  root.EVO10 = { XP: XP, branchesAt: branchesAt, tierOf: tierOf, levelForXp: levelForXp, levelOf: levelOf, branchOf: branchOf,
+    pendingChoice: pendingChoice, canTakeHybrid: canTakeHybrid, cardOf: cardOf, cardAt: cardAt, file: file, branchName: branchName,
+    nextXp: nextXp, applyXp: applyXp, choose: choose, canGrantL10: canGrantL10, grantL10: grantL10, resetPath: resetPath,
+    LINE_STUDIO: LINE_STUDIO };
+})(typeof window !== 'undefined' ? window : globalThis);
+const EXO_STAGE_XP = [0, 500, 2500, 8000, 20000]; // legacy 5-tier table (stage = power tier); levels use EVO10.XP
+function exoLevel(ex) { return EVO10.levelOf(ex); }
+function exoTierName(ex) { const L = EXO_LINES[ex && ex.line]; return L ? L.stages[EVO10.tierOf(exoLevel(ex)) - 1] : 'Evo'; }
+function exoCardLabel(ex) { const c = EVO10.cardOf(ex); return exoTierName(ex) + (c.branch !== 'BASE' ? ' · ' + EVO10.branchName(ex.line, c.branch) : ''); }
+
 const EXO_ACCENTS = { '': 'None', antenna: 'Antenna', visor: 'Visor', halo: 'Halo', fins: 'Fins' };
 
 function exoLineForStudio(sid) {
@@ -1647,7 +1743,7 @@ async function exoSaveBay() {
   const prev = exoGet(p.id) || {};
   const row = {
     player_id: p.id, line: d.line,
-    stage: prev.stage || 1, sync_xp: prev.sync_xp || 0,
+    stage: prev.stage || 1, sync_xp: prev.sync_xp || 0, level: exoLevel(prev), branch: EVO10.branchOf(prev),
     exo_name: exoEscape(d.exo_name) || EXO_LINES[d.line].stages[0],
     colorway: d.colorway || 'default',
     equipped: prev.equipped || {},
@@ -1668,6 +1764,7 @@ function renderExoBay() {
   const line = EXO_LINES[d.line];
   const existing = exoGet(p.id);
   const stage = (existing && existing.stage) || 1;
+  const level = existing ? exoLevel(existing) : 1;
   const syncXp = (existing && existing.sync_xp) || 0;
 
   const linePicker = Object.keys(EXO_LINES).map(function (k) {
@@ -1692,28 +1789,33 @@ function renderExoBay() {
       const sel = d.accent === k;
       return '<button onclick="exoSetDraft(\'accent\',\'' + k + '\')" style="cursor:pointer;padding:7px 12px;border-radius:8px;font-family:Orbitron,monospace;font-size:0.55rem;letter-spacing:0.08em;border:1px solid ' + (sel ? '#00e5ff' : 'rgba(255,255,255,0.15)') + ';background:' + (sel ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.04)') + ';color:' + (sel ? '#00e5ff' : '#aab') + '">' + EXO_ACCENTS[k].toUpperCase() + '</button>';
     }).join('');
-    const stageTrack = line.stages.map(function (nm, i) {
-      const unlocked = i < stage;
-      return '<div style="flex:1;min-width:90px;text-align:center;padding:10px 6px;border-radius:10px;border:1px solid ' + (unlocked ? line.colorways[d.colorway || 'default'].a : 'rgba(255,255,255,0.08)') + ';background:' + (unlocked ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)') + ';opacity:' + (unlocked ? '1' : '0.5') + '">' +
-        '<div style="font-family:Orbitron,monospace;font-size:0.55rem;font-weight:800;color:' + (unlocked ? '#fff' : '#667') + ';letter-spacing:0.05em">' + (unlocked ? '' : '🔒 ') + nm.toUpperCase() + '</div>' +
-        '<div style="font-size:8px;color:#778;margin-top:3px">' + (i === 4 ? EXO_STAGE_XP[i].toLocaleString() + '+ SYNC + FEAT' : EXO_STAGE_XP[i].toLocaleString() + ' SYNC') + '</div></div>';
+    const evRow = existing || { line: d.line, level: 1, branch: 'BASE' };
+    const stageTrack = EVO10.XP.map(function (xp, i) {
+      const lv = i + 1, unlocked = lv <= level;
+      const b = EVO10.cardAt(lv, EVO10.branchOf(evRow));
+      const nm = line.stages[EVO10.tierOf(lv) - 1] + (b && b !== 'BASE' ? ' · ' + EVO10.branchName(d.line, b) : '');
+      return '<div style="flex:1;min-width:84px;text-align:center;padding:8px 5px;border-radius:10px;border:1px solid ' + (unlocked ? line.colorways[d.colorway || 'default'].a : 'rgba(255,255,255,0.08)') + ';background:' + (unlocked ? 'rgba(255,255,255,0.05)' : 'transparent') + '">' +
+        '<div style="font-family:Orbitron,monospace;font-size:0.5rem;font-weight:800;color:' + (unlocked ? '#fff' : '#667') + ';letter-spacing:0.05em">' + (unlocked ? '' : '🔒 ') + 'LV ' + lv + '</div>' +
+        '<div style="font-size:8px;color:' + (unlocked ? '#cfd6ee' : '#667') + ';margin-top:2px">' + exoEscapeLong(nm) + '</div>' +
+        '<div style="font-size:8px;color:#778;margin-top:3px">' + (lv === 10 ? xp.toLocaleString() + '+ SYNC + HOST' : xp.toLocaleString() + ' SYNC') + '</div></div>';
     }).join('');
+    const pathPanel = existing ? exoPathPanelHTML(existing) : '';
     const cw = line.colorways[d.colorway || 'default'];
     body =
       '<div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:22px;align-items:start">' +
       '<div class="glass-panel" style="padding:22px;text-align:center">' +
-        '<div style="filter:drop-shadow(0 0 24px ' + cw.glow + '55);display:flex;justify-content:center">' + exoSVG({ line: d.line, colorway: d.colorway, cosmetics: { accent: d.accent } }, 170) + '</div>' +
+        '<div style="filter:drop-shadow(0 0 24px ' + cw.glow + '55);display:flex;justify-content:center">' + exoSVG({ line: d.line, colorway: d.colorway, cosmetics: { accent: d.accent }, level: existing && existing.line === d.line ? exoLevel(existing) : 1, branch: existing && existing.line === d.line ? EVO10.branchOf(existing) : 'BASE', stage: existing && existing.line === d.line ? (existing.stage || 1) : 1 }, 170) + '</div>' +
         '<input id="exoNameInput" maxlength="20" placeholder="' + line.stages[0] + '" value="' + exoEscape(d.exo_name) + '" style="margin-top:14px;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(0,229,255,0.25);border-radius:10px;padding:10px;color:#fff;font-family:Orbitron,monospace;font-size:0.75rem;text-align:center;letter-spacing:0.08em" />' +
-        '<div style="font-size:9px;color:#778;margin-top:6px">STAGE ' + stage + ' · ' + line.stages[stage - 1].toUpperCase() + ' · ' + syncXp.toLocaleString() + ' SYNC XP</div>' +
+        '<div style="font-size:9px;color:#778;margin-top:6px">LEVEL ' + level + ' · ' + exoEscapeLong(existing ? exoCardLabel(existing) : line.stages[0]).toUpperCase() + ' · ' + syncXp.toLocaleString() + ' SYNC XP' + (existing && EVO10.nextXp(existing) && level < 9 ? ' / ' + EVO10.nextXp(existing).toLocaleString() : (level === 9 ? ' · LEVEL 10 IS HOST GRANTED' : '')) + '</div>' +
         '<div style="font-size:9px;color:' + cw.glow + ';margin-top:2px">SIGNATURE STAT: ' + line.stat + '</div>' +
         '<button class="btn-arena btn-arena-gold" style="width:100%;justify-content:center;margin-top:14px;padding:12px" onclick="exoSaveBay()">' + (existing ? '💾 UPDATE EXO' : '⚡ ACTIVATE EXO') + '</button>' +
         (state.exoSaved ? '<div style="margin-top:10px;font-size:10px;color:#00e676;font-family:Orbitron,monospace;letter-spacing:0.1em">✓ SAVED — YOUR EXO IS LIVE</div>' : '') +
       '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:16px">' +
+      '<div style="display:flex;flex-direction:column;gap:16px">' + pathPanel +
         '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">' + line.name + ' LINE</div><div style="font-size:12px;color:#99a">' + line.flavor + '</div></div>' +
         '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Colorway</div><div style="display:flex;gap:10px;flex-wrap:wrap">' + swatches + '</div></div>' +
         '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Accent</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + accents + '</div></div>' +
-        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Evolution Track</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + stageTrack + '</div><div style="font-size:9px;color:#667;margin-top:10px">Sync XP is earned by playing — matches, Side Quests and Live games. Evolution can never be bought.</div></div>' +
+        '<div class="glass-panel" style="padding:18px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Evolution Track · 10 Levels</div><div style="display:flex;flex-wrap:wrap;gap:8px;flex-wrap:wrap">' + stageTrack + '</div><div style="font-size:9px;color:#667;margin-top:10px">Sync XP is earned by playing — matches, Side Quests and Live games. Evolution can never be bought.</div></div>' +
       '</div></div>';
   } else {
     body = '<div class="glass-panel" style="padding:22px;text-align:center;color:#99a;font-size:12px">Choose your line to begin — your Startup Studio decides your EXO\'s nature.</div>';
@@ -1997,7 +2099,7 @@ async function exoEquip(itemId) {
   const ex = exoGet(p.id); if (!ex) return;
   const it = exoCatItem(itemId); if (!it || !exoOwned(itemId)) return;
   if (it.kind === 'gear') {
-    if ((ex.stage || 1) < 2) { exoToastMsg('Gear unlocks at Stage 2 — earn Sync XP by playing'); return; }
+    if ((ex.stage || 1) < 2) { exoToastMsg('Gear unlocks at Level 3 — earn Sync XP by playing'); return; }
     ex.equipped = Object.assign({}, ex.equipped);
     ex.equipped[it.slot] = (ex.equipped[it.slot] === itemId) ? null : itemId;
   } else {
@@ -2041,27 +2143,93 @@ function exoSyncFromAward(pid, xcDelta) {
 }
 async function exoGrantSync(pid, amount, reason) {
   const ex = exoGet(pid); if (!ex || !amount) return;
-  ex.sync_xp = (ex.sync_xp || 0) + amount;
-  let leveled = false;
-  while ((ex.stage || 1) < 4 && ex.sync_xp >= EXO_STAGE_XP[(ex.stage || 1)]) {
-    ex.stage = (ex.stage || 1) + 1; leveled = true;
-  }
-  // Stage 5 (Paragon) is feat-gated — never auto-granted here (spec D-4).
+  const r = EVO10.applyXp(ex, (ex.sync_xp || 0) + amount);
+  Object.assign(ex, r.patch);
+  const leveled = r.leveled;
+  // Level 10 is host granted (Ennis, 4 Oct) -- never auto-granted here.
   ex.updated_at = new Date().toISOString();
   EXO_STATE.byPlayer[pid] = ex;
   exoSaveRow(ex);
   if (leveled) {
-    exoLedger(pid, 'grant', 0, null, { evolved: true, stage: ex.stage, reason: reason });
+    exoLedger(pid, 'grant', 0, null, { evolved: true, level: ex.level, stage: ex.stage, reason: reason });
     if (state.player && state.player.id === pid) exoEvolutionShow(ex);
   }
 }
 function exoEvolutionShow(ex) {
-  state.exoEvolution = { line: ex.line, stage: ex.stage, at: Date.now() };
+  state.exoEvolution = { line: ex.line, stage: ex.stage, level: exoLevel(ex), at: Date.now() };
   try { SFX.victory ? SFX.victory() : SFX.click(); } catch (e) {}
   render();
   setTimeout(function () { if (state.exoEvolution && Date.now() - state.exoEvolution.at > 5800) { state.exoEvolution = null; render(); } }, 6000);
 }
 function exoEvolutionDismiss() { state.exoEvolution = null; SFX.click(); render(); }
+// ── PATCH ARENA (evo ten levels): path choice + host tools ──
+function exoEscapeLong(s) { return String(s || '').replace(/[<>&"']/g, ''); }
+async function exoPatchRow(pid, patch) {
+  const ex = EXO_STATE.byPlayer[pid]; if (!ex) return false;
+  Object.assign(ex, patch, { updated_at: new Date().toISOString() });
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/player_avatars?player_id=eq.' + encodeURIComponent(pid), { method: 'PATCH',
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, patch, { updated_at: ex.updated_at })) });
+    return res.ok;
+  } catch (e) { return false; }
+}
+function exoPathPanelHTML(ex) {
+  const opts = EVO10.pendingChoice(ex), hyb = EVO10.canTakeHybrid(ex);
+  if (!opts && !hyb) return '';
+  const btn = function (b, label, sub) {
+    const c = { line: ex.line, level: exoLevel(ex), branch: b };
+    const card = EVO10.cardOf(c);
+    return '<button onclick="exoChoosePath(\'' + b + '\')" style="cursor:pointer;flex:1;min-width:120px;padding:10px;border-radius:12px;border:1px solid rgba(0,229,255,0.35);background:rgba(0,229,255,0.06);color:#fff;font-family:Orbitron,monospace;font-size:0.55rem;letter-spacing:0.06em">' +
+      '<div style="display:flex;justify-content:center;margin-bottom:6px">' + exoArtHTML({ line: ex.line, level: card.level, branch: card.branch }, 72, '') + '</div>' + exoEscapeLong(label) + '<div style="font-size:8px;color:#8a92b0;margin-top:3px;font-family:inherit">' + sub + '</div></button>';
+  };
+  let inner = '';
+  if (opts) {
+    inner = '<div style="font-size:11px;color:#ffd740;margin-bottom:10px">Choose your path. This is permanent — only a host can reset it.</div><div style="display:flex;gap:10px;flex-wrap:wrap">' +
+      opts.map(function (b) { return btn(b, EVO10.branchName(ex.line, b), 'PATH ' + b); }).join('') + '</div>';
+  } else {
+    inner = '<div style="font-size:11px;color:#c7a6ff;margin-bottom:10px">Level 8 opens the Hybrid path. Optional and permanent.</div><div style="display:flex;gap:10px;flex-wrap:wrap">' +
+      btn('H', EVO10.branchName(ex.line, 'H'), 'HYBRID · REPLACES ' + EVO10.branchOf(ex)) + '</div>';
+  }
+  return '<div class="glass-panel" style="padding:18px;border:1px solid rgba(255,215,64,0.35)"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:700;color:#ffd740;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">' + (opts ? 'New path unlocked' : 'Hybrid path') + '</div>' + inner + '</div>';
+}
+async function exoChoosePath(b) {
+  const p = state.player; if (!p) return;
+  const ex = exoGet(p.id); if (!ex) return;
+  const patch = EVO10.choose(ex, b); if (!patch) { exoToastMsg('That path is not open yet'); return; }
+  if (b === 'H' && !confirm('Switch to the Hybrid path? This replaces ' + EVO10.branchName(ex.line, EVO10.branchOf(ex)) + ' for good.')) return;
+  const ok = await exoPatchRow(p.id, patch);
+  exoLedger(p.id, 'grant', 0, null, { path: b, level: exoLevel(ex) });
+  exoToastMsg(ok ? 'Path locked in: ' + EVO10.branchName(ex.line, b) : 'Could not save — try again');
+  SFX.click(); render();
+}
+function exoHostEvoToolsHTML() {
+  const rows = Object.keys(EXO_STATE.byPlayer).map(function (pid) { return EXO_STATE.byPlayer[pid]; }).filter(Boolean)
+    .sort(function (a, b) { return (b.sync_xp || 0) - (a.sync_xp || 0); });
+  const nameOf = function (pid) { const r = (PLAYERS || []).find(function (p) { return p.id === pid; }); return r ? (r.brandName || r.name || pid) : pid; };
+  return '<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:12px"><div style="font-family:Orbitron,monospace;font-size:0.65rem;font-weight:800;color:#aaa;letter-spacing:0.1em;margin-bottom:8px">EVO LEVELS · HOST TOOLS</div>' +
+    (rows.length ? rows.map(function (ex) {
+      const lv = exoLevel(ex), can = EVO10.canGrantL10(ex);
+      return '<div style="display:flex;align-items:center;gap:8px;font-size:10px;color:#ccc;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05)">' +
+        '<span style="flex:1">' + exoEscapeLong(nameOf(ex.player_id)) + ' · LV ' + lv + ' · ' + EVO10.branchOf(ex) + ' · ' + (ex.sync_xp || 0).toLocaleString() + ' SYNC</span>' +
+        (lv === 9 ? '<button class="btn-arena" style="font-size:0.5rem;padding:5px 8px"' + (can ? '' : ' disabled title="Needs 30,000 Sync XP and a chosen path"') + ' onclick="exoHostGrantL10(\'' + ex.player_id + '\')">GRANT LV 10</button>' : '') +
+        (EVO10.branchOf(ex) !== 'BASE' ? '<button class="btn-arena" style="font-size:0.5rem;padding:5px 8px" onclick="exoHostResetPath(\'' + ex.player_id + '\')">RESET PATH</button>' : '') + '</div>';
+    }).join('') : '<div style="font-size:10px;color:#667">No Evos hatched yet.</div>') + '</div>';
+}
+async function exoHostGrantL10(pid) {
+  if (!isHostUser(state.player)) return;
+  const ex = EXO_STATE.byPlayer[pid]; const patch = ex && EVO10.grantL10(ex); if (!patch) return;
+  if (!confirm('Grant Level 10 to ' + pid + '?')) return;
+  const ok = await exoPatchRow(pid, patch); exoLedger(pid, 'grant', 0, null, { level: 10, hostGrant: true });
+  exoToastMsg(ok ? 'Level 10 granted' : 'Could not save'); render();
+}
+async function exoHostResetPath(pid) {
+  if (!isHostUser(state.player)) return;
+  const ex = EXO_STATE.byPlayer[pid]; if (!ex) return;
+  if (!confirm('Reset the Evo path for ' + pid + '? They choose again from A / B / C.')) return;
+  const ok = await exoPatchRow(pid, EVO10.resetPath(ex)); exoLedger(pid, 'grant', 0, null, { pathReset: true, hostGrant: true });
+  exoToastMsg(ok ? 'Path reset' : 'Could not save'); render();
+}
 function exoEvolutionOverlayHTML() {
   const ev = state.exoEvolution; if (!ev) return '';
   const line = EXO_LINES[ev.line]; if (!line) return '';
@@ -2070,8 +2238,9 @@ function exoEvolutionOverlayHTML() {
   return '<div onclick="exoEvolutionDismiss()" style="position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(circle at 50% 45%,' + cw.b + 'ee, #02060fee);cursor:pointer;animation:exoEvoIn 0.6s ease">' +
     '<div style="font-family:Orbitron,monospace;font-size:0.8rem;letter-spacing:0.5em;color:' + cw.glow + ';margin-bottom:18px;animation:exoEvoPulse 1.2s infinite">EVOLUTION</div>' +
     '<div style="filter:drop-shadow(0 0 60px ' + cw.glow + ');animation:exoEvoGrow 1.4s ease">' + exoSVG(ex, 240) + '</div>' +
-    '<div style="font-family:Orbitron,monospace;font-size:1.6rem;font-weight:800;color:#fff;letter-spacing:0.15em;margin-top:22px;text-shadow:0 0 24px ' + cw.glow + '">' + line.stages[(ev.stage || 1) - 1].toUpperCase() + '</div>' +
-    '<div style="font-family:Orbitron,monospace;font-size:0.6rem;color:' + cw.glow + ';letter-spacing:0.3em;margin-top:8px">STAGE ' + ev.stage + ' · ' + line.name + '</div>' +
+    '<div style="font-family:Orbitron,monospace;font-size:1.6rem;font-weight:800;color:#fff;letter-spacing:0.15em;margin-top:22px;text-shadow:0 0 24px ' + cw.glow + '">' + exoTierName(ex).toUpperCase() + '</div>' +
+    '<div style="font-family:Orbitron,monospace;font-size:0.6rem;color:' + cw.glow + ';letter-spacing:0.3em;margin-top:8px">LEVEL ' + (ev.level || exoLevel(ex)) + ' · ' + line.name + '</div>' +
+    (EVO10.pendingChoice(ex) ? '<div style="font-size:11px;color:#ffd740;margin-top:12px;font-family:Orbitron,monospace;letter-spacing:0.12em">NEW PATH UNLOCKED — CHOOSE IT IN THE EXO BAY</div>' : '') +
     '<div style="font-size:10px;color:#8a92b0;margin-top:26px">tap to continue</div>' +
     '<style>@keyframes exoEvoIn{from{opacity:0}to{opacity:1}}@keyframes exoEvoGrow{0%{transform:scale(0.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1)}}@keyframes exoEvoPulse{0%,100%{opacity:1}50%{opacity:0.4}}</style></div>';
 }
@@ -2081,16 +2250,14 @@ function exoEvolutionOverlayHTML() {
 
 // ── Evo art (PATCH evo-art v1): real card art from assets/exo when it exists, procedural SVG otherwise ──
 const EXO_ART_BASE = 'assets/exo/';
-function exoArtFile(exo, cw) {
-  const st = exo.stage || 1;
-  const build = String(exo.build || (st === 1 ? 'base' : st < 4 ? 'a' : 'a1')).toLowerCase();
-  return exo.line + '/' + st + '-' + build + '-' + cw + '-' + (exo.form || 'standard');
+function exoArtFile(exo, size) { // PATCH ARENA (evo ten levels): small copies only, never the PNG masters
+  const c = EVO10.cardOf(exo);
+  return EVO10.file(exo.line, c.level, c.branch, size);
 }
 function exoArtHTML(exo, size, fallback) {
   if (!exo || !exo.line) return fallback;
-  const ext = size <= 96 ? '.thumb.jpg' : '.png';
-  const src = EXO_ART_BASE + exoArtFile(exo, exo.colorway || 'default') + ext;
-  const alt = EXO_ART_BASE + exoArtFile(exo, 'default') + ext;
+  const src = EXO_ART_BASE + exoArtFile(exo, size <= 96 ? 'thumb' : 'web');
+  const alt = src;
   const fb = String(fallback || '').replace(/"/g, '&quot;');
   return '<span class="exo-art" style="display:inline-block;width:' + size + 'px;height:' + size + 'px;position:relative;vertical-align:middle">' +
     '<img src="' + src + '" data-alt="' + alt + '" alt="" draggable="false" style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;object-fit:cover;object-position:center 22%;display:block;box-shadow:0 0 0 1.5px rgba(120,220,255,.45)" ' +
@@ -2250,10 +2417,10 @@ function renderExoVault() {
     body = '<div class="glass-panel" style="padding:16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">' +
       exoSVG(ex, 84) +
       '<div style="display:flex;gap:18px">' + statBar + '</div>' +
-      '<div style="margin-left:auto;text-align:right"><div style="font-size:9px;color:#8a92b0">STAGE ' + (ex.stage || 1) + ' · ' + (ex.sync_xp || 0).toLocaleString() + ' SYNC · ' + totalPts + ' STAT PTS</div>' +
+      '<div style="margin-left:auto;text-align:right"><div style="font-size:9px;color:#8a92b0">LEVEL ' + exoLevel(ex) + ' · ' + (ex.sync_xp || 0).toLocaleString() + ' SYNC · ' + totalPts + ' STAT PTS</div>' +
       '<div style="font-size:9px;color:#ffd740">POWER bonus: +' + powBonus + '% game XC (cap 12%)</div>' +
       '<div style="font-size:9px;color:#b06bff">SCRAP: ' + exoScrap().toLocaleString() + '</div></div></div>' +
-      ((ex.stage || 1) < 2 ? '<div style="font-size:10px;color:#ffd740;margin:10px 0">🔒 Gear equips unlock at Stage 2 (500 Sync XP) — play matches to evolve.</div>' : '') +
+      ((ex.stage || 1) < 2 ? '<div style="font-size:10px;color:#ffd740;margin:10px 0">🔒 Gear equips unlock at Level 3 (500 Sync XP) — play matches to evolve.</div>' : '') +
       '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-top:14px">' +
       (owned.length ? owned.map(function (it) { return exoItemCard(it, ex); }).join('') : '<div style="grid-column:1/-1;text-align:center;color:#778;font-size:11px;padding:26px">Nothing owned yet — hit the Shop or crack a Data Vault.</div>') + '</div>';
   } else if (tab === 'host' && isHost) {
@@ -2262,6 +2429,7 @@ function renderExoVault() {
       '<label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#ccc">Data Vaults enabled <input type="checkbox" ' + (EXO_CONFIG.vaultsEnabled ? 'checked' : '') + ' onchange="EXO_CONFIG.vaultsEnabled=this.checked;exoConfigSave();render()"/></label>' +
       '<label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#ccc">Price multiplier <input id="exoCfgMult" type="number" step="0.1" min="0.1" value="' + EXO_CONFIG.priceMult + '" style="width:80px;background:rgba(255,255,255,0.06);border:1px solid rgba(0,229,255,0.25);border-radius:8px;color:#fff;padding:6px;text-align:center" onchange="EXO_CONFIG.priceMult=Math.max(0.1,parseFloat(this.value)||1);exoConfigSave();render()"/></label>' +
       '<label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#ccc">Daily spend cap (XC, 0 = unlimited) <input id="exoCfgCap" type="number" step="100" min="0" value="' + EXO_CONFIG.dailyCap + '" style="width:100px;background:rgba(255,255,255,0.06);border:1px solid rgba(0,229,255,0.25);border-radius:8px;color:#fff;padding:6px;text-align:center" onchange="EXO_CONFIG.dailyCap=Math.max(0,parseInt(this.value)||0);exoConfigSave();render()"/></label>' +
+      exoHostEvoToolsHTML() +
       '<div style="font-size:9px;color:#667">Settings save to the cloud (pflx_exo_config) and apply to every player immediately. Vault odds ship at Bronze 70/25/5, Silver 45/40/12/3, Gold 55/35/10 — odds editing lands with the Lite host dashboard.</div></div>';
   }
 
@@ -2291,9 +2459,9 @@ function exoGamePayloadFor(pid) {
   const ex = exoGet(pid); if (!ex) return null;
   const line = EXO_LINES[ex.line];
   return {
-    name: exoEscape(ex.exo_name) || (line ? line.stages[(ex.stage || 1) - 1] : 'EXO'),
+    name: exoEscape(ex.exo_name) || (line ? exoTierName(ex) : 'EXO'),
     line: line ? line.name : String(ex.line || '').toUpperCase(),
-    stage: ex.stage || 1, stats: exoStatTotal(pid), svg: exoSVG(ex, 64)
+    stage: ex.stage || 1, level: exoLevel(ex), branch: EVO10.branchOf(ex), stats: exoStatTotal(pid), svg: exoSVG(ex, 64)
   };
 }
 function exoGameRivals(excludeId) {
@@ -4755,7 +4923,7 @@ function renderSidePanel() {
         <div style="text-align:center;margin-top:6px">
           <div class="rank-badge" style="background:${ri.color}15;border:1px solid ${ri.color}40;color:${ri.color};font-size:9px;display:inline-flex">${ri.icon} ${ri.tier}</div>
         </div>
-        ${(function(){ var ex = exoGet(p.id); if (!ex) return '<div style="text-align:center;margin-top:10px"><button class="btn-arena" style="font-size:0.55rem;padding:7px 12px" onclick="goExoBay();togglePanel()">⚡ ACTIVATE YOUR EXO</button></div>'; var L = EXO_LINES[ex.line]; return '<div onclick="goExoBay();togglePanel()" style="cursor:pointer;display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(0,229,255,0.15)">' + exoSVG(ex, 40) + '<div style="text-align:left"><div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:800;color:#fff;letter-spacing:0.05em">' + (exoEscape(ex.exo_name) || L.stages[0]) + '</div><div style="font-size:8.5px;color:#8a92b0">' + L.name + ' · STAGE ' + (ex.stage||1) + ' · ' + (ex.sync_xp||0).toLocaleString() + ' SYNC</div></div></div>'; })()}
+        ${(function(){ var ex = exoGet(p.id); if (!ex) return '<div style="text-align:center;margin-top:10px"><button class="btn-arena" style="font-size:0.55rem;padding:7px 12px" onclick="goExoBay();togglePanel()">⚡ ACTIVATE YOUR EXO</button></div>'; var L = EXO_LINES[ex.line]; return '<div onclick="goExoBay();togglePanel()" style="cursor:pointer;display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(0,229,255,0.15)">' + exoSVG(ex, 40) + '<div style="text-align:left"><div style="font-family:Orbitron,monospace;font-size:0.6rem;font-weight:800;color:#fff;letter-spacing:0.05em">' + (exoEscape(ex.exo_name) || L.stages[0]) + '</div><div style="font-size:8.5px;color:#8a92b0">' + L.name + ' · LV ' + exoLevel(ex) + ' · ' + (ex.sync_xp||0).toLocaleString() + ' SYNC</div></div></div>'; })()}
 
         <!-- Quick Stats -->
         <div class="panel-stats">
