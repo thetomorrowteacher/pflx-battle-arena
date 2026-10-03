@@ -183,3 +183,8 @@ The companion game-token collection contains 20 static icons: four studios acros
 ## Claude Evo game switchover — 2026-10-03
 
 See [the current Claude Cowork handoff](<CLAUDE-EVO-GAME-SWITCHOVER.md>) for static icon unlocks, card branch mapping, assets, verified status and remaining game/cinematic integration work. Celestial icons unlock only at level 10; five icon tiers do not replace the ten-level card system.
+
+
+## Archive static game tokens — 2026-10-03
+
+The eight existing enemy designs have compact static game icons, preserving dark angular armor and lime/yellow cores. See [ARCHIVE-GAME-ICONS.md](ARCHIVE-GAME-ICONS.md) and the Claude switchover for game integration. Tokens complement detailed enemy art and do not set combat stats or change established lore.

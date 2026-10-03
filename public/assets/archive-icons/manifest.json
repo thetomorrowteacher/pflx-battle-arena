@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "type": "static-archive-game-icons",
+  "count": 8,
+  "cards": [
+    {
+      "id": "scout",
+      "name": "Scout",
+      "files": {
+        "512": "assets/archive-icons/scout-512.png",
+        "256": "assets/archive-icons/scout-256.png",
+        "128": "assets/archive-icons/scout-128.png",
+        "64": "assets/archive-icons/scout-64.png",
+        "48": "assets/archive-icons/scout-48.png"
+      },
+      "sourceArt": "Evo Avatars/Archives/scout.png",
+      "status": "checked"
+    },
+    {
+      "id": "interceptor",
+      "name": "Interceptor",
+      "files": {
+        "512": "assets/archive-icons/interceptor-512.png",
+        "256": "assets/archive-icons/interceptor-256.png",
+        "128": "assets/archive-icons/interceptor-128.png",
+        "64": "assets/archive-icons/interceptor-64.png",
+        "48": "assets/archive-icons/interceptor-48.png"
+      },
+      "sourceArt": "Evo Avatars/Archives/interceptor.png",
+      "status": "checked"
+    },
+    {
+      "id": "sentry",
+      "name": "Sentry",
+      "files": {
+        "512": "assets/archive-icons/sentry-512.png",
+        "256": "assets/archive-icons/sentry-256.png",
+        "128": "assets/archive-icons/sentry-128.png",
+        "64": "assets/archive-icons/sentry-64.png",
+        "48": "assets/archive-icons/sentry-48.png"
+      },
+      "sourceArt": "Evo Avatars/Archives/sentry.png",
+      "status": "checked"
+    },
+    {
+      "id": "elite",
+      "name": "Elite Archive",
+      "files": {
+        "512": "assets/archive-icons/elite-512.png",
+        "256": "assets/archive-icons/elite-256.png",
+        "128": "assets/archive-icons/elite-128.png",
+        "64": "assets/archive-icons/elite-64.png",
+        "48": "assets/archive-icons/elite-48.png"
+      },
+      "sourceArt": "Evo Avatars/Archives/elite.png",
+      "status": "checked"
+    },
+    {
+      "id": "hive",
+      "name": "The Hive",
+      "files": {
+        "512": "assets/archive-icons/hive-512.png",
+        "256": "assets/archive-icons/hive-256.png",
+        "128": "assets/archive-icons/hive-128.png",
+        "64": "assets/archive-icons/hive-64.png",
+        "48": "assets/archive-icons/hive-48.png"
+      },
+      "sourceArt": "Evo Avatars/Archives/hive.png",
+      "status": "checked"
+    },
+    {
+      "id": "trojan",
+      "name": "Trojan",
+      "files": {
+        "512": "assets/archive-icons/trojan-512.png",
+        "256": "assets/archive-icons/trojan-256.png",
+        "128": "assets/archive-icons/trojan-128.png",
+        "64": "assets/archive-icons/trojan-64.png",
+        "48": "assets/archive-icons/trojan-48.png"
+      },
+      "sourceArt": "Evo Avatars/Archives/trojan.png",
+      "status": "checked"
+    },
+    {
+      "id": "nightmare",
+      "name": "Nightmare",
+      "files": {
+        "512": "assets/archive-icons/nightmare-512.png",
+        "256": "assets/archive-icons/nightmare-256.png",
+        "128": "assets/archive-icons/nightmare-128.png",
+        "64": "assets/archive-icons/nightmare-64.png",
+        "48": "assets/archive-icons/nightmare-48.png"
+      },
+      "sourceArt": "Evo Avatars/Archives/nightmare.png",
+      "status": "checked"
+    },
+    {
+      "id": "agent-glitch",
+      "name": "Agent Glitch",
+      "files": {
+        "512": "assets/archive-icons/agent-glitch-512.png",
+        "256": "assets/archive-icons/agent-glitch-256.png",
+        "128": "assets/archive-icons/agent-glitch-128.png",
+        "64": "assets/archive-icons/agent-glitch-64.png",
+        "48": "assets/archive-icons/agent-glitch-48.png"
+      },
+      "sourceArt": "Evo Avatars/Archives/agent-glitch.png",
+      "status": "checked"
+    }
+  ]
+}

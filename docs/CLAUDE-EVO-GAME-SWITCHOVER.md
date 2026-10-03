@@ -1,5 +1,11 @@
 # Claude Cowork switchover — Evo game avatars and cinematics
 
+## Latest handoff checkpoint — Archive token set ready
+
+2026-10-03: Both token collections are available locally: 20 Evo core icons with 40 branch badges, plus eight Archive enemy icons. Archive import verified: eight manifest entries and all 40 PNG size variants. Read [ARCHIVE-GAME-ICONS.md](ARCHIVE-GAME-ICONS.md); preview `public/archive-icons.html`; catalog `public/assets/archive-icons/manifest.json`. Archive deployment has not been verified. Earlier local-only statements describe this asset-production work; preserve any separately recorded Claude deployment status for Evo files.
+
+Claude's current platform handoff records a remaining five-stage player-state migration before trusted ten-level/branch unlock integration. Treat that as unresolved game implementation work, not a reason to change the approved ten-level artwork scheme. No automatic stage-to-level conversion or unearned branch unlock is authorized by the icons. Use enemy IDs for Archive tokens, and preserve the existing detailed art for cinematic powers and boss scenes.
+
 Updated 2026-10-03. This is the current handoff for the Evo game-icon work. It complements the existing platform/module handoffs. Local assets are prepared; live gameplay integration and deployment are not complete.
 
 ## Decisions to preserve
@@ -67,3 +73,10 @@ Detailed cards evolve from feline-dragon companions into upright humanoid dragon
 All 196 detailed Evo cards were recorded complete, checked and locally imported, with 588 full/thumbnail/web derivatives. Eight existing Archive artworks are outside that 196-card total. The icon work adds 20 core icons, 100 PNG size exports, 40 SVG badges and a resolver. All 196 valid studio/level/branch combinations were checked against the icon catalog and files; unavailable branches were rejected. This is asset/catalog validation, not an end-to-end player gameplay test.
 
 No live player unlock wiring, cosmetic editor, cinematic videos, new game modes or deployment is claimed. Scheduled production remains stopped; this handoff does not restart it. Do not regenerate completed artwork or run retired `exo_import.py`. Follow the current `evo_import.py` and ten-level production plan if future card import is required.
+
+
+## Archive game icons — added 2026-10-03
+
+Eight existing Archive enemies now have static transparent tokens: `scout`, `interceptor`, `sentry`, `elite`, `hive`, `trojan`, `nightmare`, `agent-glitch`. Local runtime catalog: `public/assets/archive-icons/manifest.json`; preview: `public/archive-icons.html`; guide: [ARCHIVE-GAME-ICONS.md](ARCHIVE-GAME-ICONS.md). Each token has 512/256/128/64/48-pixel PNGs. Workspace `Archive Game Icons/` preserves originals, exact prompts, exporter and preview. All 40 exports were checked for alpha, dimensions, local import parity and preview file references; 48/64-pixel appearances reviewed on light/dark backgrounds.
+
+Select enemy icons by stable enemy ID, independently of player studio/level/build. Keep existing detailed Archive art for cinematic use. This supplies tokens only: enemy stats, encounter difficulty, boss phases, AI behavior and game integration remain to be developed. Hack Guild is a faction grouping, not an additional invented icon, and Agent Glitch remains a possible leader rather than a confirmed one. No deployment or scheduled production was initiated.
