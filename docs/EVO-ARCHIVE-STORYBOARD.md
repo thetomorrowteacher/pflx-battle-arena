@@ -1,5 +1,10 @@
 # PFLX — Evo Avatars and The Archive
 
+## 2026-10-03 — Approved Evo artwork scope complete
+All 196/196 Default Standard Evo cards are complete, visually checked and imported into local PFLX: 49 per studio. Level counts: 4, 12, 12, 12, 24, 24, 24, 28, 28, 28. All 28 Level 10 celestial forms carry powerful studio-specific swords: Gentech greatswords, Mindforge resonance blades, eMagination constellation swords and Innov8 phase sabers. Humanoid dragon-angel bodies, studio badges, distinct attack poses and digital-space Archive battles preserve the approved direction.
+
+Verified root/app manifest equality, all 588 catalog image/thumbnail/web derivatives and all art-library file references. Level 10 originals and exact prompts are saved; Mindforge H and eMagination B1 tail corrections retain their original revisions and correction prompts. Local art library now includes all 196 canonical Evos alongside existing Archive/legacy art. Eight Archive artworks are outside the 196-Evo scope. This completion covers artwork and local catalog import, not deployment or implementation of story/gameplay features. No next production card remains. Historical progress entries below do not authorize duplicate generation or restart scheduling.
+
 Story and visual production reference. Lore updated 2026-09-27.
 
 ## Authority and scope
@@ -157,10 +162,24 @@ For flying scenes, show clear separation from any floor, legs trailing or folded
 
 Source library: `../../../Evo Avatars/` relative to this document's directory. Exact prompts and original source paths are retained there. Active Evo catalog: `../public/assets/exo/manifest.json`. All-art library: `../public/assets/art-library/manifest.json`; gallery: `../public/art-library.html`. Evo gallery: `../public/evo-gallery.html`.
 
-Production checkpoint 2026-10-01: Levels 1–6 have 88 completed, checked and locally imported Evo images. All 24 Level 6 images now depict flying humanoid dragon combat. Levels 7–10 remain in production. Eight Archive foundation images are saved and imported; legacy and revision artwork is additional and does not increase the 196-image target.
+Production checkpoint 2026-10-02: Levels 1–8 have 140 completed, checked and locally imported Evo images. Levels 6–8 depict flying humanoid dragon combat; Level 8 introduces floating armor, angelic wings and one shared hybrid per studio. Levels 9–10 remain incomplete (56 images). Eight Archive foundation images are imported. Local import is separate from deployment.
 
 User explicitly requested all art imported on this update, including work in progress. Draft status must remain visible. Future full level sets should be checked and immediately imported using `evo_import.py`; never use retired `exo_import.py`. Keep archived revisions out of the active avatar catalog. Verify catalog entries, files, previews and thumbnails. Local asset import is separate from deployment and from gameplay integration.
 
 The user requested scheduled production stop. Continue production only on manual instruction unless the user explicitly restarts scheduling. Archive expansion is separate scope.
 
 Celestial weapons update: Level10 Evos wield powerful signature weapons, especially energy swords and dragon-forged blades. Studio direction: Gentech greatswords, Mindforge resonance blades, eMagination constellation swords, Innov8 phase sabers. Vary weapons by branch and showcase them in flying combat poses.
+
+
+## 2026-10-03 — Level 9 complete
+All 28 Level 9 cards across four studios and seven branches are checked and imported locally. Catalog: 168/196. Verified manifest parity and all 84 full/thumbnail/web files; added 28 cards to the art library. Mindforge H tail and eMagination B1/B2 anatomy corrections retained with originals and prompts. Level 10 celestial sword forms are next. This is a local import, not deployment.
+
+
+## Static Evo game icons
+
+The companion game-token collection contains 20 static icons: four studios across five visual tiers mapped to Evo levels 1–10. The icons preserve studio identity and show armor, dragon and celestial progression. They complement the detailed Evo power cards and do not change the ten-level branching system. See [EVO-GAME-ICONS.md](EVO-GAME-ICONS.md) for tier mapping, asset paths and future customization/cutscene boundaries. Local preview: `public/evo-icons.html`; runtime catalog: `public/assets/evo-icons/manifest.json`.
+
+
+## Claude Evo game switchover — 2026-10-03
+
+See [the current Claude Cowork handoff](<CLAUDE-EVO-GAME-SWITCHOVER.md>) for static icon unlocks, card branch mapping, assets, verified status and remaining game/cinematic integration work. Celestial icons unlock only at level 10; five icon tiers do not replace the ten-level card system.

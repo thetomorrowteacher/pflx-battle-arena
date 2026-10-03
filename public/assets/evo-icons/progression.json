@@ -1,0 +1,306 @@
+{
+  "version": 1,
+  "tierLevels": [
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      7,
+      8,
+      9
+    ],
+    [
+      10
+    ]
+  ],
+  "branchesByLevel": {
+    "1": [
+      "BASE"
+    ],
+    "2": [
+      "A",
+      "B",
+      "C"
+    ],
+    "3": [
+      "A",
+      "B",
+      "C"
+    ],
+    "4": [
+      "A",
+      "B",
+      "C"
+    ],
+    "5": [
+      "A1",
+      "A2",
+      "B1",
+      "B2",
+      "C1",
+      "C2"
+    ],
+    "6": [
+      "A1",
+      "A2",
+      "B1",
+      "B2",
+      "C1",
+      "C2"
+    ],
+    "7": [
+      "A1",
+      "A2",
+      "B1",
+      "B2",
+      "C1",
+      "C2"
+    ],
+    "8": [
+      "A1",
+      "A2",
+      "B1",
+      "B2",
+      "C1",
+      "C2",
+      "H"
+    ],
+    "9": [
+      "A1",
+      "A2",
+      "B1",
+      "B2",
+      "C1",
+      "C2",
+      "H"
+    ],
+    "10": [
+      "A1",
+      "A2",
+      "B1",
+      "B2",
+      "C1",
+      "C2",
+      "H"
+    ]
+  },
+  "studios": {
+    "gentech": {
+      "A": {
+        "name": "Forgeclaw",
+        "badge": "badges/gentech/A.svg",
+        "parent": null
+      },
+      "B": {
+        "name": "Bulwark",
+        "badge": "badges/gentech/B.svg",
+        "parent": null
+      },
+      "C": {
+        "name": "Arcwright",
+        "badge": "badges/gentech/C.svg",
+        "parent": null
+      },
+      "A1": {
+        "name": "Forgeclaw 1",
+        "badge": "badges/gentech/A1.svg",
+        "parent": "A"
+      },
+      "A2": {
+        "name": "Forgeclaw 2",
+        "badge": "badges/gentech/A2.svg",
+        "parent": "A"
+      },
+      "B1": {
+        "name": "Bulwark 1",
+        "badge": "badges/gentech/B1.svg",
+        "parent": "B"
+      },
+      "B2": {
+        "name": "Bulwark 2",
+        "badge": "badges/gentech/B2.svg",
+        "parent": "B"
+      },
+      "C1": {
+        "name": "Arcwright 1",
+        "badge": "badges/gentech/C1.svg",
+        "parent": "C"
+      },
+      "C2": {
+        "name": "Arcwright 2",
+        "badge": "badges/gentech/C2.svg",
+        "parent": "C"
+      },
+      "H": {
+        "name": "Hybrid",
+        "badge": "badges/gentech/H.svg",
+        "parent": null
+      }
+    },
+    "mindforge": {
+      "A": {
+        "name": "Bassbreaker",
+        "badge": "badges/mindforge/A.svg",
+        "parent": null
+      },
+      "B": {
+        "name": "Tempo",
+        "badge": "badges/mindforge/B.svg",
+        "parent": null
+      },
+      "C": {
+        "name": "Harmonic",
+        "badge": "badges/mindforge/C.svg",
+        "parent": null
+      },
+      "A1": {
+        "name": "Bassbreaker 1",
+        "badge": "badges/mindforge/A1.svg",
+        "parent": "A"
+      },
+      "A2": {
+        "name": "Bassbreaker 2",
+        "badge": "badges/mindforge/A2.svg",
+        "parent": "A"
+      },
+      "B1": {
+        "name": "Tempo 1",
+        "badge": "badges/mindforge/B1.svg",
+        "parent": "B"
+      },
+      "B2": {
+        "name": "Tempo 2",
+        "badge": "badges/mindforge/B2.svg",
+        "parent": "B"
+      },
+      "C1": {
+        "name": "Harmonic 1",
+        "badge": "badges/mindforge/C1.svg",
+        "parent": "C"
+      },
+      "C2": {
+        "name": "Harmonic 2",
+        "badge": "badges/mindforge/C2.svg",
+        "parent": "C"
+      },
+      "H": {
+        "name": "Hybrid",
+        "badge": "badges/mindforge/H.svg",
+        "parent": null
+      }
+    },
+    "emagination": {
+      "A": {
+        "name": "Quillblade",
+        "badge": "badges/emagination/A.svg",
+        "parent": null
+      },
+      "B": {
+        "name": "Mirage",
+        "badge": "badges/emagination/B.svg",
+        "parent": null
+      },
+      "C": {
+        "name": "Starweaver",
+        "badge": "badges/emagination/C.svg",
+        "parent": null
+      },
+      "A1": {
+        "name": "Quillblade 1",
+        "badge": "badges/emagination/A1.svg",
+        "parent": "A"
+      },
+      "A2": {
+        "name": "Quillblade 2",
+        "badge": "badges/emagination/A2.svg",
+        "parent": "A"
+      },
+      "B1": {
+        "name": "Mirage 1",
+        "badge": "badges/emagination/B1.svg",
+        "parent": "B"
+      },
+      "B2": {
+        "name": "Mirage 2",
+        "badge": "badges/emagination/B2.svg",
+        "parent": "B"
+      },
+      "C1": {
+        "name": "Starweaver 1",
+        "badge": "badges/emagination/C1.svg",
+        "parent": "C"
+      },
+      "C2": {
+        "name": "Starweaver 2",
+        "badge": "badges/emagination/C2.svg",
+        "parent": "C"
+      },
+      "H": {
+        "name": "Hybrid",
+        "badge": "badges/emagination/H.svg",
+        "parent": null
+      }
+    },
+    "innov8": {
+      "A": {
+        "name": "Riftfang",
+        "badge": "badges/innov8/A.svg",
+        "parent": null
+      },
+      "B": {
+        "name": "Ghostwire",
+        "badge": "badges/innov8/B.svg",
+        "parent": null
+      },
+      "C": {
+        "name": "Voltstalker",
+        "badge": "badges/innov8/C.svg",
+        "parent": null
+      },
+      "A1": {
+        "name": "Riftfang 1",
+        "badge": "badges/innov8/A1.svg",
+        "parent": "A"
+      },
+      "A2": {
+        "name": "Riftfang 2",
+        "badge": "badges/innov8/A2.svg",
+        "parent": "A"
+      },
+      "B1": {
+        "name": "Ghostwire 1",
+        "badge": "badges/innov8/B1.svg",
+        "parent": "B"
+      },
+      "B2": {
+        "name": "Ghostwire 2",
+        "badge": "badges/innov8/B2.svg",
+        "parent": "B"
+      },
+      "C1": {
+        "name": "Voltstalker 1",
+        "badge": "badges/innov8/C1.svg",
+        "parent": "C"
+      },
+      "C2": {
+        "name": "Voltstalker 2",
+        "badge": "badges/innov8/C2.svg",
+        "parent": "C"
+      },
+      "H": {
+        "name": "Hybrid",
+        "badge": "badges/innov8/H.svg",
+        "parent": null
+      }
+    }
+  }
+}

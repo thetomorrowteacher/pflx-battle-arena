@@ -1,0 +1,368 @@
+{
+  "version": 2,
+  "count": 20,
+  "type": "static-evo-game-icons",
+  "tiers": 5,
+  "cards": [
+    {
+      "id": "EVO-ICON-GT-T1",
+      "studio": "gentech",
+      "tier": 1,
+      "tierName": "Companion",
+      "levels": [
+        1,
+        2
+      ],
+      "files": {
+        "512": "assets/evo-icons/gentech/EVO-ICON-GT-T1-512.png",
+        "256": "assets/evo-icons/gentech/EVO-ICON-GT-T1-256.png",
+        "128": "assets/evo-icons/gentech/EVO-ICON-GT-T1-128.png",
+        "64": "assets/evo-icons/gentech/EVO-ICON-GT-T1-64.png",
+        "48": "assets/evo-icons/gentech/EVO-ICON-GT-T1-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-MF-T1",
+      "studio": "mindforge",
+      "tier": 1,
+      "tierName": "Companion",
+      "levels": [
+        1,
+        2
+      ],
+      "files": {
+        "512": "assets/evo-icons/mindforge/EVO-ICON-MF-T1-512.png",
+        "256": "assets/evo-icons/mindforge/EVO-ICON-MF-T1-256.png",
+        "128": "assets/evo-icons/mindforge/EVO-ICON-MF-T1-128.png",
+        "64": "assets/evo-icons/mindforge/EVO-ICON-MF-T1-64.png",
+        "48": "assets/evo-icons/mindforge/EVO-ICON-MF-T1-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-EM-T1",
+      "studio": "emagination",
+      "tier": 1,
+      "tierName": "Companion",
+      "levels": [
+        1,
+        2
+      ],
+      "files": {
+        "512": "assets/evo-icons/emagination/EVO-ICON-EM-T1-512.png",
+        "256": "assets/evo-icons/emagination/EVO-ICON-EM-T1-256.png",
+        "128": "assets/evo-icons/emagination/EVO-ICON-EM-T1-128.png",
+        "64": "assets/evo-icons/emagination/EVO-ICON-EM-T1-64.png",
+        "48": "assets/evo-icons/emagination/EVO-ICON-EM-T1-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-IN-T1",
+      "studio": "innov8",
+      "tier": 1,
+      "tierName": "Companion",
+      "levels": [
+        1,
+        2
+      ],
+      "files": {
+        "512": "assets/evo-icons/innov8/EVO-ICON-IN-T1-512.png",
+        "256": "assets/evo-icons/innov8/EVO-ICON-IN-T1-256.png",
+        "128": "assets/evo-icons/innov8/EVO-ICON-IN-T1-128.png",
+        "64": "assets/evo-icons/innov8/EVO-ICON-IN-T1-64.png",
+        "48": "assets/evo-icons/innov8/EVO-ICON-IN-T1-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-GT-T2",
+      "studio": "gentech",
+      "tier": 2,
+      "tierName": "Armored",
+      "levels": [
+        3,
+        4
+      ],
+      "files": {
+        "512": "assets/evo-icons/gentech/EVO-ICON-GT-T2-512.png",
+        "256": "assets/evo-icons/gentech/EVO-ICON-GT-T2-256.png",
+        "128": "assets/evo-icons/gentech/EVO-ICON-GT-T2-128.png",
+        "64": "assets/evo-icons/gentech/EVO-ICON-GT-T2-64.png",
+        "48": "assets/evo-icons/gentech/EVO-ICON-GT-T2-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-GT-T3",
+      "studio": "gentech",
+      "tier": 3,
+      "tierName": "Dragon",
+      "levels": [
+        5,
+        6
+      ],
+      "files": {
+        "512": "assets/evo-icons/gentech/EVO-ICON-GT-T3-512.png",
+        "256": "assets/evo-icons/gentech/EVO-ICON-GT-T3-256.png",
+        "128": "assets/evo-icons/gentech/EVO-ICON-GT-T3-128.png",
+        "64": "assets/evo-icons/gentech/EVO-ICON-GT-T3-64.png",
+        "48": "assets/evo-icons/gentech/EVO-ICON-GT-T3-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-MF-T2",
+      "studio": "mindforge",
+      "tier": 2,
+      "tierName": "Armored",
+      "levels": [
+        3,
+        4
+      ],
+      "files": {
+        "512": "assets/evo-icons/mindforge/EVO-ICON-MF-T2-512.png",
+        "256": "assets/evo-icons/mindforge/EVO-ICON-MF-T2-256.png",
+        "128": "assets/evo-icons/mindforge/EVO-ICON-MF-T2-128.png",
+        "64": "assets/evo-icons/mindforge/EVO-ICON-MF-T2-64.png",
+        "48": "assets/evo-icons/mindforge/EVO-ICON-MF-T2-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-MF-T3",
+      "studio": "mindforge",
+      "tier": 3,
+      "tierName": "Dragon",
+      "levels": [
+        5,
+        6
+      ],
+      "files": {
+        "512": "assets/evo-icons/mindforge/EVO-ICON-MF-T3-512.png",
+        "256": "assets/evo-icons/mindforge/EVO-ICON-MF-T3-256.png",
+        "128": "assets/evo-icons/mindforge/EVO-ICON-MF-T3-128.png",
+        "64": "assets/evo-icons/mindforge/EVO-ICON-MF-T3-64.png",
+        "48": "assets/evo-icons/mindforge/EVO-ICON-MF-T3-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-EM-T2",
+      "studio": "emagination",
+      "tier": 2,
+      "tierName": "Armored",
+      "levels": [
+        3,
+        4
+      ],
+      "files": {
+        "512": "assets/evo-icons/emagination/EVO-ICON-EM-T2-512.png",
+        "256": "assets/evo-icons/emagination/EVO-ICON-EM-T2-256.png",
+        "128": "assets/evo-icons/emagination/EVO-ICON-EM-T2-128.png",
+        "64": "assets/evo-icons/emagination/EVO-ICON-EM-T2-64.png",
+        "48": "assets/evo-icons/emagination/EVO-ICON-EM-T2-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-EM-T3",
+      "studio": "emagination",
+      "tier": 3,
+      "tierName": "Dragon",
+      "levels": [
+        5,
+        6
+      ],
+      "files": {
+        "512": "assets/evo-icons/emagination/EVO-ICON-EM-T3-512.png",
+        "256": "assets/evo-icons/emagination/EVO-ICON-EM-T3-256.png",
+        "128": "assets/evo-icons/emagination/EVO-ICON-EM-T3-128.png",
+        "64": "assets/evo-icons/emagination/EVO-ICON-EM-T3-64.png",
+        "48": "assets/evo-icons/emagination/EVO-ICON-EM-T3-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-IN-T2",
+      "studio": "innov8",
+      "tier": 2,
+      "tierName": "Armored",
+      "levels": [
+        3,
+        4
+      ],
+      "files": {
+        "512": "assets/evo-icons/innov8/EVO-ICON-IN-T2-512.png",
+        "256": "assets/evo-icons/innov8/EVO-ICON-IN-T2-256.png",
+        "128": "assets/evo-icons/innov8/EVO-ICON-IN-T2-128.png",
+        "64": "assets/evo-icons/innov8/EVO-ICON-IN-T2-64.png",
+        "48": "assets/evo-icons/innov8/EVO-ICON-IN-T2-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-IN-T3",
+      "studio": "innov8",
+      "tier": 3,
+      "tierName": "Dragon",
+      "levels": [
+        5,
+        6
+      ],
+      "files": {
+        "512": "assets/evo-icons/innov8/EVO-ICON-IN-T3-512.png",
+        "256": "assets/evo-icons/innov8/EVO-ICON-IN-T3-256.png",
+        "128": "assets/evo-icons/innov8/EVO-ICON-IN-T3-128.png",
+        "64": "assets/evo-icons/innov8/EVO-ICON-IN-T3-64.png",
+        "48": "assets/evo-icons/innov8/EVO-ICON-IN-T3-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-GT-T4",
+      "studio": "gentech",
+      "tier": 4,
+      "tierName": "Ascended",
+      "levels": [
+        7,
+        8,
+        9
+      ],
+      "files": {
+        "512": "assets/evo-icons/gentech/EVO-ICON-GT-T4-512.png",
+        "256": "assets/evo-icons/gentech/EVO-ICON-GT-T4-256.png",
+        "128": "assets/evo-icons/gentech/EVO-ICON-GT-T4-128.png",
+        "64": "assets/evo-icons/gentech/EVO-ICON-GT-T4-64.png",
+        "48": "assets/evo-icons/gentech/EVO-ICON-GT-T4-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-GT-T5",
+      "studio": "gentech",
+      "tier": 5,
+      "tierName": "Celestial",
+      "levels": [
+        10
+      ],
+      "files": {
+        "512": "assets/evo-icons/gentech/EVO-ICON-GT-T5-512.png",
+        "256": "assets/evo-icons/gentech/EVO-ICON-GT-T5-256.png",
+        "128": "assets/evo-icons/gentech/EVO-ICON-GT-T5-128.png",
+        "64": "assets/evo-icons/gentech/EVO-ICON-GT-T5-64.png",
+        "48": "assets/evo-icons/gentech/EVO-ICON-GT-T5-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-MF-T4",
+      "studio": "mindforge",
+      "tier": 4,
+      "tierName": "Ascended",
+      "levels": [
+        7,
+        8,
+        9
+      ],
+      "files": {
+        "512": "assets/evo-icons/mindforge/EVO-ICON-MF-T4-512.png",
+        "256": "assets/evo-icons/mindforge/EVO-ICON-MF-T4-256.png",
+        "128": "assets/evo-icons/mindforge/EVO-ICON-MF-T4-128.png",
+        "64": "assets/evo-icons/mindforge/EVO-ICON-MF-T4-64.png",
+        "48": "assets/evo-icons/mindforge/EVO-ICON-MF-T4-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-MF-T5",
+      "studio": "mindforge",
+      "tier": 5,
+      "tierName": "Celestial",
+      "levels": [
+        10
+      ],
+      "files": {
+        "512": "assets/evo-icons/mindforge/EVO-ICON-MF-T5-512.png",
+        "256": "assets/evo-icons/mindforge/EVO-ICON-MF-T5-256.png",
+        "128": "assets/evo-icons/mindforge/EVO-ICON-MF-T5-128.png",
+        "64": "assets/evo-icons/mindforge/EVO-ICON-MF-T5-64.png",
+        "48": "assets/evo-icons/mindforge/EVO-ICON-MF-T5-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-EM-T4",
+      "studio": "emagination",
+      "tier": 4,
+      "tierName": "Ascended",
+      "levels": [
+        7,
+        8,
+        9
+      ],
+      "files": {
+        "512": "assets/evo-icons/emagination/EVO-ICON-EM-T4-512.png",
+        "256": "assets/evo-icons/emagination/EVO-ICON-EM-T4-256.png",
+        "128": "assets/evo-icons/emagination/EVO-ICON-EM-T4-128.png",
+        "64": "assets/evo-icons/emagination/EVO-ICON-EM-T4-64.png",
+        "48": "assets/evo-icons/emagination/EVO-ICON-EM-T4-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-EM-T5",
+      "studio": "emagination",
+      "tier": 5,
+      "tierName": "Celestial",
+      "levels": [
+        10
+      ],
+      "files": {
+        "512": "assets/evo-icons/emagination/EVO-ICON-EM-T5-512.png",
+        "256": "assets/evo-icons/emagination/EVO-ICON-EM-T5-256.png",
+        "128": "assets/evo-icons/emagination/EVO-ICON-EM-T5-128.png",
+        "64": "assets/evo-icons/emagination/EVO-ICON-EM-T5-64.png",
+        "48": "assets/evo-icons/emagination/EVO-ICON-EM-T5-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-IN-T4",
+      "studio": "innov8",
+      "tier": 4,
+      "tierName": "Ascended",
+      "levels": [
+        7,
+        8,
+        9
+      ],
+      "files": {
+        "512": "assets/evo-icons/innov8/EVO-ICON-IN-T4-512.png",
+        "256": "assets/evo-icons/innov8/EVO-ICON-IN-T4-256.png",
+        "128": "assets/evo-icons/innov8/EVO-ICON-IN-T4-128.png",
+        "64": "assets/evo-icons/innov8/EVO-ICON-IN-T4-64.png",
+        "48": "assets/evo-icons/innov8/EVO-ICON-IN-T4-48.png"
+      },
+      "status": "checked"
+    },
+    {
+      "id": "EVO-ICON-IN-T5",
+      "studio": "innov8",
+      "tier": 5,
+      "tierName": "Celestial",
+      "levels": [
+        10
+      ],
+      "files": {
+        "512": "assets/evo-icons/innov8/EVO-ICON-IN-T5-512.png",
+        "256": "assets/evo-icons/innov8/EVO-ICON-IN-T5-256.png",
+        "128": "assets/evo-icons/innov8/EVO-ICON-IN-T5-128.png",
+        "64": "assets/evo-icons/innov8/EVO-ICON-IN-T5-64.png",
+        "48": "assets/evo-icons/innov8/EVO-ICON-IN-T5-48.png"
+      },
+      "status": "checked"
+    }
+  ]
+}
