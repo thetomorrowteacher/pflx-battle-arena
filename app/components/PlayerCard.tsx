@@ -92,7 +92,7 @@ export default function PlayerCard({
 
       {/* Rank + Level */}
       <div className="mt-1 flex items-center justify-between">
-        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Evolution Rank</span>
+        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Pro Rank</span>
         <span className="font-mono text-xs text-gray-400">
           Rank {player.rank} • Lv.{player.level}
         </span>

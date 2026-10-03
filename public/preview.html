@@ -2192,7 +2192,7 @@ function renderExoVault() {
       return (a.price_xc == null ? 1 : 0) - (b.price_xc == null ? 1 : 0) || ra - rb;
     });
     body = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px">' + items.map(function (it) { return exoItemCard(it, ex); }).join('') + '</div>' +
-      '<div style="font-size:9px;color:#667;margin-top:14px">Buying never raises rank — Evo Ranks read lifetime earned XC, and gear sways a match by 12% at most. Relic & Anomaly drop from Data Vaults only (or craft them with scrap).</div>';
+      '<div style="font-size:9px;color:#667;margin-top:14px">Buying never raises rank — Pro Ranks read lifetime earned XC, and gear sways a match by 12% at most. Relic & Anomaly drop from Data Vaults only (or craft them with scrap).</div>';
   } else if (tab === 'vaults') {
     if (!EXO_CONFIG.vaultsEnabled) {
       body = '<div class="glass-panel" style="padding:28px;text-align:center;color:#99a;font-size:12px">🔒 Data Vaults are currently disabled by your host.</div>';
@@ -2516,7 +2516,7 @@ const QUESTIONS = [
   { q:"What does 'AI' stand for?", opts:["Automated Intelligence","Artificial Intelligence","Advanced Integration","Algorithmic Innovation"], ans:1, cat:"CS/AI", diff:"Easy", time:10 },
   { q:"Which DAW is popular in hip-hop production for its step sequencer?", opts:["Ableton Live","FL Studio","Logic Pro","Pro Tools"], ans:1, cat:"Sound Design", diff:"Medium", time:20 },
   { q:"What game engine uses 'Blueprints' visual scripting?", opts:["Unity","Godot","Unreal Engine","GameMaker"], ans:2, cat:"Game Design", diff:"Medium", time:20 },
-  { q:"In the PFLX rank system, what is the highest Evolution Rank?", opts:["Chief","Senior","Partner","Director"], ans:2, cat:"PFLX Lore", diff:"Medium", time:15 },
+  { q:"In the PFLX rank system, what is the highest Pro Rank?", opts:["Chief","Senior","Partner","Director"], ans:2, cat:"PFLX Lore", diff:"Medium", time:15 },
   { q:"Which badge type carries the highest weight in PFLX status scoring?", opts:["Primary","Premium","Executive","Signature"], ans:3, cat:"PFLX Lore", diff:"Hard", time:15 },
 ];
 
@@ -4744,7 +4744,7 @@ function renderSidePanel() {
         <!-- Balance & Rank -->
         <div style="margin-top:16px">
           <div class="panel-row"><span class="pr-label">Balance</span><span class="pr-value" style="color:var(--pflx-gold)">${p.xc.toLocaleString()} XC</span></div>
-          <div class="panel-row"><span class="pr-label">Evolution Rank</span><span class="pr-value" style="color:#aaa">Rank ${p.rank} · Lv.${p.level}</span></div>
+          <div class="panel-row"><span class="pr-label">Pro Rank</span><span class="pr-value" style="color:#aaa">Rank ${p.rank} · Lv.${p.level}</span></div>
         </div>
 
         <!-- Badge dots -->

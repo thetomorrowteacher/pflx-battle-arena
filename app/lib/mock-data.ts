@@ -339,7 +339,7 @@ export const mockQuizQuestions: QuizQuestion[] = [
   },
   {
     id: "q-9",
-    question: "In the PFLX rank system, what is the highest Evolution Rank?",
+    question: "In the PFLX rank system, what is the highest Pro Rank?",
     options: ["Chief", "Senior", "Partner", "Director"],
     correctAnswer: 2,
     category: "pflx_lore",

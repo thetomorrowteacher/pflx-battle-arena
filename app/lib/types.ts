@@ -102,7 +102,7 @@ export interface GameModeConfig {
   teamBased: boolean;
   estimatedMinutes: number;
   requiredBadges?: string[];  // Badge-gated entry
-  minRank?: number;           // Minimum Evolution Rank to enter
+  minRank?: number;           // Minimum Pro Rank to enter
   minArenaRank?: ArenaRankTier;
 }
 
