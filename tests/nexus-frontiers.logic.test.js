@@ -143,4 +143,72 @@ t('materials: 3 per combat district, non-solid, on free cells, never on the play
     a.forEach(x => { assert.ok(!L.boxSolid(m, x.x, x.y, 14)); assert.strictEqual(L.roomIndexAt(m, Math.floor(x.x / 32), Math.floor(x.y / 32)), x.room); assert.ok(Math.hypot(x.x - m.start.x, x.y - m.start.y) >= 160 || x.room !== 0); });
     assert.deepStrictEqual(L.reachable(m, m.start).rooms, [0]); }
 });
+// ───────── v0.2: sprint, meter, difficulty/team scaling, upgrades, revives, boosters ─────────
+t('meter: N correct answers fill it; pips map 0..5; a SURGE costs exactly one pip', () => {
+  for (const N of [3, 5, 6, 8, 10, 12]) {
+    const m = new L.Meter(N); for (let i = 0; i < N; i++) assert.strictEqual(m.gain(), 1); assert.ok(m.isFull()); assert.strictEqual(m.pips(), 5); assert.strictEqual(m.gain(), 0);
+    assert.ok(m.spend(1)); assert.strictEqual(m.pips(), 4); for (let i = 0; i < 4; i++) assert.ok(m.spend(1)); assert.strictEqual(m.fill, 0); assert.ok(!m.spend(1));
+  }
+  assert.strictEqual(new L.Meter(99).target, 12); assert.strictEqual(new L.Meter(0).target, 3);
+});
+t('sprint: 60 s timer drains, ends on time; ends the moment the meter is full (no penalty)', () => {
+  const m = new L.Meter(6), sp = new L.Sprint(m); assert.strictEqual(sp.limit, 60);
+  sp.tick(30); assert.ok(!sp.over); assert.strictEqual(Math.round(sp.left), 30); sp.tick(31); assert.ok(sp.over); assert.strictEqual(sp.reason, 'time'); assert.strictEqual(sp.leave(), 0);
+  const m2 = new L.Meter(4), s2 = new L.Sprint(m2); for (let i = 0; i < 4; i++) { m2.gain(); s2.record(true); } assert.ok(s2.over); assert.strictEqual(s2.reason, 'full'); assert.strictEqual(m2.fill, 1);
+});
+t('sprint: leaving early keeps the fill but reverts ONE notch, never below where the sprint began', () => {
+  const m = new L.Meter(6); m.gain(); m.gain(); const start = m.fill; const sp = new L.Sprint(m); m.gain(); m.gain(); m.gain(); // 5/6
+  const lost = sp.leave(); assert.ok(Math.abs(lost - 1 / 6) < 1e-9); assert.ok(Math.abs(m.fill - 4 / 6) < 1e-9);
+  const m2 = new L.Meter(6); m2.gain(); const s2 = new L.Sprint(m2); assert.strictEqual(s2.leave(), 0); assert.ok(Math.abs(m2.fill - 1 / 6) < 1e-9); // nothing earned -> nothing lost
+  const m3 = new L.Meter(5); const s3 = new L.Sprint(m3); m3.gain(); assert.ok(s3.leave() > 0); assert.strictEqual(m3.fill, 0); // one earned, one reverted, floor at start
+});
+t('quiz deck + meter: correct fills the meter, wrong does not, charge mirrors pips', () => {
+  const q = new L.QuizDeck(L.FALLBACK_DECK, L.mulberry32(3)), m = new L.Meter(5); q.setMeter(m);
+  let a = q.open(); let r = q.answer(a.id, a._correctId); assert.ok(r.correct && r.charge === 1); assert.strictEqual(q.charge, 1); assert.ok(Math.abs(m.fill - .2) < 1e-9);
+  a = q.open(); r = q.answer(a.id, a.options.find(o => o.id !== a._correctId).id); assert.ok(!r.correct && r.charge === 0); assert.strictEqual(q.charge, 1);
+  assert.ok(q.spend(1)); assert.strictEqual(q.charge, 0); assert.ok(!q.spend(1));
+});
+t('difficulty: EXPERT area 1 is exactly the stage-5 wave distribution; every new stage is bigger or tougher', () => {
+  assert.deepStrictEqual(L.encounterFor('expert', 0, 1), L.W01_ENCOUNTERS[4]);
+  for (const d of Object.keys(L.DIFFS)) { let prevPop = 0, prevHp = 0; for (let a = 0; a < 6; a++) { const e = L.encounterFor(d, a, 1), pop = e.waves * e.size, hp = L.hpMul(L.stageScale(d, a), 1); assert.ok(pop >= prevPop, d + ' pop'); assert.ok(hp > prevHp, d + ' hp'); prevPop = pop; prevHp = hp; } }
+  for (let a = 0; a < 6; a++) { const p = ['cadet', 'ranger', 'veteran', 'expert'].map(d => { const e = L.encounterFor(d, a, 1); return e.waves * e.size; }); for (let i = 1; i < 4; i++) assert.ok(p[i] >= p[i - 1], 'harder difficulty never has fewer Archives (area ' + (a + 1) + ')'); }
+  assert.deepStrictEqual(L.encounterFor('cadet', 0, 1), L.W01_ENCOUNTERS[0]); // Cadet keeps the learning room
+  assert.ok(L.encounterFor('expert', 5, 1).waves <= 10 && L.encounterFor('expert', 5, 4).size <= 30);
+});
+t('team of 4: more Archives and tougher bars, scaled per difficulty; the cap grows too', () => {
+  for (const d of Object.keys(L.DIFFS)) for (let a = 0; a < 6; a++) { const s1 = L.encounterFor(d, a, 1), s4 = L.encounterFor(d, a, 4); assert.ok(s4.size > s1.size, d + ' a' + a); assert.strictEqual(s4.waves, s1.waves); assert.ok(L.hpMul(3, 4) > L.hpMul(3, 1)); }
+  const g = d => L.encounterFor(d, 0, 4).size / L.encounterFor(d, 0, 1).size; assert.ok(g('expert') >= g('veteran') && g('veteran') >= g('ranger') && g('ranger') >= g('cadet'));
+  assert.strictEqual(L.activeCap(1), 9); assert.strictEqual(L.activeCap(4), 18); assert.strictEqual(L.teamSizeFrom({}), 4); assert.strictEqual(L.teamSizeFrom({ nfTeam: 2 }), 2); assert.strictEqual(L.teamSizeFrom({ nfTeam: 99 }), 4);
+  assert.ok(L.bossHp(60, 'expert', 4) > L.bossHp(60, 'cadet', 1)); assert.strictEqual(L.bossHp(60, 'cadet', 1), 60);
+});
+t('config mapping: host difficulty, legacy difficulty, meter target', () => {
+  assert.strictEqual(L.diffFromConfig({ nfDifficulty: 'expert' }), 'expert'); assert.strictEqual(L.diffFromConfig({ difficulty: 'easy' }), 'cadet'); assert.strictEqual(L.diffFromConfig({ difficulty: 'hard' }), 'veteran'); assert.strictEqual(L.diffFromConfig(null), 'ranger'); assert.strictEqual(L.diffFromConfig({ nfDifficulty: 'zzz' }), 'ranger');
+  assert.strictEqual(L.meterTargetFrom({}, 'expert'), 10); assert.strictEqual(L.meterTargetFrom({ nfMeter: 8 }, 'cadet'), 8); assert.strictEqual(L.meterTargetFrom({ nfMeter: 100 }, 'cadet'), 12);
+});
+t('loadout slots equal the Evo level (L1 = 1 … L10 = 10); only owned game upgrades fit', () => {
+  for (let l = 1; l <= 10; l++) assert.strictEqual(L.slotsFor(l), l); assert.strictEqual(L.slotsFor(0), 1); assert.strictEqual(L.slotsFor(40), 10);
+  const owned = { chronorespawn: 2, aegis: 1, magnet: 1, deadline: 3 };
+  assert.deepStrictEqual(L.validateLoadout(['chronorespawn', 'aegis', 'magnet'], owned, 1), ['chronorespawn']);
+  assert.deepStrictEqual(L.validateLoadout(['chronorespawn', 'chronorespawn', 'chronorespawn', 'aegis', 'magnet'], owned, 5), ['chronorespawn', 'chronorespawn', 'aegis', 'magnet']);
+  assert.deepStrictEqual(L.validateLoadout(['deadline', 'repair', 'nonsense', 'magnet', 'magnet'], owned, 5), ['magnet']);
+});
+t('revives: only the Evo-level ability (Lv5+ once, Lv10 twice) or a ChronoRespawn; otherwise none', () => {
+  assert.strictEqual(L.reviveCharges(1), 0); assert.strictEqual(L.reviveCharges(4), 0); assert.strictEqual(L.reviveCharges(5), 1); assert.strictEqual(L.reviveCharges(9), 1); assert.strictEqual(L.reviveCharges(10), 2);
+  assert.strictEqual(L.reviveSource(1, 1), 'ability'); assert.strictEqual(L.reviveSource(0, 1), 'item'); assert.strictEqual(L.reviveSource(0, 0), null);
+});
+t('inventory use-up: passives are used when a round starts, trigger items only if they fired', () => {
+  assert.deepStrictEqual(L.consumedItems(['chronorespawn', 'aegis', 'magnet'], { chronorespawn: 0, aegis: 1 }), { aegis: 1, magnet: 1 });
+  assert.deepStrictEqual(L.consumedItems(['chronorespawn', 'chronorespawn'], { chronorespawn: 1 }), { chronorespawn: 1 });
+  assert.deepStrictEqual(L.consumedItems([], { chronorespawn: 3 }), {}); // in-run purchases never touch stock
+});
+t('catalog: every upgrade has a price; game vs live-session kinds; ChronoRespawn exists', () => {
+  const U = L.UPGRADES; assert.strictEqual(U.chronorespawn.kind, 'game'); assert.ok(Object.keys(U).filter(k => U[k].kind === 'game').length >= 9);
+  assert.strictEqual(U.deadline.kind, 'session'); assert.strictEqual(U.reassess.kind, 'session'); Object.keys(U).forEach(k => { assert.ok(U[k].price > 0 && U[k].name && U[k].desc, k); });
+});
+t('boosters: 10 s, triple / nova / star; drop odds by enemy, Star Seeker doubles, sentry always drops', () => {
+  assert.deepStrictEqual(Object.keys(L.BOOSTERS).sort(), ['nova', 'star', 'triple']); Object.values(L.BOOSTERS).forEach(b => assert.strictEqual(b.dur, 10));
+  let hits = { scout: 0, interceptor: 0 }, seek = 0; const r = L.mulberry32(11); for (let i = 0; i < 20000; i++) { if (L.boosterDrop('scout', r, false)) hits.scout++; if (L.boosterDrop('interceptor', r, false)) hits.interceptor++; if (L.boosterDrop('scout', r, true)) seek++; }
+  assert.ok(Math.abs(hits.scout / 20000 - .04) < .01 && Math.abs(hits.interceptor / 20000 - .15) < .015 && Math.abs(seek / 20000 - .08) < .012);
+  for (let i = 0; i < 50; i++) assert.ok(L.boosterDrop('sentry', r, false)); assert.strictEqual(L.boosterDrop('boss', r, false), null);
+});
 console.log('\n' + n + ' tests passed');

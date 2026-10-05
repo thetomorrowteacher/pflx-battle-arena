@@ -3687,6 +3687,82 @@ function deckBindCipher(id) {
   SFX.click();
   render();
 }
+// ═══ NEXUS FRONTIERS — market, inventory, team progress (Oct 2026) ═══
+// Authority split: the cartridge plays the round; the Arena owns prices, stock and team progress (stored in app_data, no schema change).
+//   pflx_nf_p_<playerId>    -> { v:1, owned:{upgradeId:n} }                      (per player, never shared)
+//   pflx_nf_team_<scope>    -> { v:1, cleared, clears, runs, best, byPlayer }    (shared by everyone in the same session/season)
+// Prices below MUST match NFLogic.UPGRADES in games/nexus-frontiers.html (a test compares them).
+const NF_MARKET = { chronorespawn: 25, aegis: 10, repair: 10, capacitor: 8, surgeamp: 12, magnet: 6, rapid: 10, linkext: 15, seeker: 12, deadline: 40, reassess: 40 };
+const NF_OWN_MAX = 9;
+function nfClamp(v, lo, hi) { v = Math.round(Number(v)); if (!isFinite(v)) v = lo; return Math.max(lo, Math.min(hi, v)); }
+function nfScopeFor(opts, pid) {
+  opts = opts || {};
+  if (opts.sessionId) { let sess = null; try { sess = baSessions.byId(opts.sessionId); } catch (e) {} return (sess && sess.seasonMode && sess.seasonId) ? 'season_' + sess.seasonId : 'sess_' + opts.sessionId; }
+  if (opts.gameId) return 'game_' + opts.gameId;
+  if (opts.liveId) return 'live_' + opts.liveId;
+  return 'solo_' + pid;
+}
+// Pure: merge one player's save into the shared team record. Checkpoints only move forward; a boss win closes the cycle.
+function nfMergeTeam(old, inc) {
+  const t = Object.assign({ v: 1, cleared: 0, clears: 0, runs: 0, best: 0, byPlayer: {} }, old || {});
+  t.byPlayer = Object.assign({}, t.byPlayer);
+  const c = nfClamp(inc.cleared, 0, 6);
+  if (inc.final && inc.bossDone) { t.clears = (t.clears | 0) + 1; t.cleared = 0; } else t.cleared = Math.max(t.cleared | 0, c);
+  t.best = Math.max(t.best | 0, nfClamp(inc.score, 0, 1000000));
+  if (inc.final) {
+    t.runs = (t.runs | 0) + 1;
+    const b = Object.assign({ runs: 0, best: 0 }, t.byPlayer[inc.pid] || {}); b.runs++; b.best = Math.max(b.best, nfClamp(inc.score, 0, 1000000)); t.byPlayer[inc.pid] = b;
+    const ids = Object.keys(t.byPlayer); if (ids.length > 60) { ids.sort(function (a, b2) { return t.byPlayer[a].runs - t.byPlayer[b2].runs; }); for (let i = 0; i < ids.length - 60; i++) delete t.byPlayer[ids[i]]; }
+  }
+  t.updatedAt = Date.now();
+  return t;
+}
+// Pure: remove used-up stock (only known ids, never below zero, never more than owned).
+function nfApplyConsumed(owned, consumed) {
+  const o = Object.assign({}, owned || {});
+  Object.keys(consumed || {}).forEach(function (k) { if (NF_MARKET[k] == null) return; o[k] = Math.max(0, (o[k] | 0) - nfClamp(consumed[k], 0, NF_OWN_MAX * 2)); if (!o[k]) delete o[k]; });
+  return o;
+}
+let nfChain = Promise.resolve();
+function nfSerial(fn) { nfChain = nfChain.then(fn, fn); return nfChain; }
+function nfReply(extra) {
+  if (!arenaGame.frame || !arenaGame.frame.contentWindow) return;
+  arenaGame.frame.contentWindow.postMessage(Object.assign({ type: 'pflx_arena_nf_state' }, extra), '*');
+}
+async function nfLoadState(scope, pid) {
+  const own = await supabaseLoad('pflx_nf_p_' + pid), team = await supabaseLoad('pflx_nf_team_' + scope);
+  return { owned: (own && own.owned) || {}, progress: { cleared: nfClamp(team && team.cleared, 0, 6), clears: (team && team.clears) | 0, runs: (team && team.runs) | 0, best: (team && team.best) | 0 } };
+}
+function nfHandleBuy(id) {
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const price = NF_MARKET[id];
+    if (price == null) { nfReply({ error: 'That upgrade is not for sale.' }); return; }
+    const own = (await supabaseLoad('pflx_nf_p_' + p.id)) || { v: 1, owned: {} }; own.owned = own.owned || {};
+    if ((own.owned[id] | 0) >= NF_OWN_MAX) { nfReply({ owned: own.owned, xc: p.xc || 0, error: 'You already hold the maximum of this upgrade.' }); return; }
+    if (!exoSpend(price, 'nf.' + id)) { nfReply({ owned: own.owned, xc: p.xc || 0, error: 'Not enough X-Coin (or your host\'s daily spend cap is reached).' }); return; }
+    own.owned[id] = (own.owned[id] | 0) + 1; own.v = 1; own.updatedAt = Date.now();
+    const saved = await supabaseSave('pflx_nf_p_' + p.id, own);
+    if (!saved) { try { arenaPostAward(p.id, { xc: price, reason: 'arena.nf.refund.' + id }); p.xc = (p.xc || 0) + price; } catch (e) {} own.owned[id]--; nfReply({ owned: own.owned, xc: p.xc || 0, error: 'The purchase could not be saved — your X-Coin was returned.' }); return; }
+    nfReply({ owned: own.owned, xc: p.xc || 0, note: 'Bought ' + id + '.' });
+  });
+}
+function nfHandleSave(m) {
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const scope = String(m.scope || nfScopeFor(arenaGame.opts, p.id)).replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 80) || ('solo_' + p.id);
+    const inc = { cleared: m.cleared, bossDone: !!m.bossDone, score: m.score, final: !!m.final, pid: p.id };
+    const team = nfMergeTeam(await supabaseLoad('pflx_nf_team_' + scope), inc);
+    await supabaseSave('pflx_nf_team_' + scope, team);
+    let owned = null;
+    if (m.consumed && typeof m.consumed === 'object') {
+      const own = (await supabaseLoad('pflx_nf_p_' + p.id)) || { v: 1, owned: {} };
+      own.owned = nfApplyConsumed(own.owned, m.consumed); own.updatedAt = Date.now(); await supabaseSave('pflx_nf_p_' + p.id, own); owned = own.owned;
+    }
+    nfReply(Object.assign({ progress: { cleared: team.cleared | 0, clears: team.clears | 0, runs: team.runs | 0, best: team.best | 0 }, xc: p.xc || 0 }, owned ? { owned: owned } : {}));
+  });
+}
+
 // ═══ ARENA GAME CARTRIDGE LAUNCHER (contract v0.1) ═══
 // Opens a game in a fullscreen iframe overlay, hands it the bound
 // deck via postMessage, receives the result, proposes XC through
@@ -3737,14 +3813,28 @@ window.addEventListener('message', function (e) {
   if (m.type === 'pflx_game_ready' && arenaGame.open && arenaGame.frame) {
     const d = baDecks.byId(arenaGame.deckId);
     if (!d) return;
-    arenaGame.frame.contentWindow.postMessage({
+    const frameEl = arenaGame.frame, isNf = /nexus-frontiers/.test(m.game || '') || /nexus-frontiers/.test(frameEl.getAttribute('src') || '');
+    const sendDeck = function (nf) {
+    if (!arenaGame.open || arenaGame.frame !== frameEl) return;
+    frameEl.contentWindow.postMessage({
       type: 'pflx_arena_deck',
       deck: { id: d.id, name: d.name, subject: d.subject || '', cards: d.cards.map(function (c) { return { term: c.term, definition: c.definition }; }) },
       player: { id: (state.player && state.player.id) || 'p', brand: (state.player && state.player.brand) || 'Challenger', studioId: (state.player && state.player.studioId) || '' },
       config: (arenaGame.opts && arenaGame.opts.config) || null,
       exo: (state.player ? exoGamePayloadFor(state.player.id) : null),
-      rivals: (state.player ? exoGameRivals(state.player.id) : [])
+      rivals: (state.player ? exoGameRivals(state.player.id) : []),
+      nf: nf || null
     }, '*');
+    };
+    if (isNf && state.player) {
+      const scope = nfScopeFor(arenaGame.opts, state.player.id);
+      nfLoadState(scope, state.player.id).then(function (st) { sendDeck({ scope: scope, market: true, xc: state.player.xc || 0, owned: st.owned, progress: st.progress }); })
+        .catch(function () { sendDeck({ scope: scope, market: false, xc: state.player.xc || 0, owned: {}, progress: { cleared: 0 } }); });
+    } else sendDeck(null);
+  } else if (m.type === 'pflx_arena_nf_buy' && arenaGame.open && arenaGame.frame) {
+    nfHandleBuy(String(m.id || ''));
+  } else if (m.type === 'pflx_arena_game_save' && arenaGame.open) {
+    nfHandleSave(m);
   } else if (m.type === 'pflx_arena_game_result' && arenaGame.open) {
     try {
       let best = 0;
@@ -3879,7 +3969,7 @@ function renderDecks() {
 const STUDIO_TEMPLATES = [
   { id: 'nexus-frontiers', name: 'PFLX: Nexus Frontiers', icon: '🌐', file: 'games/nexus-frontiers.html', ready: true,
     img: 'games/covers/nexus-frontiers.png',
-    desc: 'Top-down Archive defense: clear sealed sections, answer LINK quizzes to charge your Evo, break materials for a little X-Coin, then face the turn-based Elite boss. Server 01 playable; solo.' },
+    desc: 'Top-down Archive defense for a team of up to 4: 60-second LINK sprints fill your ammo meter, equip upgrades by Evo level, grab 10-second boosters, break materials for a little X-Coin, then face the turn-based Elite boss. Host sets difficulty and team size; team progress saves across the season. Server 01 playable.' },
   { id: 'exo-clash', name: 'EXO Clash', icon: '🤖', file: 'games/exo-clash.html', ready: true,
     img: 'games/covers/exo-clash.png',
     desc: 'The EXO showcase brawler: your EXO and three rival EXOs on one platform — correct answers land strikes, gear stats are live (max 12% swing), OVERDRIVE hits everyone.' },
@@ -4445,6 +4535,10 @@ function studioEditGame(id) {
     set('stSound', (g.config && g.config.sound === false) ? 'off' : 'on');
     set('stPowerups', (g.config && g.config.powerups === false) ? 'off' : 'on');
     set('stMusic', (g.config && g.config.music === false) ? 'off' : 'on');
+    set('stNfDiff', (g.config && g.config.nfDifficulty) || 'ranger');
+    set('stNfTeam', (g.config && g.config.nfTeam) || 4);
+    set('stNfMeter', (g.config && g.config.nfMeter) || 0);
+    set('stNfShop', (g.config && g.config.nfShop === false) ? 'off' : 'on');
     studioPreview();
   }, 40);
 }
@@ -4471,13 +4565,20 @@ function studioReadConfig() {
     sound: val('stSound', 'on') !== 'off',
     powerups: val('stPowerups', 'on') !== 'off',
     music: val('stMusic', 'on') !== 'off',
+    nfDifficulty: studioSelTemplate === 'nexus-frontiers' ? (['cadet', 'ranger', 'veteran', 'expert'].indexOf(val('stNfDiff', 'ranger')) !== -1 ? val('stNfDiff', 'ranger') : 'ranger') : undefined,
+    nfTeam: studioSelTemplate === 'nexus-frontiers' ? Math.max(1, Math.min(4, parseInt(val('stNfTeam', '4'), 10) || 4)) : undefined,
+    nfMeter: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(12, parseInt(val('stNfMeter', '0'), 10) || 0)) : undefined,
+    nfShop: studioSelTemplate === 'nexus-frontiers' ? val('stNfShop', 'on') !== 'off' : undefined,
     rivalName: (val('stRival', '') || '').trim() || 'RIVAL AI',
     roundTime: Math.max(8, Math.min(30, parseInt(val('stTime', '15'), 10) || 15))
   };
 }
 function studioConfigOf(c) {
-  return { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
+  const o = { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
            ordered: c.ordered, sound: c.sound, music: c.music, powerups: c.powerups, rivalName: c.rivalName, roundTime: c.roundTime };
+  // Nexus Frontiers host pre-launch settings (saved with the game / session, so they carry through the season)
+  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfTeam = c.nfTeam || 4; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; }
+  return o;
 }
 
 function studioTest() {
@@ -4740,6 +4841,23 @@ function renderStudio() {
           <select id="stPowerups" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="on" selected>On — streaks grant 50/50, Heal, 2× (duel)</option><option value="off">Off</option>
           </select></div>
+        ${studioSelTemplate === 'nexus-frontiers' ? `
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">NEXUS DIFFICULTY</div>
+          <select id="stNfDiff" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            <option value="cadet">Cadet — learning pace</option><option value="ranger" selected>Ranger — standard</option><option value="veteran">Veteran — hard</option><option value="expert">Expert — starts at stage-5 waves</option>
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">TEAM SIZE (SCALES ARCHIVES)</div>
+          <select id="stNfTeam" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            <option value="1">1 player</option><option value="2">2 players</option><option value="3">3 players</option><option value="4" selected>4 players (recommended)</option>
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">AMMO METER FULL AT (CORRECT ANSWERS IN 60 s)</div>
+          <select id="stNfMeter" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            <option value="0" selected>Auto — set by difficulty</option>${[4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (n) { return '<option value="' + n + '">' + n + ' answers</option>'; }).join('')}
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">IN-ROUND FIELD SHOP</div>
+          <select id="stNfShop" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
+            <option value="on" selected>On — spend run X-Coin on upgrades</option><option value="off">Off</option>
+          </select></div>` : ''}
       </div>
       <div style="margin-bottom:12px"><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">DESCRIPTION (SHOWN ON THE SHELF)</div>
         <textarea id="stDesc" rows="2" maxlength="140" placeholder="Tell players what this game is about…" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 12px;font-size:0.65rem;color:#e6f8ff;outline:none;resize:vertical"></textarea></div>
