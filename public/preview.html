@@ -3692,7 +3692,8 @@ function deckBindCipher(id) {
 //   pflx_nf_p_<playerId>    -> { v:1, owned:{upgradeId:n} }                      (per player, never shared)
 //   pflx_nf_team_<scope>    -> { v:1, cleared, clears, runs, best, byPlayer }    (shared by everyone in the same session/season)
 // Prices below MUST match NFLogic.UPGRADES in games/nexus-frontiers.html (a test compares them).
-const NF_MARKET = { chronorespawn: 25, aegis: 10, repair: 10, capacitor: 8, surgeamp: 12, magnet: 6, rapid: 10, linkext: 15, seeker: 12, deadline: 40, reassess: 40 };
+// 9 game upgrades x 3 Mk levels (key, key#2, key#3). Session Upgrades (Deadline Extension, Checkpoint Reassess) are sold in the X-Live Marketplace only.
+const NF_MARKET = { chronorespawn: 50, 'chronorespawn#2': 90, 'chronorespawn#3': 150, aegis: 20, 'aegis#2': 40, 'aegis#3': 70, repair: 20, 'repair#2': 40, 'repair#3': 70, capacitor: 15, 'capacitor#2': 30, 'capacitor#3': 50, surgeamp: 25, 'surgeamp#2': 50, 'surgeamp#3': 85, magnet: 10, 'magnet#2': 25, 'magnet#3': 45, rapid: 20, 'rapid#2': 40, 'rapid#3': 70, linkext: 30, 'linkext#2': 55, 'linkext#3': 90, seeker: 25, 'seeker#2': 45, 'seeker#3': 75 };
 const NF_OWN_MAX = 9;
 function nfClamp(v, lo, hi) { v = Math.round(Number(v)); if (!isFinite(v)) v = lo; return Math.max(lo, Math.min(hi, v)); }
 function nfScopeFor(opts, pid) {
@@ -3731,12 +3732,12 @@ function nfReply(extra) {
 }
 async function nfLoadState(scope, pid) {
   const own = await supabaseLoad('pflx_nf_p_' + pid), team = await supabaseLoad('pflx_nf_team_' + scope);
-  return { owned: (own && own.owned) || {}, progress: { cleared: nfClamp(team && team.cleared, 0, 6), clears: (team && team.clears) | 0, runs: (team && team.runs) | 0, best: (team && team.best) | 0 } };
+  return { owned: (own && own.owned) || {}, orbs: (own && own.orbs) | 0, catalog: await nfLoadCatalog(), progress: { cleared: nfClamp(team && team.cleared, 0, 6), clears: (team && team.clears) | 0, runs: (team && team.runs) | 0, best: (team && team.best) | 0 } };
 }
 function nfHandleBuy(id) {
   return nfSerial(async function () {
     const p = state.player; if (!p) return;
-    const price = NF_MARKET[id];
+    const price = NF_MARKET[id] == null ? null : nfPriceOf(id, await nfLoadCatalog());
     if (price == null) { nfReply({ error: 'That upgrade is not for sale.' }); return; }
     const own = (await supabaseLoad('pflx_nf_p_' + p.id)) || { v: 1, owned: {} }; own.owned = own.owned || {};
     if ((own.owned[id] | 0) >= NF_OWN_MAX) { nfReply({ owned: own.owned, xc: p.xc || 0, error: 'You already hold the maximum of this upgrade.' }); return; }
@@ -3744,7 +3745,7 @@ function nfHandleBuy(id) {
     own.owned[id] = (own.owned[id] | 0) + 1; own.v = 1; own.updatedAt = Date.now();
     const saved = await supabaseSave('pflx_nf_p_' + p.id, own);
     if (!saved) { try { arenaPostAward(p.id, { xc: price, reason: 'arena.nf.refund.' + id }); p.xc = (p.xc || 0) + price; } catch (e) {} own.owned[id]--; nfReply({ owned: own.owned, xc: p.xc || 0, error: 'The purchase could not be saved — your X-Coin was returned.' }); return; }
-    nfReply({ owned: own.owned, xc: p.xc || 0, note: 'Bought ' + id + '.' });
+    nfReply({ owned: own.owned, orbs: own.orbs | 0, xc: p.xc || 0, note: 'Bought ' + id + '.' });
   });
 }
 function nfHandleSave(m) {
@@ -3754,13 +3755,260 @@ function nfHandleSave(m) {
     const inc = { cleared: m.cleared, bossDone: !!m.bossDone, score: m.score, final: !!m.final, pid: p.id };
     const team = nfMergeTeam(await supabaseLoad('pflx_nf_team_' + scope), inc);
     await supabaseSave('pflx_nf_team_' + scope, team);
-    let owned = null;
+    let owned = null, orbsNow = 0;
     if (m.consumed && typeof m.consumed === 'object') {
       const own = (await supabaseLoad('pflx_nf_p_' + p.id)) || { v: 1, owned: {} };
-      own.owned = nfApplyConsumed(own.owned, m.consumed); own.updatedAt = Date.now(); await supabaseSave('pflx_nf_p_' + p.id, own); owned = own.owned;
+      own.owned = nfApplyConsumed(own.owned, m.consumed); if (m.final) own.orbs = Math.min(99999, (own.orbs | 0) + nfClamp(m.orbs, 0, 300)); own.updatedAt = Date.now(); await supabaseSave('pflx_nf_p_' + p.id, own); owned = own.owned; orbsNow = own.orbs | 0;
     }
-    nfReply(Object.assign({ progress: { cleared: team.cleared | 0, clears: team.clears | 0, runs: team.runs | 0, best: team.best | 0 }, xc: p.xc || 0 }, owned ? { owned: owned } : {}));
+    nfReply(Object.assign({ progress: { cleared: team.cleared | 0, clears: team.clears | 0, runs: team.runs | 0, best: team.best | 0 }, xc: p.xc || 0 }, owned ? { owned: owned, orbs: orbsNow } : {}));
   });
+}
+
+// ── Round economy (Oct 2026): wager hold, orb evolution, settlement, completion badges, Champion / Beacon windows ──
+// The cartridge never moves X-Coin itself. Every real movement happens here, through the Platform award path:
+//   wager  -> X-Coin leaves the wallet at READY (held in pflx_nf_p_<pid>.stake) and is refunded on UNREADY / a stale hold
+//   arm    -> the hold is bound to a round id; the squad is registered in its launch window (pflx_nf_sess_<session>)
+//   settle -> once per round id: goals met = the team bank is paid to every member; missed = the wager stays lost.
+//             Completion badges are earned either way (>= 2 min played). Champion / Beacon come from the launch window.
+// Constants below MUST agree with NFLogic in games/nexus-frontiers.html (a test compares them).
+const NF_ORB_COST = [8, 16];
+const NF_WAGER_PER_LEVEL = 50, NF_WAGER_STEP = 5, NF_MIN_ROUND_SEC = 120, NF_BANK_CAP_DEFAULT = 2000, NF_STALE_MS = 30 * 60000, NF_WINDOW_MS = 120000, NF_WINDOW_WAIT_MS = 15 * 60000;
+const NF_BADGES = {
+  participant: { id: 'positive_participant', name: 'Positive Participant', xc: 100, category: 'primary' },
+  collaborator: { id: 'master_collaborator', name: 'Master Collaborator', xc: 100, category: 'primary' },
+  resilient: { id: 'resilient_learner', name: 'Resilient Learner', xc: 100, category: 'primary' },
+  champion: { id: 'arena_champion', name: 'Battle Arena Champion', xc: 300, category: 'primary' },
+  beacon: { id: 'beacon_collaboration', name: 'Beacon of Collaboration', xc: 500, category: 'premium' }
+};
+const NF_COMPLETION = ['participant', 'collaborator', 'resilient'];
+const NF_STATS = ['archives', 'correct', 'accuracy', 'keys', 'bank', 'revives', 'fastest'];
+function nfTierOf(key) { const m = /^([a-z]+)(?:#([23]))?$/.exec(String(key)); return (m && NF_MARKET[key] != null) ? { id: m[1], tier: m[2] ? +m[2] : 1 } : null; }
+function nfNextKey(key) { const t = nfTierOf(key); return (t && t.tier < 3) ? t.id + '#' + (t.tier + 1) : null; }
+function nfWagerCap(level) { return NF_WAGER_PER_LEVEL * nfClamp(level, 1, 10); }
+function nfClampWager(v, level) { v = Math.floor(Math.max(0, Number(v) || 0) / NF_WAGER_STEP) * NF_WAGER_STEP; return Math.min(v, nfWagerCap(level)); }
+function nfPlayerLevel(pid) { try { const e = exoGamePayloadFor(pid); return nfClamp(e && e.level, 1, 10); } catch (e) { return 1; } }
+function nfBankCap(cfg) { return nfClamp(cfg && cfg.nfBankCap == null ? NF_BANK_CAP_DEFAULT : cfg.nfBankCap, 100, 5000); }
+function nfSessCfg(scope) { try { const s = baSessions.byId(scope); return (s && s.config) || {}; } catch (e) { return {}; } }
+// Host catalog: name / description / picture / price per upgrade key. Prices are multiples of 5, never below 10.
+function nfValidPrice(p) { p = Math.round(Number(p)); return isFinite(p) && p >= 10 && p <= 2000 && p % 5 === 0 ? p : 0; }
+function nfCleanCatalog(raw) {
+  const out = {}; Object.keys(raw || {}).forEach(function (k) {
+    if (NF_MARKET[k] == null) return; const c = raw[k] || {}, o = {};
+    if (typeof c.name === 'string' && c.name.trim()) o.name = c.name.trim().slice(0, 40);
+    if (typeof c.desc === 'string' && c.desc.trim()) o.desc = c.desc.trim().slice(0, 160);
+    if (typeof c.image === 'string' && /^(https:\/\/|data:image\/)/.test(c.image) && c.image.length < 400000) o.image = c.image;
+    const pr = nfValidPrice(c.price); if (pr) o.price = pr;
+    if (Object.keys(o).length) out[k] = o;
+  }); return out;
+}
+function nfPriceOf(key, cat) { return (cat && cat[key] && cat[key].price) || NF_MARKET[key]; }
+async function nfLoadCatalog() { try { const d = await supabaseLoad('pflx_nf_catalog'); return nfCleanCatalog(d && d.items); } catch (e) { return {}; } }
+function nfCredit(p, amt, reason) { if (!(amt > 0)) return; arenaPostAward(p.id, { xc: amt, reason: reason, noMultiplier: true }); p.xc = (p.xc || 0) + amt; }
+function nfDebit(p, amt, reason) { if (!(amt > 0) || (p.xc || 0) < amt) return false; arenaPostAward(p.id, { xc: -amt, reason: reason, noMultiplier: true }); p.xc = Math.max(0, (p.xc || 0) - amt); return true; }
+function nfBadgeObj(key) {
+  const b = NF_BADGES[key];
+  try { const cat = (typeof PFLX_BADGES !== 'undefined' && Array.isArray(PFLX_BADGES)) ? PFLX_BADGES : [], hit = cat.find(function (x) { return x && (x.id === b.id || String(x.name || '').toLowerCase() === b.name.toLowerCase()); });
+    if (hit) return { id: hit.id, name: hit.name, category: hit.type || b.category, xcValue: typeof hit.xc === 'number' ? hit.xc : b.xc }; } catch (e) {}
+  return { id: b.id, name: b.name, category: b.category, xcValue: b.xc };
+}
+function nfAwardBadge(p, key, reason) { const bo = nfBadgeObj(key); arenaPostAward(p.id, { xc: 0, reason: reason, badge: bo, noMultiplier: true }); return bo; }
+function nfCleanId(v, n) { return String(v == null ? '' : v).replace(/[^A-Za-z0-9_\-]/g, '').slice(0, n || 60); }
+
+// Pure: launch windows. Squads launched within two minutes of each other compete for the same Champion / Beacon.
+function nfWindowFor(doc, startedAt, teamKey, roundId) {
+  doc.windows = doc.windows || [];
+  let w = doc.windows.find(function (x) { return x.status === 'open' && Math.abs(x.first - startedAt) <= NF_WINDOW_MS && (!x.teams[teamKey] || x.teams[teamKey].roundId === roundId); });
+  if (!w) { w = { id: 'w' + startedAt.toString(36), first: startedAt, status: 'open', teams: {}, claims: {} }; doc.windows.push(w); if (doc.windows.length > 12) doc.windows.shift(); }
+  return w;
+}
+function nfPickWinner(results) { // results: { teamKey: { score, endedAt } } -> highest score, then earliest finish, then key
+  const keys = Object.keys(results || {}); if (!keys.length) return { winner: null, ranking: [] };
+  keys.sort(function (a, b) { const x = results[a], y = results[b]; return (y.score - x.score) || ((x.endedAt || 0) - (y.endedAt || 0)) || (a < b ? -1 : 1); });
+  return { winner: keys[0], ranking: keys };
+}
+// Pure + idempotent: close every window whose squads have all finished (or timed out) and decide Champion / Beacon.
+function nfEvalWindows(doc, minTeams, now) {
+  doc.rec = doc.rec || {}; let changed = false;
+  (doc.windows || []).forEach(function (w) {
+    if (w.status !== 'open') return;
+    const keys = Object.keys(w.teams), done = keys.length > 0 && keys.every(function (k) { return !!w.teams[k].res; });
+    if (!done && now < w.first + NF_WINDOW_WAIT_MS) return;
+    w.status = 'done'; changed = true;
+    const results = {}; keys.forEach(function (k) { if (w.teams[k].res) results[k] = { score: w.teams[k].res.cs | 0, endedAt: w.teams[k].res.at | 0 }; });
+    const pick = nfPickWinner(results); w.ranking = pick.ranking; w.winner = null;
+    if (pick.winner && keys.length >= Math.max(1, minTeams | 0)) { // squads that LAUNCHED count, even one that never reported (it forfeits)
+      w.winner = pick.winner; const win = w.teams[pick.winner], prev = (doc.rec[pick.winner] && doc.rec[pick.winner].best) | 0, cs = win.res.cs | 0;
+      (win.members || []).forEach(function (id) { w.claims[id] = { champion: 1, beacon: cs > 0 && cs > prev ? 1 : 0 }; });
+      w.beacon = cs > 0 && cs > prev;
+    }
+    Object.keys(results).forEach(function (k) { const r = doc.rec[k] = Object.assign({ name: w.teams[k].name, best: 0, runs: 0 }, doc.rec[k] || {}); r.best = Math.max(r.best | 0, results[k].score); r.runs = (r.runs | 0) + 1; r.name = w.teams[k].name; });
+  });
+  doc.windows = (doc.windows || []).filter(function (w) { return now - w.first < 24 * 3600000; });
+  return changed;
+}
+// Pure: fold one squad's team stats into the session-best table (fastest clear is lower-is-better).
+function nfMergeCats(doc, teamKey, teamName, ts) {
+  doc.cats = doc.cats || {};
+  NF_STATS.forEach(function (id) {
+    const v = nfClamp(ts && ts[id], 0, 1000000); if (v <= 0) return; const cur = doc.cats[id];
+    if (!cur || (id === 'fastest' ? v < cur.value : v > cur.value)) doc.cats[id] = { value: v, team: teamKey, name: String(teamName || teamKey).slice(0, 30) };
+  });
+}
+function nfCatsFor(doc, teamKey) { const out = {}; Object.keys((doc && doc.cats) || {}).forEach(function (id) { const c = doc.cats[id]; out[id] = { value: c.value, name: c.name, mine: !!teamKey && c.team === teamKey }; }); return out; }
+// Shared session doc with read-after-write verification: concurrent squad members merge instead of overwriting each other.
+async function nfSessUpdate(scope, fn) {
+  const key = 'pflx_nf_sess_' + scope;
+  for (let i = 0; i < 4; i++) {
+    const doc = (await supabaseLoad(key)) || { v: 1, windows: [], rec: {}, cats: {} }; doc.windows = doc.windows || []; doc.rec = doc.rec || {}; doc.cats = doc.cats || {};
+    const before = JSON.stringify(doc); fn(doc); if (JSON.stringify(doc) === before) return doc;
+    doc.nonce = Math.random().toString(36).slice(2) + Date.now().toString(36); doc.updatedAt = Date.now();
+    if (await supabaseSave(key, doc)) { const chk = await supabaseLoad(key); if (chk && chk.nonce === doc.nonce) return doc; }
+  }
+  return null;
+}
+const nfOwnKey = function (pid) { return 'pflx_nf_p_' + pid; };
+async function nfLoadOwn(pid) { const o = (await supabaseLoad(nfOwnKey(pid))) || { v: 1, owned: {} }; o.owned = o.owned || {}; return o; }
+// A hold nobody armed (closed tab, crash) is returned; an armed round that never settled for 30 min is returned too.
+function nfReleaseStale() {
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const own = await nfLoadOwn(p.id), st = own.stake; if (!st) return;
+    if (st.round && Date.now() - (st.at || 0) < NF_STALE_MS) return;
+    const amt = st.amount | 0; own.stake = null; own.updatedAt = Date.now();
+    if (await supabaseSave(nfOwnKey(p.id), own)) { if (amt > 0) nfCredit(p, amt, 'exo.nf.wager.refund'); }
+  });
+}
+function nfHandleWager(m) {
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const own = await nfLoadOwn(p.id), old = own.stake || null, have = old ? old.amount | 0 : 0;
+    const reply = function (e) { nfReply(Object.assign({ stakeReply: true, stake: own.stake ? own.stake.amount | 0 : 0, xc: p.xc || 0 }, e || {})); };
+    if (old && old.round && Date.now() - (old.at || 0) < NF_STALE_MS) { reply({ error: 'Your wager is locked into a round in progress.' }); return; }
+    const want = m.cancel ? 0 : nfClampWager(m.amount, nfPlayerLevel(p.id)), delta = want - have;
+    if (delta > 0 && !nfDebit(p, delta, 'exo.nf.wager')) { reply({ error: 'Not enough X-Coin for that wager.' }); return; }
+    if (delta < 0) nfCredit(p, -delta, 'exo.nf.wager.refund');
+    const prev = own.stake; own.stake = want > 0 ? { amount: want, round: null, at: Date.now(), scope: nfCleanId(m.scope, 80) } : null; own.v = 1; own.updatedAt = Date.now();
+    if (!(await supabaseSave(nfOwnKey(p.id), own))) { if (delta > 0) nfCredit(p, delta, 'exo.nf.wager.refund'); else if (delta < 0) nfDebit(p, -delta, 'exo.nf.wager'); own.stake = prev; reply({ error: 'The wager could not be saved — nothing was charged.' }); return; }
+    reply();
+  });
+}
+function nfHandleEvolve(key) {
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const t = nfTierOf(key), to = nfNextKey(key); if (!t || !to) { nfReply({ error: 'That upgrade cannot evolve further.' }); return; }
+    const own = await nfLoadOwn(p.id), cost = NF_ORB_COST[t.tier - 1];
+    if ((own.owned[key] | 0) < 1) { nfReply({ owned: own.owned, orbs: own.orbs | 0, xc: p.xc || 0, error: 'You do not hold that upgrade.' }); return; }
+    if ((own.orbs | 0) < cost) { nfReply({ owned: own.owned, orbs: own.orbs | 0, xc: p.xc || 0, error: 'Evolving needs ' + cost + ' orbs.' }); return; }
+    if ((own.owned[to] | 0) >= NF_OWN_MAX) { nfReply({ owned: own.owned, orbs: own.orbs | 0, xc: p.xc || 0, error: 'You already hold the maximum of the evolved upgrade.' }); return; }
+    const snap = JSON.stringify({ o: own.owned, b: own.orbs });
+    own.owned[key]--; if (!own.owned[key]) delete own.owned[key]; own.owned[to] = (own.owned[to] | 0) + 1; own.orbs = (own.orbs | 0) - cost; own.updatedAt = Date.now();
+    if (!(await supabaseSave(nfOwnKey(p.id), own))) { const s = JSON.parse(snap); nfReply({ owned: s.o, orbs: s.b, xc: p.xc || 0, error: 'The evolution could not be saved — nothing was spent.' }); return; }
+    nfReply({ owned: own.owned, orbs: own.orbs, xc: p.xc || 0, note: 'Evolved ' + key + ' → ' + to + '.' });
+  });
+}
+function nfHandleArm(m) {
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const roundId = nfCleanId(m.roundId, 40); if (!roundId) return;
+    const own = await nfLoadOwn(p.id), st = own.stake, teamKey = nfCleanId(m.team, 60) || 'solo', scope = nfCleanId(m.scope, 80);
+    if (st && st.round === roundId) return; // already armed (repeat message)
+    own.stake = { amount: st && !st.round ? st.amount | 0 : 0, round: roundId, at: Date.now(), scope: scope, team: teamKey }; own.updatedAt = Date.now();
+    if (!(await supabaseSave(nfOwnKey(p.id), own))) return;
+    if (!scope || teamKey === 'solo') return;
+    const members = (Array.isArray(m.members) ? m.members : []).map(function (x) { return nfCleanId(x && x.id, 60); }).filter(Boolean).slice(0, 4);
+    if (members.indexOf(p.id) < 0) return;
+    const startedAt = Math.abs(Date.now() - (Number(m.startedAt) || 0)) < 5 * 60000 ? Number(m.startedAt) : Date.now(), name = String(m.teamName || teamKey).replace(/[<>]/g, '').slice(0, 30);
+    await nfSessUpdate(scope, function (doc) { const w = nfWindowFor(doc, startedAt, teamKey, roundId); const cur = w.teams[teamKey]; if (!cur) w.teams[teamKey] = { name: name, members: members, roundId: roundId, startedAt: startedAt, res: null }; });
+  });
+}
+function nfHandleSettle(m) {
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const roundId = nfCleanId(m.roundId, 40); if (!roundId) return;
+    const own = await nfLoadOwn(p.id); own.settled = Array.isArray(own.settled) ? own.settled : [];
+    if (own.settled.indexOf(roundId) >= 0) { nfReply({ xc: p.xc || 0, stakeReply: true, stake: 0 }); return; } // idempotent: a repeat settle pays nothing
+    const st = own.stake, armed = !!st && st.round === roundId, scope = nfCleanId(m.scope, 80), teamKey = nfCleanId(m.team, 60) || 'solo';
+    const cfg = (arenaGame.opts && arenaGame.opts.config) || {}, goalMet = armed && m.goalMet === true;
+    const pay = goalMet ? nfClamp(m.payout, 0, nfBankCap(cfg)) : 0;
+    const badges = (armed && (Number(m.t) || 0) >= NF_MIN_ROUND_SEC) ? NF_COMPLETION.filter(function (k) { return Array.isArray(m.badges) && m.badges.indexOf(k) >= 0; }) : [];
+    own.stake = null; own.settled.push(roundId); if (own.settled.length > 40) own.settled = own.settled.slice(-40); own.updatedAt = Date.now();
+    if (!(await supabaseSave(nfOwnKey(p.id), own))) { nfReply({ error: 'The round could not be settled right now — it will be retried.' }); return; } // saved first, paid after: a failure can never double-pay
+    if (pay > 0) arenaPostAward(p.id, { xc: pay, reason: 'arena.nf.payout.' + roundId, noMultiplier: true }), p.xc = (p.xc || 0) + pay;
+    const earned = badges.map(function (k) { return nfAwardBadge(p, k, 'arena.nf.badge.' + k).name; });
+    let cats = null;
+    if (armed && scope && teamKey !== 'solo') {
+      const ts = m.ts && typeof m.ts === 'object' ? m.ts : {}, cs = nfClamp(m.cs, 0, 1000000), minTeams = nfClamp(nfSessCfg(scope).nfAwardMinTeams == null ? 2 : nfSessCfg(scope).nfAwardMinTeams, 1, 4);
+      const doc = await nfSessUpdate(scope, function (d) {
+        d.windows.forEach(function (w) { const t = w.teams[teamKey]; if (t && t.roundId === st.round && !t.res) { t.res = { cs: cs, goalMet: !!goalMet, at: Date.now(), t: nfClamp(m.t, 0, 7200) }; nfMergeCats(d, teamKey, t.name, ts); } });
+        nfEvalWindows(d, minTeams, Date.now());
+      });
+      if (doc) cats = nfCatsFor(doc, teamKey);
+    }
+    nfReply(Object.assign({ xc: p.xc || 0, stakeReply: true, stake: 0, note: pay > 0 ? 'Team bank paid: ' + pay + ' XC.' : (armed ? 'Goals missed — the wager is lost.' : '') }, cats ? { sessStats: { cats: cats } } : {}));
+  });
+}
+let nfLastCatsSent = '';
+function nfHandleClaim(m) { // polled by the lobby / end screen: closes finished windows and pays Champion / Beacon to this player
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const scope = nfCleanId(m.scope, 80); if (!scope) return;
+    const minTeams = nfClamp(nfSessCfg(scope).nfAwardMinTeams == null ? 2 : nfSessCfg(scope).nfAwardMinTeams, 1, 4);
+    let toPay = [];
+    const doc = await nfSessUpdate(scope, function (d) {
+      toPay = []; nfEvalWindows(d, minTeams, Date.now());
+      d.windows.forEach(function (w) { const c = w.claims && w.claims[p.id]; if (!c) return; ['champion', 'beacon'].forEach(function (k) { if (c[k] === 1) { c[k] = 2; toPay.push(k); } }); });
+    });
+    if (!doc) return;
+    const award = toPay.map(function (k) { const bo = nfAwardBadge(p, k, 'arena.nf.' + k); return { name: bo.name, xc: bo.xcValue | 0 }; });
+    const teamKey = nfCleanId(m.team, 60), cats = nfCatsFor(doc, teamKey), sig = JSON.stringify(cats);
+    if (award.length || sig !== nfLastCatsSent) { nfLastCatsSent = sig; nfReply({ xc: p.xc || 0, award: award, sessStats: { cats: cats } }); }
+  });
+}
+
+// ── Host: game upgrade catalog (name, description, picture, price per upgrade). Session Upgrades live in the X-Live Marketplace, not here. ──
+const NF_META = { chronorespawn: ['ChronoRespawn', '⏳'], aegis: ['Aegis Shell', '🛡'], repair: ['Repair Pack', '🔧'], capacitor: ['Capacitor', '🔋'], surgeamp: ['Surge Amp', '💥'], magnet: ['Coin Magnet', '🧲'], rapid: ['Rapid Spark', '⚡'], linkext: ['Link Extender', '⏱'], seeker: ['Star Seeker', '✨'] };
+let nfCatDraft = null;
+function nfCatEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function nfDefaultName(key) { const t = nfTierOf(key), m = NF_META[t.id]; return m[0] + (t.tier > 1 ? ' Mk ' + ['I', 'II', 'III'][t.tier - 1] : ''); }
+async function nfCatalogToggle() {
+  const box = document.getElementById('nfCatBox'); if (!box || !isHostUser(state.player)) return;
+  if (box.dataset.open === '1') { box.style.display = 'none'; box.dataset.open = '0'; return; }
+  nfCatDraft = JSON.parse(JSON.stringify(await nfLoadCatalog())); box.dataset.open = '1'; box.style.display = 'block'; nfCatRender();
+}
+function nfCatEdit(key, field, val) { nfCatDraft = nfCatDraft || {}; nfCatDraft[key] = nfCatDraft[key] || {}; nfCatDraft[key][field] = val; }
+function nfCatClearImage(key) { if (nfCatDraft && nfCatDraft[key]) { delete nfCatDraft[key].image; nfCatRender(); } }
+function nfCatImage(key, input) {
+  const f = input && input.files && input.files[0]; if (!f || !/^image\//.test(f.type)) return;
+  const fr = new FileReader(); fr.onload = function () {
+    const img = new Image(); img.onload = function () {
+      const c = document.createElement('canvas'), N = 96; c.width = c.height = N; const x = c.getContext('2d'), sc = Math.max(N / img.width, N / img.height);
+      x.drawImage(img, (N - img.width * sc) / 2, (N - img.height * sc) / 2, img.width * sc, img.height * sc);
+      let d = c.toDataURL('image/png'); if (d.length > 60000) d = c.toDataURL('image/jpeg', 0.8);
+      nfCatEdit(key, 'image', d); nfCatRender();
+    }; img.src = fr.result;
+  }; fr.readAsDataURL(f);
+}
+function nfCatRender() {
+  const box = document.getElementById('nfCatBox'); if (!box || !nfCatDraft) return;
+  const inp = 'background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.3);border-radius:5px;padding:5px 7px;font-size:0.58rem;color:#e6f8ff;box-sizing:border-box';
+  const rows = Object.keys(NF_MARKET).map(function (k) {
+    const t = nfTierOf(k), c = nfCatDraft[k] || {}, meta = NF_META[t.id];
+    const thumb = c.image ? '<img src="' + nfCatEsc(c.image) + '" style="width:40px;height:40px;border-radius:6px;object-fit:cover">' : '<div style="width:40px;height:40px;border-radius:6px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:1.2rem">' + meta[1] + '</div>';
+    return '<div style="display:grid;grid-template-columns:44px 1.1fr 1.6fr 74px auto;gap:6px;align-items:center;margin-bottom:5px">' + thumb +
+      '<input style="' + inp + '" maxlength="40" placeholder="' + nfCatEsc(nfDefaultName(k)) + '" value="' + nfCatEsc(c.name || '') + '" oninput="nfCatEdit(\'' + k + '\',\'name\',this.value)">' +
+      '<input style="' + inp + '" maxlength="160" placeholder="Default description" value="' + nfCatEsc(c.desc || '') + '" oninput="nfCatEdit(\'' + k + '\',\'desc\',this.value)">' +
+      '<input style="' + inp + '" type="number" min="10" max="2000" step="5" placeholder="' + NF_MARKET[k] + '" value="' + (c.price || '') + '" oninput="nfCatEdit(\'' + k + '\',\'price\',this.value)" title="Multiples of 5, at least 10 XC">' +
+      '<span style="display:flex;gap:4px"><label class="btn-arena" style="font-size:0.5rem;padding:5px 8px;cursor:pointer">PICTURE<input type="file" accept="image/*" style="display:none" onchange="nfCatImage(\'' + k + '\',this)"></label>' + (c.image ? '<button class="btn-arena" style="font-size:0.5rem;padding:5px 8px" onclick="nfCatClearImage(\'' + k + '\')">✕</button>' : '') + '</span></div>';
+  }).join('');
+  box.innerHTML = '<div style="font-size:0.52rem;color:#9fb3d9;margin-bottom:8px">Leave a field empty to keep the default. Prices are multiples of 5 and never below 10 XC. Pictures are cropped to a small square. Higher Mk levels are reached by spending orbs on an owned upgrade in the Marketplace.</div>' + rows +
+    '<div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="btn-arena btn-arena-gold" style="font-size:0.58rem;padding:8px 18px" onclick="nfCatalogSave()">💾 SAVE CATALOG</button><span id="nfCatMsg" style="font-size:0.55rem;color:#7dffb4"></span></div>';
+}
+async function nfCatalogSave() {
+  if (!isHostUser(state.player)) return; const msg = document.getElementById('nfCatMsg');
+  const clean = nfCleanCatalog(nfCatDraft), bad = Object.keys(nfCatDraft || {}).filter(function (k) { const v = nfCatDraft[k] && nfCatDraft[k].price; return v !== undefined && v !== '' && v !== null && !nfValidPrice(v); });
+  if (bad.length) { if (msg) { msg.style.color = '#ff7b8e'; msg.textContent = 'Prices must be multiples of 5, from 10 to 2000 XC: ' + bad.map(nfDefaultName).join(', '); } return; }
+  const ok = await supabaseSave('pflx_nf_catalog', { v: 1, items: clean, updatedAt: Date.now() });
+  if (msg) { msg.style.color = ok ? '#7dffb4' : '#ff7b8e'; msg.textContent = ok ? 'Saved — players see it next time they open Nexus Frontiers.' : 'Could not save. Try again.'; }
 }
 
 // ── Co-op (v0.3): squads of 2-4 from different studios, launched from an Arena (X-Live) session; hosts observe from above ──
@@ -3785,7 +4033,7 @@ function nfHandleScope(scope) { // a squad was formed: load THAT squad's checkpo
     const p = state.player; if (!p) return;
     scope = String(scope || '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 80); if (!scope) return;
     const st = await nfLoadState(scope, p.id);
-    nfReply({ owned: st.owned, progress: st.progress, xc: p.xc || 0 });
+    nfReply({ owned: st.owned, orbs: st.orbs, progress: st.progress, xc: p.xc || 0 });
   });
 }
 function nfSessionTagsHtml(sess) {
@@ -3863,12 +4111,22 @@ window.addEventListener('message', function (e) {
       const scope = nfScopeFor(arenaGame.opts, state.player.id), o = arenaGame.opts || {};
       const sessCo = (o.coop && o.sessionId) ? baSessions.byId(o.sessionId) : null;
       const coopP = sessCo ? Promise.resolve(supabaseLoad('pflx_lite_config')).catch(function () { return null; }).then(function (lite) { return nfCoopContext(o, sessCo, state.player, lite); }) : Promise.resolve(null);
-      const stP = nfLoadState(scope, state.player.id).then(function (st) { return { scope: scope, market: true, xc: state.player.xc || 0, owned: st.owned, progress: st.progress }; })
+      const stP = nfReleaseStale().catch(function () {}).then(function () { return nfLoadState(scope, state.player.id); }).then(function (st) { return { scope: scope, market: true, xc: state.player.xc || 0, owned: st.owned, orbs: st.orbs, catalog: st.catalog, progress: st.progress, net: { url: SUPABASE_URL, key: SUPABASE_KEY } }; })
         .catch(function () { return { scope: scope, market: false, xc: state.player.xc || 0, owned: {}, progress: { cleared: 0 } }; });
       Promise.all([stP, coopP]).then(function (r) { sendDeck(r[0], r[1]); });
     } else sendDeck(null);
   } else if (m.type === 'pflx_arena_nf_buy' && arenaGame.open && arenaGame.frame) {
     nfHandleBuy(String(m.id || ''));
+  } else if (m.type === 'pflx_arena_nf_wager' && arenaGame.open) {
+    nfHandleWager(m);
+  } else if (m.type === 'pflx_arena_nf_evolve' && arenaGame.open) {
+    nfHandleEvolve(String(m.id || ''));
+  } else if (m.type === 'pflx_arena_nf_arm' && arenaGame.open) {
+    nfHandleArm(m);
+  } else if (m.type === 'pflx_arena_nf_settle' && arenaGame.open) {
+    nfHandleSettle(m);
+  } else if (m.type === 'pflx_arena_nf_claim' && arenaGame.open) {
+    nfHandleClaim(m);
   } else if (m.type === 'pflx_arena_nf_scope' && arenaGame.open) {
     nfHandleScope(m.scope);
   } else if (m.type === 'pflx_arena_game_save' && arenaGame.open) {
@@ -4581,6 +4839,11 @@ function studioEditGame(id) {
     set('stNfStudio', (g.config && g.config.nfStudioRule === 'relaxed') ? 'relaxed' : 'strict');
     set('stNfMeter', (g.config && g.config.nfMeter) || 0);
     set('stNfShop', (g.config && g.config.nfShop === false) ? 'off' : 'on');
+    set('stNfGoalC', (g.config && g.config.nfGoalCorrect != null) ? g.config.nfGoalCorrect : 20);
+    set('stNfGoalK', (g.config && g.config.nfGoalKeys != null) ? g.config.nfGoalKeys : 3);
+    set('stNfGoalX', (g.config && g.config.nfGoalClear === false) ? 'off' : 'on');
+    set('stNfCap', (g.config && g.config.nfBankCap) || 2000);
+    set('stNfMinT', (g.config && g.config.nfAwardMinTeams) || 2);
     studioPreview();
   }, 40);
 }
@@ -4613,6 +4876,11 @@ function studioReadConfig() {
     nfStudioRule: studioSelTemplate === 'nexus-frontiers' ? (val('stNfStudio', 'strict') === 'relaxed' ? 'relaxed' : 'strict') : undefined,
     nfMeter: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(12, parseInt(val('stNfMeter', '0'), 10) || 0)) : undefined,
     nfShop: studioSelTemplate === 'nexus-frontiers' ? val('stNfShop', 'on') !== 'off' : undefined,
+    nfGoalCorrect: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(60, parseInt(val('stNfGoalC', '20'), 10) || 0)) : undefined,
+    nfGoalKeys: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(6, parseInt(val('stNfGoalK', '3'), 10) || 0)) : undefined,
+    nfGoalClear: studioSelTemplate === 'nexus-frontiers' ? val('stNfGoalX', 'on') !== 'off' : undefined,
+    nfBankCap: studioSelTemplate === 'nexus-frontiers' ? Math.max(100, Math.min(5000, parseInt(val('stNfCap', '2000'), 10) || 2000)) : undefined,
+    nfAwardMinTeams: studioSelTemplate === 'nexus-frontiers' ? Math.max(1, Math.min(4, parseInt(val('stNfMinT', '2'), 10) || 2)) : undefined,
     rivalName: (val('stRival', '') || '').trim() || 'RIVAL AI',
     roundTime: Math.max(8, Math.min(30, parseInt(val('stTime', '15'), 10) || 15))
   };
@@ -4621,7 +4889,7 @@ function studioConfigOf(c) {
   const o = { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
            ordered: c.ordered, sound: c.sound, music: c.music, powerups: c.powerups, rivalName: c.rivalName, roundTime: c.roundTime };
   // Nexus Frontiers host pre-launch settings (saved with the game / session, so they carry through the season)
-  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfRoundMin = c.nfRoundMin || 10; o.nfAllowSolo = !!c.nfAllowSolo; o.nfStudioRule = c.nfStudioRule || 'strict'; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; }
+  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfRoundMin = c.nfRoundMin || 10; o.nfAllowSolo = !!c.nfAllowSolo; o.nfStudioRule = c.nfStudioRule || 'strict'; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; o.nfGoalCorrect = c.nfGoalCorrect == null ? 20 : c.nfGoalCorrect; o.nfGoalKeys = c.nfGoalKeys == null ? 3 : c.nfGoalKeys; o.nfGoalClear = c.nfGoalClear !== false; o.nfBankCap = c.nfBankCap || 2000; o.nfAwardMinTeams = c.nfAwardMinTeams || 2; }
   return o;
 }
 
@@ -4902,8 +5170,14 @@ function renderStudio() {
           </select></div>
         <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">IN-ROUND FIELD SHOP</div>
           <select id="stNfShop" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
-            <option value="on" selected>On — spend run X-Coin on upgrades</option><option value="off">Off</option>
-          </select></div>` : ''}
+            <option value="on" selected>On — spend the team bank on upgrades</option><option value="off">Off</option>
+          </select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">ROUND GOAL · CORRECT ANSWERS (0 = OFF)</div><select id="stNfGoalC" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[0, 5, 10, 15, 20, 25, 30, 40, 50, 60].map(function (n) { return '<option value="' + n + '">' + (n + ' correct answers') + '</option>'; }).join('')}</select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">ROUND GOAL · ACCESS KEYS (0 = OFF)</div><select id="stNfGoalK" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[0, 1, 2, 3, 4, 5, 6].map(function (n) { return '<option value="' + n + '">' + (n + (n === 1 ? ' key' : ' keys')) + '</option>'; }).join('')}</select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">ROUND GOAL · REACH THE EXIT</div><select id="stNfGoalX" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff"><option value="on" selected>On — defeat the hub boss and reach the portal</option><option value="off">Off</option></select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">TEAM BANK PAYOUT CAP (XC PER MEMBER)</div><select id="stNfCap" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[500, 1000, 1500, 2000, 3000, 5000].map(function (n) { return '<option value="' + n + '">' + (n + ' XC') + '</option>'; }).join('')}</select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">CHAMPION / BEACON NEEDS AT LEAST</div><select id="stNfMinT" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[1, 2, 3, 4].map(function (n) { return '<option value="' + n + '">' + (n + (n === 1 ? ' squad' : ' squads') + ' in the launch') + '</option>'; }).join('')}</select></div>
+        <div style="grid-column:1/-1"><button class="btn-arena" style="font-size:0.55rem;padding:8px 14px" onclick="nfCatalogToggle()">🛒 GAME UPGRADE CATALOG (NAMES · PICTURES · PRICES)</button><div id="nfCatBox" style="display:none;margin-top:10px"></div></div>` : ''}
       </div>
       <div style="margin-bottom:12px"><div style="font-size:0.5rem;color:#7a8db0;letter-spacing:0.12em;margin-bottom:4px">DESCRIPTION (SHOWN ON THE SHELF)</div>
         <textarea id="stDesc" rows="2" maxlength="140" placeholder="Tell players what this game is about…" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.4);border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:9px 12px;font-size:0.65rem;color:#e6f8ff;outline:none;resize:vertical"></textarea></div>

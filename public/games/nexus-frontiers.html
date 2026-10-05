@@ -153,6 +153,22 @@
   #obsTitle { font-size:.8em; font-weight:800; letter-spacing:.14em; color:#fff; flex:1 1 30%; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #obsPinned { font-size:.6em; letter-spacing:.2em; color:#ffd740; min-width:7em; text-align:center; }
   #obsTop .grp { display:flex; gap:.35em; align-items:center; }
+
+  /* v0.4: tiers, wager, goals, team inventory, results */
+  .tpip { position:absolute; right:-.15em; bottom:-.2em; font-size:.55em; font-weight:900; font-style:normal; color:#02040a; background:#ffd740; border-radius:.3em; padding:0 .25em; line-height:1.3; }
+  .slot, .up .ic { position:relative; } .up .ic { width:1.4em; height:1.4em; display:flex; align-items:center; justify-content:center; flex:none; border-radius:.3em; }
+  .up.t2 { border-color:rgba(127,216,255,.55); } .up.t3 { border-color:rgba(255,215,64,.75); box-shadow:0 0 .8em rgba(255,215,64,.18); }
+  #ldWager { background:rgba(255,215,64,.06); border:1px solid rgba(255,215,64,.35); border-radius:.7em; padding:.6em .8em; margin:.5em 0 .8em; }
+  .wrow { display:flex; gap:.35em; align-items:center; justify-content:center; flex-wrap:wrap; margin:.4em 0; } .wrow b { min-width:6em; font-size:1.2em; color:#ffd740; } .wrow .btn { padding:.3em .6em; font-size:.75em; }
+  #goals { margin-top:.4em; font-size:.62em; line-height:1.5; max-width:20em; } .goal { color:#cfe; } .goal.done { color:#7dffb4; } .goal b { color:#ffd740; } .goal.ev { color:#ff9fe5; letter-spacing:.1em; }
+  #regroup { background:radial-gradient(ellipse at 50% 0, rgba(20,10,60,.55), rgba(2,4,10,.93) 70%); align-items:center; justify-content:center; text-align:center; } #regroup .panel { width:86%; max-height:94%; overflow:auto; }
+  #regroup h2 { font-size:1.5em; letter-spacing:.2em; color:#fff; text-shadow:0 0 .8em #00e5ff; }
+  #rgCols { display:grid; grid-template-columns:repeat(auto-fit,minmax(11em,1fr)); gap:.6em; margin:.6em 0; }
+  .rgc { background:rgba(10,14,34,.9); border:1px solid; border-radius:.7em; padding:.5em; } .rgc .rgh { font-weight:800; letter-spacing:.1em; font-size:.8em; margin-bottom:.4em; } .rgc .rgs { display:flex; flex-wrap:wrap; gap:.3em; justify-content:center; margin-bottom:.4em; } .rgc .btn { font-size:.6em; padding:.35em .5em; width:100%; }
+  .rgc .slot { cursor:default; width:2.2em; height:2.2em; } .rgc.me .slot.full { cursor:pointer; } .slot.sel { outline:2px solid #ffd740; box-shadow:0 0 .8em #ffd740; }
+  #endExtra { text-align:left; font-size:.8em; margin:.6em 0; max-height:34vh; overflow:auto; } #endExtra .eg { margin-bottom:.4em; } .bankres { padding:.5em .8em; border-radius:.6em; font-weight:700; margin:.4em 0; } .bankres.win { background:rgba(0,230,118,.12); border:1px solid rgba(0,230,118,.5); color:#7dffb4; } .bankres.lose { background:rgba(255,77,109,.12); border:1px solid rgba(255,77,109,.5); color:#ff9db0; }
+  .bdgs { display:flex; flex-wrap:wrap; gap:.4em; margin-top:.3em; } .bdg { background:rgba(124,77,255,.18); border:1px solid rgba(124,77,255,.6); border-radius:1em; padding:.25em .8em; font-size:.85em; } .bdg.gold { background:rgba(255,215,64,.15); border-color:rgba(255,215,64,.7); } .bdg i { font-style:normal; color:#ffd740; margin-left:.4em; }
+  .tsg { display:grid; grid-template-columns:1fr 1fr; gap:.3em .8em; margin-top:.3em; } .tsr { display:flex; gap:.5em; align-items:baseline; background:rgba(255,255,255,.05); border-radius:.4em; padding:.25em .5em; } .tsr span { flex:1; color:#9bb8d6; } .tsr b { color:#7fd8ff; } .tsr em { font-style:normal; font-size:.75em; color:#ffd740; }
   @media (prefers-reduced-motion: reduce) { #clock.low { animation:none; } }
   @media (prefers-reduced-motion: reduce) { #banner.show { animation:none; opacity:1; } .btn.pulse, #linkBtn.pulse { animation:none; } }
 </style>
@@ -170,7 +186,7 @@
       <div id="boosts"></div>
     </div>
     <div class="hudbox" id="hudC"><div id="obj">—<small></small></div></div>
-    <div class="hudbox" id="hudR"><div class="lbl mono">SCORE <b id="scoreV" style="color:#fff">0</b></div><div class="lbl mono" style="margin-top:.3em"><img src="/assets/nexus-frontiers/sprites/xcoin-32.png" alt="" style="width:1.3em;height:1.3em;vertical-align:-.3em;margin-right:.3em">X-COIN <b id="xcV" style="color:#ffd740">0</b></div><div class="lbl mono" style="margin-top:.3em">ORBS (THIS RUN) <b id="orbV" style="color:#7fd8ff">0</b></div></div>
+    <div class="hudbox" id="hudR"><div class="lbl mono">SCORE <b id="scoreV" style="color:#fff">0</b></div><div class="lbl mono" style="margin-top:.3em"><img src="/assets/nexus-frontiers/sprites/xcoin-32.png" alt="" style="width:1.3em;height:1.3em;vertical-align:-.3em;margin-right:.3em">TEAM BANK <b id="xcV" style="color:#ffd740">0</b></div><div class="lbl mono" style="margin-top:.3em">ORBS (THIS RUN) <b id="orbV" style="color:#7fd8ff">0</b></div><div id="goals"></div></div>
     <div id="clock" style="display:none"></div>
     <div id="squad"></div>
     <div id="banner" class="mono"></div>
@@ -225,15 +241,23 @@
     </div>
     <div></div>
   </div>
-  <div class="ov" id="end"><div class="panel" style="min-width:56%"><h2 class="mono" id="endT"></h2><div id="endS" style="color:#9bb8d6;font-size:.9em"></div><div class="st" id="endStats"></div><div class="row"><button class="btn gold" id="endAgain">PLAY AGAIN</button><button class="btn gold" id="endNext" style="display:none">BACK TO SQUAD LOBBY</button><button class="btn" id="endExit">EXIT TO ARENA</button></div></div></div>
+  <div class="ov" id="end"><div class="panel" style="min-width:56%"><h2 class="mono" id="endT"></h2><div id="endS" style="color:#9bb8d6;font-size:.9em"></div><div class="st" id="endStats"></div><div id="endExtra"></div><div class="row"><button class="btn gold" id="endAgain">PLAY AGAIN</button><button class="btn gold" id="endNext" style="display:none">BACK TO SQUAD LOBBY</button><button class="btn" id="endExit">EXIT TO ARENA</button></div></div></div>
   <div class="ov" id="loadout"><div class="panel">
     <h2 class="mono">LOADOUT</h2>
     <div class="ldsum" id="ldSum"></div>
+    <div id="ldWager"></div>
     <div class="lbl mono">EQUIPPED — TAP A SLOT TO REMOVE</div><div class="slots" id="ldSlots"></div>
-    <div class="ulist" id="ldList"></div>
+    <div class="lbl mono" style="margin-top:.5em">YOUR UPGRADES — EVOLVE THEM WITH ORBS</div><div class="ulist" id="ldOwned"></div>
+    <div class="lbl mono" style="margin-top:.8em">MARKETPLACE — GAME UPGRADES</div><div class="ulist" id="ldList"></div>
     <div id="ldSession" class="ldsum"></div>
     <div id="ldNote"></div>
     <div class="row stick" style="display:flex;gap:.8em;justify-content:center;flex-wrap:wrap"><button class="btn gold" id="ldStart">START ROUND</button><button class="btn" id="ldFresh">START FROM SECTION 1</button><button class="btn" id="ldBack">BACK</button></div>
+  </div></div>
+  <div class="ov" id="regroup"><div class="panel">
+    <h2 class="mono">TEAM INVENTORY</h2>
+    <div class="ldsum">Tap one of <b>your</b> unused items, then give it to a teammate (up to their slot limit). Upgrades last this round only. Team bank: <b style="color:#ffd740" id="rgBank">0</b> XC · closes in <b id="rgT" class="mono">30s</b> · the round clock is paused.</div>
+    <div id="rgCols"></div>
+    <div class="row stick" style="display:flex;gap:.8em;justify-content:center"><button class="btn" id="rgShop">FIELD SHOP</button><button class="btn gold" id="rgReady">READY — BACK TO THE MISSION</button></div>
   </div></div>
   <div class="ov" id="shop"><div class="panel">
     <h2 class="mono">FIELD SHOP</h2>
@@ -682,45 +706,101 @@ const NFLogic = (function () {
   function bossHp(base, diff, team) { return Math.round(base * (DIFFS[diff] || DIFFS.ranger).bossMul * (1 + 0.2 * (clampInt(team, 1, 4, 1) - 1))); }
   function meterTargetFrom(cfg, diff) { return clampInt(cfg && cfg.nfMeter, 3, 12, (DIFFS[diff] || DIFFS.ranger).meter); }
 
-  // ── Upgrades (kind 'game' = equippable in a round; 'session' = held for live sessions, host-applied) ──
+  // ── Upgrades (Oct 2026 economy): nine game families × three tiers (Mk I–III). Session upgrades live ONLY in X-Live. ──
+  // PROTOTYPE numbers. Every price is a multiple of 5 and at least 10. An item is identified by its KEY: "aegis" (Mk I), "aegis#2", "aegis#3".
+  // Mk I behaves exactly like the v0.2 upgrade; higher tiers are stronger. An item lasts ONE round (see consumedItems).
+  const TIER_MAX = 3, TIER_LABELS = ['Mk I', 'Mk II', 'Mk III'], ORB_COST = [8, 16]; // orbs needed to evolve Mk I→II and Mk II→III
+  function up(id, name, icon, trigger, tiers) { return { id: id, name: name, icon: icon, kind: 'game', trigger: trigger, price: tiers[0].p, desc: tiers[0].d, tiers: tiers }; }
   const UPGRADES = {
-    chronorespawn: { id: 'chronorespawn', name: 'ChronoRespawn', icon: '⏳', kind: 'game', trigger: true, price: 25, desc: 'Revive once when your Evo falls (60% vitality). Used when triggered.' },
-    aegis:         { id: 'aegis',         name: 'Aegis Shell',   icon: '🛡', kind: 'game', trigger: true, price: 10, desc: 'Blocks the next 2 hits you take. Used when it activates.' },
-    repair:        { id: 'repair',        name: 'Repair Pack',   icon: '🔧', kind: 'game', trigger: true, price: 10, desc: 'Auto-restores 50 vitality when you drop below 30%. Used when triggered.' },
-    capacitor:     { id: 'capacitor',     name: 'Capacitor',     icon: '🔋', kind: 'game', trigger: false, price: 8,  desc: 'Start the round with the ammo meter 40% full.' },
-    surgeamp:      { id: 'surgeamp',      name: 'Surge Amp',     icon: '💥', kind: 'game', trigger: false, price: 12, desc: 'SURGE hits 50% harder and reaches farther.' },
-    magnet:        { id: 'magnet',        name: 'Coin Magnet',   icon: '🧲', kind: 'game', trigger: false, price: 6,  desc: 'X-Coin, orbs and boosters are pulled in from much farther.' },
-    rapid:         { id: 'rapid',         name: 'Rapid Spark',   icon: '⚡', kind: 'game', trigger: false, price: 10, desc: 'Your spark fires about 30% faster.' },
-    linkext:       { id: 'linkext',       name: 'Link Extender', icon: '⏱', kind: 'game', trigger: false, price: 15, desc: 'Each quiz sprint lasts 10 seconds longer.' },
-    seeker:        { id: 'seeker',        name: 'Star Seeker',   icon: '✨', kind: 'game', trigger: false, price: 12, desc: 'Archives drop temporary boosters twice as often.' },
-    deadline:      { id: 'deadline',      name: 'Deadline Extension',  icon: '📅', kind: 'session', trigger: false, price: 40, desc: 'Live-session upgrade: ask your host to extend a deadline. Not used inside a round.' },
-    reassess:      { id: 'reassess',      name: 'Checkpoint Reassess', icon: '🔁', kind: 'session', trigger: false, price: 40, desc: 'Live-session upgrade: ask your host to reassess a checkpoint. Not used inside a round.' }
+    chronorespawn: up('chronorespawn', 'ChronoRespawn', '⏳', true, [
+      { p: 50,  v: .60, d: 'Revive once when your Evo falls (60% vitality). Used when triggered.' },
+      { p: 90,  v: .75, d: 'Revive once when your Evo falls (75% vitality). Used when triggered.' },
+      { p: 150, v: .90, d: 'Revive once when your Evo falls (90% vitality). Used when triggered.' }]),
+    aegis: up('aegis', 'Aegis Shell', '🛡', true, [
+      { p: 20, v: 2, d: 'Blocks the next 2 hits you take. Used when it activates.' },
+      { p: 40, v: 3, d: 'Blocks the next 3 hits you take. Used when it activates.' },
+      { p: 70, v: 4, d: 'Blocks the next 4 hits you take. Used when it activates.' }]),
+    repair: up('repair', 'Repair Pack', '🔧', true, [
+      { p: 20, v: 50,  w: .30, d: 'Auto-restores 50 vitality when you drop below 30%. Used when triggered.' },
+      { p: 40, v: 70,  w: .35, d: 'Auto-restores 70 vitality when you drop below 35%. Used when triggered.' },
+      { p: 70, v: 100, w: .40, d: 'Auto-restores 100 vitality when you drop below 40%. Used when triggered.' }]),
+    capacitor: up('capacitor', 'Capacitor', '🔋', false, [
+      { p: 15, v: .4, d: 'Start the round with the ammo meter 40% full.' },
+      { p: 30, v: .6, d: 'Start the round with the ammo meter 60% full.' },
+      { p: 50, v: .8, d: 'Start the round with the ammo meter 80% full.' }]),
+    surgeamp: up('surgeamp', 'Surge Amp', '💥', false, [
+      { p: 25, v: 9,  w: 185, d: 'SURGE hits 50% harder and reaches farther.' },
+      { p: 50, v: 11, w: 215, d: 'SURGE hits 80% harder and reaches much farther.' },
+      { p: 85, v: 13, w: 245, d: 'SURGE hits 120% harder and reaches far.' }]),
+    magnet: up('magnet', 'Coin Magnet', '🧲', false, [
+      { p: 10, v: 2.5, d: 'X-Coin, orbs and boosters are pulled in from much farther.' },
+      { p: 25, v: 3.5, d: 'X-Coin, orbs and boosters are pulled in from very far.' },
+      { p: 45, v: 4.5, d: 'X-Coin, orbs and boosters are pulled in from across the room.' }]),
+    rapid: up('rapid', 'Rapid Spark', '⚡', false, [
+      { p: 20, v: .30, d: 'Your spark fires about 30% faster.' },
+      { p: 40, v: .26, d: 'Your spark fires about 60% faster.' },
+      { p: 70, v: .22, d: 'Your spark fires about 90% faster.' }]),
+    linkext: up('linkext', 'Link Extender', '⏱', false, [
+      { p: 30, v: 10, d: 'Each quiz sprint lasts 10 seconds longer.' },
+      { p: 55, v: 15, d: 'Each quiz sprint lasts 15 seconds longer.' },
+      { p: 90, v: 20, d: 'Each quiz sprint lasts 20 seconds longer.' }]),
+    seeker: up('seeker', 'Star Seeker', '✨', false, [
+      { p: 25, v: 2, d: 'Archives drop temporary boosters twice as often.' },
+      { p: 45, v: 3, d: 'Archives drop temporary boosters three times as often.' },
+      { p: 75, v: 4, d: 'Archives drop temporary boosters four times as often.' }])
   };
-  function slotsFor(level) { return clampInt(level, 1, 10, 1); } // Level 1 = 1 slot, Level 2 = 2 … Level 10 = 10
+  // Inventory slots by Evo level: 1–2 → 3, 3–4 → 4, 5–6 → 5, 7–8 → 6, 9–10 → 7 (Ennis: level 1=3, 3=4, 5=5, 7=6, 9=7; even levels share the lower step).
+  function slotsFor(level) { const l = clampInt(level, 1, 10, 1); return l >= 9 ? 7 : l >= 7 ? 6 : l >= 5 ? 5 : l >= 3 ? 4 : 3; }
+  function keyOf(id, tier) { tier = clampInt(tier, 1, TIER_MAX, 1); return tier > 1 ? id + '#' + tier : id; }
+  function parseKey(key) {
+    const m = /^([a-z]+)(?:#([2-9]))?$/.exec(String(key || '')); if (!m || !UPGRADES[m[1]]) return null;
+    const t = m[2] ? +m[2] : 1; return t > TIER_MAX ? null : { id: m[1], tier: t };
+  }
+  // Host catalog overrides (name / description / image / price) — the Arena owns them and sends them with the deck. Prices must stay multiples of 5, ≥ 10.
+  let CATALOG = {};
+  function validPrice(p) { p = Math.round(Number(p)); return isFinite(p) && p >= 10 && p <= 2000 && p % 5 === 0 ? p : 0; }
+  function applyCatalog(cat) {
+    const out = {}; Object.keys(cat || {}).forEach(function (k) {
+      if (!parseKey(k)) return; const c = cat[k] || {}, o = {};
+      if (typeof c.name === 'string' && c.name.trim()) o.name = c.name.trim().slice(0, 40);
+      if (typeof c.desc === 'string' && c.desc.trim()) o.desc = c.desc.trim().slice(0, 160);
+      if (typeof c.image === 'string' && /^(https:\/\/|data:image\/)/.test(c.image) && c.image.length < 400000) o.image = c.image;
+      const pr = validPrice(c.price); if (pr) o.price = pr;
+      if (Object.keys(o).length) out[k] = o;
+    }); CATALOG = out; return out;
+  }
+  function priceOf(key) { const p = parseKey(key); if (!p) return 0; const c = CATALOG[key]; return (c && c.price) || UPGRADES[p.id].tiers[p.tier - 1].p; }
+  function itemInfo(key) {
+    const p = parseKey(key); if (!p) return null; const u = UPGRADES[p.id], t = u.tiers[p.tier - 1], c = CATALOG[key] || {};
+    return { key: key, id: p.id, tier: p.tier, kind: 'game', trigger: u.trigger, icon: u.icon, label: TIER_LABELS[p.tier - 1], v: t.v, w: t.w, image: c.image || '',
+      name: c.name || (u.name + (p.tier > 1 ? ' ' + TIER_LABELS[p.tier - 1] : '')), baseName: u.name, price: priceOf(key), desc: c.desc || t.d };
+  }
+  function marketKeys() { const out = []; Object.keys(UPGRADES).forEach(function (id) { for (let t = 1; t <= TIER_MAX; t++) out.push(keyOf(id, t)); }); return out; }
+  function bestTier(list, id) { let b = 0; (list || []).forEach(function (k) { const p = parseKey(k); if (p && p.id === id && p.tier > b) b = p.tier; }); return b; }
+  function tierFx(id, tier) { return tier > 0 ? UPGRADES[id].tiers[tier - 1] : null; }
+  // Evolving: one Mk-N item + orbs → one Mk-(N+1) item (orbs are banked from rounds by the Arena).
+  function evolveCost(key) { const p = parseKey(key); if (!p || p.tier >= TIER_MAX) return null; return { from: key, to: keyOf(p.id, p.tier + 1), orbs: ORB_COST[p.tier - 1] }; }
+  function evolve(owned, orbs, key) { // pure → { owned, orbs } or null
+    const c = evolveCost(key); if (!c || ((owned && owned[key]) | 0) < 1 || (orbs | 0) < c.orbs) return null;
+    const o = Object.assign({}, owned); o[key] = (o[key] | 0) - 1; if (!o[key]) delete o[key]; o[c.to] = (o[c.to] | 0) + 1; return { owned: o, orbs: (orbs | 0) - c.orbs, to: c.to };
+  }
   function reviveCharges(level) { level = clampInt(level, 1, 10, 1); return level >= 10 ? 2 : level >= 5 ? 1 : 0; } // Evo-level ability: Lv5+ once per round, Lv10 twice
   function reviveSource(abilityLeft, chronoLeft) { return abilityLeft > 0 ? 'ability' : chronoLeft > 0 ? 'item' : null; } // free Evo ability first, then the item
-  // Keep only owned, game-kind upgrades, within the slot limit. Duplicates need duplicate stock; passive duplicates are dropped.
+  // Keep only owned game items, within the slot limit. Duplicates need duplicate stock; a passive family can be equipped once (any tier).
   function validateLoadout(ids, owned, level, trust) { // trust: the picks were already checked against that player's own stock on their device (co-op leader)
-    const out = [], used = {}, cap = slotsFor(level);
-    (ids || []).forEach(function (id) {
-      const u = UPGRADES[id]; if (!u || u.kind !== 'game' || out.length >= cap) return;
-      if (!trust && (used[id] || 0) >= ((owned && owned[id]) | 0)) return;
-      if (!u.trigger && used[id]) return;
-      used[id] = (used[id] || 0) + 1; out.push(id);
+    const out = [], used = {}, fams = {}, cap = slotsFor(level);
+    (ids || []).forEach(function (key) {
+      const p = parseKey(key); if (!p || out.length >= cap) return; const u = UPGRADES[p.id];
+      if (!trust && (used[key] || 0) >= ((owned && owned[key]) | 0)) return;
+      if (!u.trigger && fams[p.id]) return;
+      used[key] = (used[key] || 0) + 1; fams[p.id] = 1; out.push(key);
     });
     return out;
   }
-  // What leaves the player's inventory when a round that really started ends: passives equipped from stock are used up;
-  // trigger items only if they fired (unused ones come back).
-  function consumedItems(invList, spent) {
-    const have = {}, out = {};
-    (invList || []).forEach(function (id) { have[id] = (have[id] || 0) + 1; });
-    Object.keys(have).forEach(function (id) {
-      const u = UPGRADES[id]; if (!u) return;
-      const n = u.trigger ? Math.min(have[id], (spent && spent[id]) | 0) : have[id];
-      if (n > 0) out[id] = n;
-    });
-    return out;
+  // Upgrades only last ONE round: everything a player brought in (their start inventory) leaves their stock when the round really started,
+  // whether or not it fired and whoever ended up holding it after a mid-round hand-over.
+  function consumedItems(invList) {
+    const out = {}; (invList || []).forEach(function (k) { if (parseKey(k)) out[k] = (out[k] | 0) + 1; }); return out;
   }
 
   // ── Temporary boosters (~10 s, found in the field) ──
@@ -732,7 +812,7 @@ const NFLogic = (function () {
   const BOOSTER_RULES = { scout: 0.04, interceptor: 0.15, sentry: 1 };
   function boosterDrop(kind, rng, seeker) {
     const p = BOOSTER_RULES[kind]; if (!p) return null;
-    if (rng() >= Math.min(1, p * (seeker ? 2 : 1))) return null;
+    if (rng() >= Math.min(1, p * (seeker === true ? 2 : (+seeker > 1 ? +seeker : 1)))) return null;
     const ids = Object.keys(BOOSTERS); return ids[Math.floor(rng() * ids.length)];
   }
 
@@ -805,10 +885,108 @@ const NFLogic = (function () {
   // Progress points for a team when the clock runs out: sections already cleared are kept for the team checkpoint.
   function timeoutOutcome(secCleared, bossDone) { return { saved: Math.max(0, Math.min(6, secCleared | 0)), bossDone: !!bossDone, reason: 'time' }; }
 
+  // ══════════ ROUND ECONOMY (Oct 2026): wager → joint team bank → goals → payout; badges; team stats ══════════
+  // PROTOTYPE numbers (host-tunable where noted). The Arena owns every real X-Coin movement; this block is the pure rule set both sides share.
+  const WAGER_STEP = 5;
+  function wagerCap(level) { return 50 * clampInt(level, 1, 10, 1); } // per player: Evo level × 50 XC (Lv1 50 … Lv10 500)
+  function clampWager(v, level, have) {
+    let n = Math.floor(Number(v) / WAGER_STEP) * WAGER_STEP; if (!isFinite(n) || n < 0) n = 0;
+    return Math.min(n, wagerCap(level), Math.floor(Math.max(0, have | 0) / WAGER_STEP) * WAGER_STEP);
+  }
+  const BANK_CAP_DEFAULT = 2000; // the most any one payout can be (each member receives the whole bank, so this is also the inflation guard)
+  function bankCapFrom(cfg) { return clampInt(cfg && cfg.nfBankCap, 100, 5000, BANK_CAP_DEFAULT); }
+  // System Events (X-Live) → what they do to the XC the squad collects. events: [{type,startAt,endAt,mult,pct,bonus,studio,rain,every}]
+  function eventFx(events, now) {
+    const fx = { mult: 1, taxPct: 0, studio: {}, rain: null, names: [] };
+    (events || []).forEach(function (e) {
+      if (!e || !(now >= (e.startAt || 0) && now < (e.endAt || 0))) return; fx.names.push(e.type);
+      if (e.type === 'xc_boost' || e.type === 'golden_hour') fx.mult *= Math.max(1, Number(e.mult) || 1);
+      else if (e.type === 'system_tax') fx.taxPct = Math.min(90, fx.taxPct + Math.max(0, Number(e.pct) || 0));
+      else if (e.type === 'studio_surge' && e.studio) fx.studio[studioKey(e.studio)] = (fx.studio[studioKey(e.studio)] || 0) + Math.max(0, Number(e.bonus) || 0);
+      else if (e.type === 'xc_rain') fx.rain = { amount: Math.max(1, Number(e.rain) || 25), every: Math.max(10, Number(e.every) || 60) };
+    });
+    return fx;
+  }
+  // The joint XC bank. Start = every member's confirmed wager; field XC adds to it; upgrades bought in the round come out of it.
+  function Bank(start, cap) { this.start = Math.max(0, start | 0); this.cap = cap || BANK_CAP_DEFAULT; this.gained = 0; this.spent = 0; this.taxed = 0; this.bonus = 0; this.fg = 0; this.ft = 0; }
+  Bank.prototype.value = function () { return Math.max(0, Math.min(this.cap, this.start + this.gained + this.bonus - this.taxed - this.spent)); };
+  // n coins picked up by a player of `studio` under the active events → { gain, tax } (fractions carry over so 10% of 1 coin is not lost)
+  Bank.prototype.add = function (n, fx, studio) {
+    fx = fx || { mult: 1, taxPct: 0, studio: {} }; if (this.start + this.gained + this.bonus - this.taxed - this.spent >= this.cap) return { gain: 0, tax: 0 };
+    this.fg += n * fx.mult + n * ((fx.studio && fx.studio[studioKey(studio)]) || 0) / 100; const g = Math.floor(this.fg + 1e-9); this.fg -= g;
+    this.ft += g * fx.taxPct / 100; const t = Math.min(g, Math.floor(this.ft + 1e-9)); this.ft -= t;
+    this.gained += g; this.taxed += t; return { gain: g, tax: t };
+  };
+  Bank.prototype.grant = function (n) { this.bonus += Math.max(0, n | 0); };
+  Bank.prototype.spend = function (n) { n = n | 0; if (n <= 0 || this.value() < n) return false; this.spent += n; return true; };
+  Bank.prototype.state = function () { return [this.start, this.gained, this.bonus, this.taxed, this.spent]; };
+  Bank.prototype.load = function (a) { if (a) { this.start = a[0]; this.gained = a[1]; this.bonus = a[2]; this.taxed = a[3]; this.spent = a[4]; } };
+  // Goals for a round. correct = team total of correct LINK answers; keys = Access Keys dropped by the first N Sentries; clear = defeat the hub boss and reach the exit portal.
+  function sentriesFrom(diff, resume) {
+    let n = 0; for (let i = Math.max(0, resume | 0); i < 6; i++) n += baseEncounter(stageScale(diff, i)).sentryAfter.length; return n;
+  }
+  function goalConfig(cfg, resume, diff) {
+    cfg = cfg || {}; return { correct: clampInt(cfg.nfGoalCorrect, 0, 60, 20), keys: Math.min(clampInt(cfg.nfGoalKeys, 0, 6, 3), sentriesFrom(diff || 'ranger', resume)), clear: cfg.nfGoalClear !== false };
+  }
+  function Goals(conf) { this.conf = conf; this.correct = 0; this.answered = 0; this.keys = 0; this.clear = false; }
+  Goals.prototype.status = function () {
+    const c = this.conf, out = [];
+    if (c.correct > 0) out.push({ id: 'correct', label: 'Answer ' + c.correct + ' LINK questions correctly', have: Math.min(this.correct, c.correct), need: c.correct, done: this.correct >= c.correct });
+    if (c.keys > 0) out.push({ id: 'keys', label: 'Find ' + c.keys + ' Access Key' + (c.keys > 1 ? 's' : ''), have: Math.min(this.keys, c.keys), need: c.keys, done: this.keys >= c.keys });
+    if (c.clear) out.push({ id: 'clear', label: 'Defeat the hub boss and reach the exit portal', have: this.clear ? 1 : 0, need: 1, done: !!this.clear });
+    return out;
+  };
+  Goals.prototype.met = function () { const s = this.status(); return s.length > 0 && s.every(function (g) { return g.done; }); };
+  Goals.prototype.state = function () { return [this.correct, this.answered, this.keys, this.clear ? 1 : 0]; };
+  Goals.prototype.load = function (a) { if (a) { this.correct = a[0]; this.answered = a[1]; this.keys = a[2]; this.clear = !!a[3]; } };
+  // Settlement: if the goals are met EVERY member receives the whole bank; otherwise the wagers are lost (nothing is paid out).
+  function settle(bankValue, goalMet, wagerTotal, cap) {
+    return { payout: goalMet ? Math.max(0, Math.min(cap || BANK_CAP_DEFAULT, bankValue | 0)) : 0, lost: goalMet ? 0 : Math.max(0, wagerTotal | 0), won: !!goalMet };
+  }
+  // Digital badges (names match the X-Coin catalog; XC values are the catalog's — the Arena resolves the real record by name).
+  const BADGES = {
+    participant: { id: 'positive_participant', name: 'Positive Participant', xc: 100, category: 'primary' },
+    collaborator: { id: 'master_collaborator', name: 'Master Collaborator', xc: 100, category: 'primary' },
+    resilient: { id: 'resilient_learner', name: 'Resilient Learner', xc: 100, category: 'primary' },
+    champion: { id: 'arena_champion', name: 'Battle Arena Champion', xc: 300, category: 'primary' },
+    beacon: { id: 'beacon_collaboration', name: 'Beacon of Collaboration', xc: 500, category: 'premium' }
+  };
+  const COMPLETION_BADGES = ['participant', 'collaborator', 'resilient'];
+  const MIN_ROUND_SEC = 120; // a round must actually be played for ~2 minutes to count as "completed"
+  // Everyone who finishes a full round with their team earns the three completion badges — goal met or not.
+  function completionBadges(played, secPlayed, present) { return (present !== false && played && secPlayed >= MIN_ROUND_SEC) ? COMPLETION_BADGES.slice() : []; }
+  // Team stats (no "kills": the Archives are cleared, not killed). Higher is better except `fastest`.
+  const TEAM_STATS = [
+    { id: 'archives', name: 'Most Archives Cleared', icon: '🛰', unit: '' },
+    { id: 'correct', name: 'Most Correct Answers', icon: '🎯', unit: '' },
+    { id: 'accuracy', name: 'Best Answer Accuracy', icon: '📈', unit: '%' },
+    { id: 'keys', name: 'Most Access Keys', icon: '🗝', unit: '' },
+    { id: 'bank', name: 'Biggest Team Bank', icon: '🏦', unit: ' XC' },
+    { id: 'revives', name: 'Most Revives Used', icon: '♻', unit: '' },
+    { id: 'fastest', name: 'Fastest Clear', icon: '⏱', unit: ' s' }
+  ];
+  function teamStatsOf(r) { // r: { archives, correct, answered, keys, bank, revives, clearSec, cleared }
+    const ans = r.answered | 0;
+    return { archives: r.archives | 0, correct: r.correct | 0, accuracy: ans > 0 ? Math.round(100 * (r.correct | 0) / ans) : 0, keys: r.keys | 0, bank: r.bank | 0, revives: r.revives | 0, fastest: r.cleared && r.clearSec > 0 ? r.clearSec | 0 : 0 };
+  }
+  // One number to rank squads against each other for Champion / Beacon of Collaboration.
+  function collabScore(r) { return (r.score | 0) + 10 * (r.correct | 0) + 150 * (r.keys | 0) + (r.goalMet ? 500 : 0); }
+  // A squad earns the Beacon again only by beating its OWN best (the score it last won it with); the first time any positive score counts.
+  function beaconEligible(score, beaconBest) { return score > 0 && score > (beaconBest | 0); }
+  // Compare squads that played the same launch window → { winner, ranking }. results: { teamKey: { score, endedAt } }
+  function pickWinner(results) {
+    const keys = Object.keys(results || {}); if (!keys.length) return { winner: null, ranking: [] };
+    keys.sort(function (a, b) { const x = results[a], y = results[b]; return (y.score - x.score) || ((x.endedAt || 0) - (y.endedAt || 0)) || (a < b ? -1 : 1); });
+    return { winner: keys[0], ranking: keys };
+  }
+
   return {
     Meter: Meter, Sprint: Sprint, SPRINT_SEC: SPRINT_SEC, DIFFS: DIFFS, diffFromConfig: diffFromConfig, teamSizeFrom: teamSizeFrom, stageScale: stageScale,
     baseEncounter: baseEncounter, encounterFor: encounterFor, activeCap: activeCap, hpMul: hpMul, scaledHp: scaledHp, bossHp: bossHp, meterTargetFrom: meterTargetFrom, teamSizeMul: teamSizeMul,
-    UPGRADES: UPGRADES, slotsFor: slotsFor, reviveCharges: reviveCharges, reviveSource: reviveSource, validateLoadout: validateLoadout, consumedItems: consumedItems,
+    UPGRADES: UPGRADES, TIER_MAX: TIER_MAX, TIER_LABELS: TIER_LABELS, ORB_COST: ORB_COST, slotsFor: slotsFor, keyOf: keyOf, parseKey: parseKey, itemInfo: itemInfo, priceOf: priceOf, marketKeys: marketKeys, applyCatalog: applyCatalog, bestTier: bestTier, tierFx: tierFx, evolveCost: evolveCost, evolve: evolve,
+    reviveCharges: reviveCharges, reviveSource: reviveSource, validateLoadout: validateLoadout, consumedItems: consumedItems,
+    WAGER_STEP: WAGER_STEP, wagerCap: wagerCap, clampWager: clampWager, BANK_CAP_DEFAULT: BANK_CAP_DEFAULT, bankCapFrom: bankCapFrom, eventFx: eventFx, Bank: Bank, sentriesFrom: sentriesFrom, goalConfig: goalConfig, Goals: Goals, settle: settle,
+    BADGES: BADGES, COMPLETION_BADGES: COMPLETION_BADGES, MIN_ROUND_SEC: MIN_ROUND_SEC, completionBadges: completionBadges, TEAM_STATS: TEAM_STATS, teamStatsOf: teamStatsOf, collabScore: collabScore, beaconEligible: beaconEligible, pickWinner: pickWinner,
     BOOSTERS: BOOSTERS, BOOSTER_RULES: BOOSTER_RULES, boosterDrop: boosterDrop,
     STUDIO_IDS: STUDIO_IDS, STUDIO_COLORS: STUDIO_COLORS, COOP: COOP, studioKey: studioKey, slug: slug, coopRules: coopRules, lobbyCheck: lobbyCheck, assignTeams: assignTeams, RoundClock: RoundClock, timeoutOutcome: timeoutOutcome, escortFor: escortFor,
     XC_RULES: XC_RULES, coinDrop: coinDrop, placeMaterials: placeMaterials,
@@ -942,7 +1120,7 @@ let deckApplied = false;
 function applyDeck(m) {
   if (deckApplied) return; deckApplied = true;
   S.player = Object.assign(S.player, m.player || {}); S.config = m.config || {}; S.exo = m.exo || null;
-  S.deck = m.deck || null; S.nf = m.nf || null; S.me = String(S.player.id || 'p');
+  S.deck = m.deck || null; S.nf = m.nf || null; S.me = String(S.player.id || 'p'); if (S.nf && S.nf.catalog) L.applyCatalog(S.nf.catalog);
   if (m.coop && m.coop.scope) { // launched from an X-Live session: squad lobby (players) or observation (host)
     const c = m.coop; S.coop = { scope: String(c.scope).replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 60), base: (S.nf && S.nf.scope) || ('sess_' + c.scope), title: c.title || '', squad: c.squad || '', net: c.net || null, transport: c.transport || '', rules: L.coopRules(c.rules || {}), sessionId: c.sessionId || '' };
     S.role = c.role === 'host' ? 'host' : 'player';
@@ -959,15 +1137,18 @@ function readCfg() {
 }
 function embedded() { return window.parent !== window; }
 function evoLevel() { return Math.max(1, Math.min(10, (S.exo && S.exo.level) | 0 || 1)); }
-function ownedN(id) { return (S.nf && S.nf.owned && S.nf.owned[id]) | 0; }
+function ownedN(key) { return (S.nf && S.nf.owned && S.nf.owned[key]) | 0; }
 function applyNfState(m) {
   if (!S.nf) return;
-  if (m.owned) S.nf.owned = m.owned; if (typeof m.xc === 'number') S.nf.xc = m.xc; if (m.progress) S.nf.progress = m.progress;
-  if (S.ld) { S.ld.pending = false; S.ld.note = m.error ? m.error : (m.note || ''); S.ld.picks = L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()); }
+  if (m.owned) S.nf.owned = m.owned; if (typeof m.xc === 'number') S.nf.xc = m.xc; if (m.progress) S.nf.progress = m.progress; if (typeof m.orbs === 'number') S.nf.orbs = m.orbs; if (m.catalog) L.applyCatalog(m.catalog);
+  if (m.sessStats) { S.sessStats = m.sessStats; if (S.mode === 'end') renderEndExtra(S.lastEnd); }
+  if (m.award) showAwards(m.award);
+  if (m.stakeReply) onStakeReply(m);
+  if (S.ld) { S.ld.pending = false; if (!m.stakeReply) S.ld.note = m.error ? m.error : (m.note || S.ld.note || ''); S.ld.picks = L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()); }
   if (S.mode === 'loadout') renderLoadout();
 }
 post({ type: 'pflx_game_ready', game: 'nexus-frontiers' });
-setTimeout(function () { if (!deckApplied) { deckApplied = true; S.deck = { id: 'dev', name: 'Dev deck', cards: L.FALLBACK_DECK }; S.player.studioId = 'innov8'; S.exo = { level: 3, stats: { power: 3, guard: 2, speed: 2, luck: 2 } }; S.nf = { scope: 'dev', standalone: true, market: true, xc: 100, owned: { chronorespawn: 1, aegis: 1, magnet: 1, rapid: 1 }, progress: { cleared: 0 } }; start(); } }, TEST ? 100 : (window.parent !== window ? 9000 : 2500)); // inside the Arena the deck waits for the market/progress lookup
+setTimeout(function () { if (!deckApplied) { deckApplied = true; S.deck = { id: 'dev', name: 'Dev deck', cards: L.FALLBACK_DECK }; S.player.studioId = 'innov8'; S.exo = { level: 3, stats: { power: 3, guard: 2, speed: 2, luck: 2 } }; S.nf = { scope: 'dev', standalone: true, market: true, xc: 300, orbs: 20, owned: { chronorespawn: 1, aegis: 1, magnet: 1, rapid: 1 }, progress: { cleared: 0 } }; start(); } }, TEST ? 100 : (window.parent !== window ? 9000 : 2500)); // inside the Arena the deck waits for the market/progress lookup
 
 function start() {
   readCfg();
@@ -1015,9 +1196,10 @@ $('endAgain').onclick = function () { awardRun(); openLoadout(); };
 // X-Coin is the ONLY thing that leaves the game, as an explicit capped amount (the Arena turns it into a host-approved award proposal).
 // Hosts can switch it off with config.rewards === false. Orbs, score and charge never convert to anything.
 function awardRun() {
-  if (S.awarded || !S.xc || (S.config && S.config.rewards === false)) return;
-  S.awarded = true;
-  post({ type: 'pflx_arena_game_result', game: 'nexus-frontiers', deckId: S.deck && S.deck.id, score: S.score, won: !!S.bossDone, xc: Math.min(L.XC_RULES.cap, S.xc) });
+  if (S.awarded || (S.config && S.config.rewards === false)) return;
+  if (!S.round && !S.xc) return; S.awarded = true;
+  // Round X-Coin now flows through the joint team bank (settled by the Arena), so the old personal award is always 0 — this message only carries the result.
+  post({ type: 'pflx_arena_game_result', game: 'nexus-frontiers', deckId: S.deck && S.deck.id, score: S.score, won: !!S.bossDone, xc: 0 });
 }
 function exitToArena() { if (S.runLive) saveProgress(true); awardRun(); post({ type: 'pflx_arena_game_exit', game: 'nexus-frontiers' }); }
 
@@ -1046,62 +1228,82 @@ function shake(n) { if (!REDUCED) S.shake = Math.max(S.shake, n); }
 // after a round (co-op): back to the squad lobby for the next launch
 function backToLobby() {
   awardRun();
-  S.round = null; S.endShown = false; S.ended = false; S.runLive = false; S.ready = false; S.players = {}; S.order = []; S.clock = null; S.enemies = []; S.p = null; S.awarded = false; S.consumedSent = false; S.quizOpen && closeQuiz(); closeShop();
+  S.round = null; S.endShown = false; S.ended = false; S.runLive = false; S.ready = false; S.stake = 0; S.awards = []; S.rg = null; closeRegroup(); S.players = {}; S.order = []; S.clock = null; S.enemies = []; S.p = null; S.awarded = false; S.consumedSent = false; S.quizOpen && closeQuiz(); closeShop();
   if (S.coop) post({ type: 'pflx_arena_nf_scope', game: 'nexus-frontiers', scope: S.nf.scope });
   setMode('lobby'); if (typeof sendHello === 'function') sendHello(); renderLobby();
 }
 $('endNext').onclick = function () { backToLobby(); };
 
-// ── Equipment helpers ──
-function has(id) { return !!(S.eq && S.eq.list.indexOf(id) >= 0); }
-function trigLeft(id) { return !S.eq ? 0 : S.eq.list.filter(function (x) { return x === id; }).length - (S.eq.spent[id] | 0); }
+// ── Equipment helpers ── (items are KEYS: "aegis", "aegis#2", "aegis#3" — see NFLogic.parseKey)
+function has(id) { return !!(S.eq && L.bestTier(S.eq.list, id) > 0); }
+function trigLeft(key) { return !S.eq ? 0 : S.eq.list.filter(function (x) { return x === key; }).length - (S.eq.spent[key] | 0); }
 function setTicks(id, n) { const e = $(id); if (e) e.style.background = 'repeating-linear-gradient(90deg, transparent 0, transparent calc(100%/' + n + ' - 1.5px), rgba(0,0,0,.6) calc(100%/' + n + ' - 1.5px), rgba(0,0,0,.6) calc(100%/' + n + '))'; }
+// An item's face: the host-uploaded picture when there is one, else its icon (+ tier pips).
+function slotFace(el, it) {
+  el.textContent = ''; if (it.image) { const im = document.createElement('img'); im.src = it.image; im.alt = ''; im.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit'; el.appendChild(im); } else el.textContent = it.icon;
+  if (it.tier > 1) { const t = document.createElement('i'); t.className = 'tpip'; t.textContent = it.tier === 2 ? 'II' : 'III'; el.appendChild(t); }
+}
 
 // ── Loadout screen (before a round) ──
 function openLoadout() { S.ld.picks = L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()); S.ld.note = ''; S.ld.pending = false; renderLoadout(); setMode('loadout'); }
-function pickedCount(id) { return S.ld.picks.filter(function (x) { return x === id; }).length; }
-function upRow(u, mode) { // mode: 'ld' (pre-round) or 'shop' (in-round)
-  const d = document.createElement('div'); d.className = 'up';
-  const own = ownedN(u.id), eqd = mode === 'ld' ? pickedCount(u.id) : 0;
-  d.innerHTML = '<div class="ic">' + u.icon + '</div><div class="tx"><b>' + escapeHtml(u.name) + '</b><small>' + escapeHtml(u.desc) + '</small><em class="mono">' + (u.kind === 'session' ? 'LIVE SESSION · ' : '') + (mode === 'ld' ? 'OWNED ×' + own + (eqd ? ' · EQUIPPED ×' + eqd : '') : u.price + ' X-COIN') + '</em></div>';
+function pickedCount(key) { return S.ld.picks.filter(function (x) { return x === key; }).length; }
+function upRow(key, mode) { // mode: 'own' (owned stock, pre-round) | 'mkt' (marketplace, pre-round) | 'shop' (in-round, paid from the team bank)
+  const it = L.itemInfo(key), d = document.createElement('div'); d.className = 'up t' + it.tier;
+  const own = ownedN(key), eqd = pickedCount(key), cost = L.evolveCost(key);
+  const ic = document.createElement('div'); ic.className = 'ic'; slotFace(ic, it); d.appendChild(ic);
+  const tx = document.createElement('div'); tx.className = 'tx';
+  tx.innerHTML = '<b>' + escapeHtml(it.name) + '</b><small>' + escapeHtml(it.desc) + '</small><em class="mono">' + (mode === 'own' ? 'OWNED ×' + own + (eqd ? ' · EQUIPPED ×' + eqd : '') + ' · ONE ROUND' : mode === 'shop' ? it.price + ' X-COIN FROM THE TEAM BANK' : it.price + ' X-COIN · ' + it.label) + '</em>';
+  d.appendChild(tx);
   const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;gap:.3em';
-  if (mode === 'ld') {
-    if (u.kind === 'game') { const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'EQUIP'; b.disabled = !(own > eqd && S.ld.picks.length < L.slotsFor(evoLevel()) && (u.trigger || !eqd)); b.onclick = function () { S.ld.picks.push(u.id); S.ld.note = ''; renderLoadout(); }; box.appendChild(b); }
-    if (S.nf.market) { const b2 = document.createElement('button'); b2.className = 'btn gold'; b2.textContent = 'BUY ' + u.price + ' XC'; b2.disabled = !!S.ld.pending || (S.nf.xc | 0) < u.price; b2.onclick = function () { buyUpgrade(u.id); }; box.appendChild(b2); }
+  if (mode === 'own') {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'EQUIP'; b.disabled = !(own > eqd && S.ld.picks.length < L.slotsFor(evoLevel()) && (it.trigger || (!has2(S.ld.picks, it.id)))); b.onclick = function () { S.ld.picks.push(key); S.ld.note = ''; renderLoadout(); }; box.appendChild(b);
+    if (cost) { const e = document.createElement('button'); e.className = 'btn gold'; e.textContent = 'EVOLVE ▸ ' + L.TIER_LABELS[it.tier] + ' · ' + cost.orbs + ' ORBS'; e.disabled = !!S.ld.pending || own - eqd < 1 || (S.nf.orbs | 0) < cost.orbs; e.onclick = function () { evolveUpgrade(key); }; box.appendChild(e); }
+  } else if (mode === 'mkt') {
+    const b2 = document.createElement('button'); b2.className = 'btn gold'; b2.textContent = 'BUY ' + it.price + ' XC'; b2.disabled = !S.nf.market || !!S.ld.pending || (S.nf.xc | 0) < it.price || own >= 9; b2.onclick = function () { buyUpgrade(key); }; box.appendChild(b2);
   } else {
-    const b = document.createElement('button'); b.className = 'btn gold'; b.textContent = 'BUY ' + u.price; const full = S.eq.list.length >= L.slotsFor(evoLevel()), dup = !u.trigger && has(u.id);
-    b.disabled = S.xc < u.price || full || dup; b.onclick = function () { shopBuy(u.id); }; box.appendChild(b);
+    const b = document.createElement('button'); b.className = 'btn gold'; b.textContent = 'BUY ' + it.price; const full = S.eq.list.length >= L.slotsFor(evoLevel()), dup = !it.trigger && has(it.id);
+    b.disabled = !S.bank || S.bank.value() < it.price || full || dup; b.onclick = function () { shopBuy(key); }; box.appendChild(b);
   }
   d.appendChild(box); return d;
 }
+function has2(list, id) { return L.bestTier(list, id) > 0; }
 function renderLoadout() {
   const cl = (S.nf.progress && S.nf.progress.cleared) | 0, lvl = evoLevel(), cap = L.slotsFor(lvl), dif = L.DIFFS[S.cfg.diff];
-  const secs = L.SPRINT_SEC;
+  const secs = L.SPRINT_SEC, wcap = L.wagerCap(lvl);
   $('ldSum').innerHTML = 'Server 01 · <b>' + dif.label.toUpperCase() + '</b> · team of <b>' + S.cfg.team + '</b> · Evo level <b>' + lvl + '</b> (' + cap + ' slot' + (cap > 1 ? 's' : '') + ')<br>Quiz sprint: <b>' + secs + ' s</b> · full ammo = <b>' + S.cfg.meterTarget + '</b> correct answers · Evo revive ability: <b>' + (L.reviveCharges(lvl) ? L.reviveCharges(lvl) + ' per round' : 'none until level 5') + '</b>' +
-    '<br>X-Coin: <b style="color:#ffd740">' + (S.nf.xc | 0) + '</b> · Team checkpoint: <b>' + (cl > 0 ? 'section ' + (cl + 1) + ' of 6' : 'start of server') + '</b>';
+    '<br>X-Coin: <b style="color:#ffd740">' + (S.nf.xc | 0) + '</b> · Orbs banked: <b style="color:#7fd8ff">' + (S.nf.orbs | 0) + '</b> · Team checkpoint: <b>' + (cl > 0 ? 'section ' + (cl + 1) + ' of 6' : 'start of server') + '</b>' +
+    '<br><span style="color:#ffb4c0">Upgrades last ONE round. Hit the round goals and every squad member is paid the whole team bank; miss them and the wagers are lost.</span>';
+  renderWager(wcap);
   const sl = $('ldSlots'); sl.innerHTML = '';
-  for (let i = 0; i < cap; i++) { const d = document.createElement('div'), id = S.ld.picks[i]; d.className = 'slot' + (id ? ' full' : ''); d.textContent = id ? L.UPGRADES[id].icon : ''; d.title = id ? L.UPGRADES[id].name + ' (tap to remove)' : 'Empty slot'; if (id) d.onclick = function () { S.ld.picks.splice(i, 1); renderLoadout(); }; sl.appendChild(d); }
-  const ls = $('ldList'); ls.innerHTML = ''; Object.keys(L.UPGRADES).forEach(function (k) { if (L.UPGRADES[k].kind === 'game') ls.appendChild(upRow(L.UPGRADES[k], 'ld')); });
-  const held = Object.keys(L.UPGRADES).filter(function (k) { return L.UPGRADES[k].kind === 'session'; });
-  const ss = $('ldSession'); ss.innerHTML = '<div class="lbl mono" style="margin:.7em 0 .3em">LIVE-SESSION UPGRADES (HOST-APPLIED, NOT USED IN A ROUND)</div>'; const l2 = document.createElement('div'); l2.className = 'ulist'; held.forEach(function (k) { l2.appendChild(upRow(L.UPGRADES[k], 'ld')); }); ss.appendChild(l2);
-  $('ldNote').textContent = S.ld.pending ? 'Purchasing…' : (S.ld.note || (S.nf.market ? '' : 'Marketplace purchases are not available here.'));
+  for (let i = 0; i < cap; i++) { const d = document.createElement('div'), key = S.ld.picks[i]; d.className = 'slot' + (key ? ' full' : ''); if (key) { const it = L.itemInfo(key); slotFace(d, it); d.title = it.name + ' (tap to remove)'; d.onclick = function () { S.ld.picks.splice(i, 1); renderLoadout(); }; } else d.title = 'Empty slot'; sl.appendChild(d); }
+  const ownKeys = L.marketKeys().filter(function (k) { return ownedN(k) > 0; });
+  const ol = $('ldOwned'); ol.innerHTML = ''; ownKeys.forEach(function (k) { ol.appendChild(upRow(k, 'own')); }); if (!ownKeys.length) ol.innerHTML = '<div class="ldsum" style="grid-column:1/-1">You hold no upgrades yet — buy some below.</div>';
+  const ls = $('ldList'); ls.innerHTML = ''; L.marketKeys().forEach(function (k) { ls.appendChild(upRow(k, 'mkt')); });
+  $('ldSession').innerHTML = '<div class="ldsum" style="margin:.7em 0 0">Session upgrades (Deadline Extension, Checkpoint Reassess…) are bought in the X-Live Marketplace, not here.</div>';
+  $('ldNote').textContent = S.ld.pending ? 'Working…' : (S.ld.note || (S.nf.market ? '' : 'Marketplace purchases are not available here.'));
   const co = S.role === 'player';
   $('ldStart').textContent = co ? 'LOCK IN LOADOUT' : (cl > 0 ? 'CONTINUE FROM SECTION ' + (cl + 1) : 'START ROUND'); $('ldFresh').style.display = (!co && cl > 0) ? '' : 'none';
 }
-function buyUpgrade(id) {
-  const u = L.UPGRADES[id]; if (!u || S.ld.pending) return;
-  if (S.nf.standalone) { if ((S.nf.xc | 0) < u.price) { S.ld.note = 'Not enough X-Coin.'; renderLoadout(); return; } S.nf.xc -= u.price; S.nf.owned[id] = ownedN(id) + 1; S.ld.note = 'Bought ' + u.name + ' (demo wallet).'; renderLoadout(); return; }
-  S.ld.pending = true; S.ld.note = ''; renderLoadout(); post({ type: 'pflx_arena_nf_buy', game: 'nexus-frontiers', id: id });
+function buyUpgrade(key) {
+  const it = L.itemInfo(key); if (!it || S.ld.pending) return;
+  if (S.nf.standalone) { if ((S.nf.xc | 0) < it.price) { S.ld.note = 'Not enough X-Coin.'; renderLoadout(); return; } S.nf.xc -= it.price; S.nf.owned[key] = ownedN(key) + 1; S.ld.note = 'Bought ' + it.name + ' (demo wallet).'; renderLoadout(); return; }
+  S.ld.pending = true; S.ld.note = ''; renderLoadout(); post({ type: 'pflx_arena_nf_buy', game: 'nexus-frontiers', id: key });
   clearTimeout(buyUpgrade.t); buyUpgrade.t = setTimeout(function () { if (S.ld.pending) { S.ld.pending = false; S.ld.note = 'The Arena did not answer — nothing was charged.'; if (S.mode === 'loadout') renderLoadout(); } }, 8000);
+}
+function evolveUpgrade(key) { // one Mk-N item + orbs → one Mk-(N+1) item
+  const c = L.evolveCost(key); if (!c || S.ld.pending) return;
+  if (S.nf.standalone) { const r = L.evolve(S.nf.owned, S.nf.orbs | 0, key); if (!r) { S.ld.note = 'Not enough orbs.'; renderLoadout(); return; } S.nf.owned = r.owned; S.nf.orbs = r.orbs; S.ld.note = 'Evolved into ' + L.itemInfo(r.to).name + '.'; renderLoadout(); return; }
+  S.ld.pending = true; S.ld.note = ''; renderLoadout(); post({ type: 'pflx_arena_nf_evolve', game: 'nexus-frontiers', id: key });
+  clearTimeout(buyUpgrade.t); buyUpgrade.t = setTimeout(function () { if (S.ld.pending) { S.ld.pending = false; S.ld.note = 'The Arena did not answer — nothing was changed.'; if (S.mode === 'loadout') renderLoadout(); } }, 8000);
 }
 $('ldStart').onclick = function () {
   if (S.role === 'player') { S.ld.picks = L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()); sendHello(); setMode('lobby'); renderLobby(); return; }
-  beginWorld(1, { resume: (S.nf.progress && S.nf.progress.cleared) | 0 });
+  armSoloWager(function () { beginWorld(1, { resume: (S.nf.progress && S.nf.progress.cleared) | 0 }); });
 };
-$('ldFresh').onclick = function () { beginWorld(1, { resume: 0 }); };
+$('ldFresh').onclick = function () { armSoloWager(function () { beginWorld(1, { resume: 0 }); }); };
 $('ldBack').onclick = function () { if (S.role === 'player') { setMode('lobby'); renderLobby(); } else setMode('menu'); };
 
-// ── In-round field shop: spend X-Coin collected THIS run on game upgrades (uses a free slot) ──
+// ── In-round field shop: spend the TEAM BANK on game upgrades for yourself (uses a free slot; lasts until the round ends) ──
 function openShop() {
   if (S.mode !== 'play' || S.quizOpen || S.shopOpen || !S.p || S.p.down) return;
   if (!S.cfg.shop) { toast('The field shop is switched off for this round'); return; }
@@ -1110,13 +1312,13 @@ function openShop() {
 function closeShop() { S.shopOpen = false; $('shop').classList.remove('on'); renderHud(); }
 function renderShop() {
   const cap = L.slotsFor(evoLevel());
-  $('shSum').innerHTML = 'Run X-Coin: <b style="color:#ffd740">' + S.xc + '</b> · Slots used: <b>' + S.eq.list.length + ' / ' + cap + '</b><br>Upgrades bought here come out of the X-Coin you collected this round (less to send home) and last until the round ends.';
-  const ls = $('shList'); ls.innerHTML = ''; Object.keys(L.UPGRADES).forEach(function (k) { if (L.UPGRADES[k].kind === 'game') ls.appendChild(upRow(L.UPGRADES[k], 'shop')); });
+  $('shSum').innerHTML = 'Team bank: <b style="color:#ffd740">' + (S.bank ? S.bank.value() : 0) + '</b> X-Coin (shared by the whole squad) · Your slots: <b>' + S.eq.list.length + ' / ' + cap + '</b><br>Anything bought here comes out of the joint bank — spend carefully: whatever is left is what everyone is paid if you hit the goals.';
+  const ls = $('shList'); ls.innerHTML = ''; L.marketKeys().forEach(function (k) { ls.appendChild(upRow(k, 'shop')); });
 }
-function shopBuy(id) { // the leader validates every purchase (it holds each player's run X-Coin); a client asks and gets 'buyok' back
-  const u = L.UPGRADES[id]; if (!u || u.kind !== 'game' || S.xc < u.price || S.eq.list.length >= L.slotsFor(evoLevel()) || (!u.trigger && has(id))) return;
-  if (S.isLeader) { if (!doBuy(S.p, id)) return; S.mirror(); if (id === 'capacitor') S.meter.setFill(Math.max(S.meter.fill, .4)); $('shNote').textContent = u.name + ' equipped.'; }
-  else { netAct({ k: 'buy', item: id }); $('shNote').textContent = 'Buying ' + u.name + '…'; }
+function shopBuy(key) { // the leader validates every purchase (it holds the bank and each player's equipment); a client asks and gets 'buyok' back
+  const it = L.itemInfo(key); if (!it || !S.bank || S.bank.value() < it.price || S.eq.list.length >= L.slotsFor(evoLevel()) || (!it.trigger && has(it.id))) return;
+  if (S.isLeader) { if (!doBuy(S.p, key)) return; S.mirror(); if (it.id === 'capacitor') S.meter.setFill(Math.max(S.meter.fill, it.v)); $('shNote').textContent = it.name + ' equipped.'; }
+  else { netAct({ k: 'buy', item: key }); $('shNote').textContent = 'Buying ' + it.name + '…'; }
   renderShop(); renderHud();
 }
 $('shopBtn').onclick = function () { openShop(); }; $('shClose').onclick = closeShop;
@@ -1161,10 +1363,10 @@ function renderQuestion() {
   });
 }
 function openQuiz(ctxName, cb) {
-  if (S.quizOpen) return;
+  if (S.quizOpen || (S.rg && ctxName === 'field')) return;
   if (ctxName === 'field') {
     if (S.meter.isFull()) { toast('Ammo is full — fire a SURGE (F)'); return; }
-    S.sprint = new L.Sprint(S.meter, L.SPRINT_SEC + (has('linkext') ? 10 : 0)); S.sprintEnding = false;
+    S.sprint = new L.Sprint(S.meter, L.SPRINT_SEC + (has('linkext') ? L.tierFx('linkext', L.bestTier(S.eq.list, 'linkext')).v : 0)); S.sprintEnding = false;
   } else S.sprint = null;
   S.quizOpen = true; S.quizContext = ctxName; S.quizCb = cb || null;
   renderQuestion();
@@ -1190,6 +1392,7 @@ function pickOption(i) {
   S.p.charge = S.quiz.charge;
   $('qMsg').className = res.correct ? 'good' : 'bad';
   if (res.correct) { if (S.isLeader) S.score += 20; else netAct({ k: 'pts', n: 20 }); }
+  netAct({ k: 'qa', ok: !!res.correct });
   if (S.sprint) {
     S.sprint.record(res.correct);
     $('qMsg').textContent = res.correct ? (res.charge ? 'Correct! +1 notch of ammo.' : 'Correct! Ammo is full.') : 'Not this time. The answer: ' + res.answerText;
@@ -1272,8 +1475,8 @@ function joinTeam(key, name) {
 }
 function sendHello() {
   if (!NET.team) return; const i = myInfo(), me = NET.members[S.me] || {};
-  NET.team.send('hello', { id: i.id, name: i.name, studio: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, rdy: S.ready ? 1 : 0, picks: S.ld.picks, md: S.mode === 'play' || S.mode === 'boss' ? 'p' : S.mode === 'end' ? 'e' : 'l', rs: NET.roundSec, rd: NET.roundId, nf: S.nf && S.nf.progress ? S.nf.progress.cleared | 0 : 0 }, false);
-  NET.members[S.me] = Object.assign(me, { id: i.id, name: i.name, studioId: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, ready: !!S.ready, picks: S.ld.picks.slice(), seen: performance.now(), online: true });
+  NET.team.send('hello', { id: i.id, name: i.name, studio: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, rdy: S.ready ? 1 : 0, picks: S.ld.picks, md: S.mode === 'play' || S.mode === 'boss' ? 'p' : S.mode === 'end' ? 'e' : 'l', rs: NET.roundSec, rd: NET.roundId, nf: S.nf && S.nf.progress ? S.nf.progress.cleared | 0 : 0, wg: S.stake | 0 }, false);
+  NET.members[S.me] = Object.assign(me, { id: i.id, name: i.name, studioId: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, ready: !!S.ready, picks: S.ld.picks.slice(), wg: S.stake | 0, seen: performance.now(), online: true });
 }
 function onTeamMsg(e, p) {
   if (!p) return; const now = performance.now();
@@ -1281,7 +1484,7 @@ function onTeamMsg(e, p) {
   switch (e) {
     case 'hello': {
       const m = NET.members[p.id] || (NET.members[p.id] = { id: p.id });
-      Object.assign(m, { name: p.name, studioId: p.studio, lvl: p.lvl, tier: p.tier, stats: p.stats, ready: !!p.rdy, picks: p.picks || [], seen: now, online: true, md: p.md });
+      Object.assign(m, { name: p.name, studioId: p.studio, lvl: p.lvl, tier: p.tier, stats: p.stats, ready: !!p.rdy, picks: p.picks || [], wg: p.wg | 0, seen: now, online: true, md: p.md });
       const P = S.players && S.players[p.id]; if (P) { P.lastSeen = now; }
       if (p.rs && p.id === leaderId()) NET.roundSec = p.rs;
       // rejoin: a squad member who reloaded mid-round says "lobby" while the round is live → leader sends the start message again
@@ -1310,7 +1513,7 @@ function netAct(a) { // a player action that the leader must see
 }
 function netTo(pid, o) { if (NET.team) NET.team.send('msg', Object.assign({ to: pid }, o), true); }
 function onDirect(p) {
-  if (p.k === 'buyok') { if (p.id === 'capacitor' && S.meter) { S.meter.setFill(Math.max(S.meter.fill, .4)); S.quiz.setMeter(S.meter); } if (S.shopOpen) renderShop(); renderHud(); }
+  if (p.k === 'buyok') { const q = L.parseKey(p.id); if (q && q.id === 'capacitor' && S.meter) { S.meter.setFill(Math.max(S.meter.fill, L.tierFx('capacitor', q.tier).v)); S.quiz.setMeter(S.meter); } if (S.shopOpen) renderShop(); renderHud(); if (S.rg) renderRegroup(); }
 }
 function handleAct(id, a) { // leader
   const P = S.players[id]; if (!P) return;
@@ -1321,6 +1524,9 @@ function handleAct(id, a) { // leader
     case 'buy': doBuy(P, String(a.item || '')); break;
     case 'bossmove': bossMove(P, String(a.card || ''), !!a.ok); break;
     case 'pts': S.score += Math.max(0, Math.min(20, a.n | 0)); break;
+    case 'qa': P.qn = (P.qn | 0) + 1; S.goals.answered++; if (a.ok) { P.qc = (P.qc | 0) + 1; S.goals.correct++; } break;
+    case 'give': doGive(P, S.players[String(a.to || '')], String(a.key || '')); break;
+    case 'rgready': if (S.rg) S.rg.ready[id] = 1; break;
   }
 }
 function onPos(p) { // leader: another player's own movement
@@ -1359,16 +1565,17 @@ function renderLobby() {
   $('lbSub').innerHTML = escapeHtml(S.coop.title || 'X-Live session') + ' · <b>' + dif.label.toUpperCase() + '</b> · round time <b>' + Math.floor(NET.roundSec / 60) + ':' + String(NET.roundSec % 60).padStart(2, '0') + '</b> (host-set, max 10 min) · squad checkpoint: <b>' + (cl > 0 ? 'section ' + (cl + 1) + ' of 6' : 'start of server') + '</b>';
   $('lbMembers').innerHTML = ms.map(function (m) {
     const col = L.STUDIO_COLORS[L.studioKey(m.studioId)];
-    return '<div class="lbm' + (m.online ? '' : ' off') + '" style="border-color:' + col + '"><i style="background:' + col + '"></i><div class="tx"><b>' + escapeHtml(m.name || '…') + (m.id === S.me ? ' (you)' : '') + (m.id === lead ? ' ★' : '') + '</b><small>' + escapeHtml(String(L.studioKey(m.studioId)).toUpperCase()) + ' · EVO LV ' + (m.lvl || 1) + '</small></div><span class="mono ' + (m.ready ? 'rdy' : 'wait') + '">' + (!m.online ? 'OFFLINE' : m.ready ? 'READY' : 'NOT READY') + '</span></div>';
+    return '<div class="lbm' + (m.online ? '' : ' off') + '" style="border-color:' + col + '"><i style="background:' + col + '"></i><div class="tx"><b>' + escapeHtml(m.name || '…') + (m.id === S.me ? ' (you)' : '') + (m.id === lead ? ' ★' : '') + '</b><small>' + escapeHtml(String(L.studioKey(m.studioId)).toUpperCase()) + ' · EVO LV ' + (m.lvl || 1) + ((m.id === S.me ? S.stake : m.wg) ? ' · WAGER ' + (m.id === S.me ? S.stake : m.wg) + ' XC' : '') + '</small></div><span class="mono ' + (m.ready ? 'rdy' : 'wait') + '">' + (!m.online ? 'OFFLINE' : m.ready ? 'READY' : 'NOT READY') + '</span></div>';
   }).join('') || '<div class="ldsum">Looking for your squad…</div>';
-  const rule = S.coop.rules; $('lbRules').innerHTML = '2–4 players per squad, one per studio' + (rule.solo ? ' · <b>1-player squads allowed by your host for this cohort</b>' : '') + (rule.studioRule === 'relaxed' ? ' · same-studio teammates allowed' : '');
+  const rule = S.coop.rules; $('lbRules').innerHTML = '2–4 players per squad, one per studio' + (rule.solo ? ' · <b>1-player squads allowed by your host for this cohort</b>' : '') + (rule.studioRule === 'relaxed' ? ' · same-studio teammates allowed' : '')
+  const bk = ms.filter(function (m) { return m.online && m.ready; }).reduce(function (n, m) { return n + ((m.id === S.me ? S.stake : m.wg) | 0); }, 0); $('lbRules').innerHTML += ' · <b style="color:#ffd740">team bank if you launch now: ' + bk + ' XC</b>';
   const need = chk.reasons.filter(function (r) { return r.indexOf('not ready') < 0; });
   $('lbNote').textContent = S.round && !S.players[S.me] ? 'A round is in progress for this squad. You can join the next launch.' : (chk.ok ? ('Squad ready: ' + chk.active + ' player' + (chk.active > 1 ? 's' : '') + '. ' + (lead === S.me ? 'Press LAUNCH ROUND.' : 'Waiting for ' + ((NET.members[lead] || {}).name || 'the squad leader') + ' to launch (or press LAUNCH to ask).')) : need.join(' '));
   $('lbReady').textContent = S.ready ? 'NOT READY' : 'READY'; $('lbReady').classList.toggle('gold', !S.ready);
   const canStart = chk.ok && !!S.ready && !(S.round && !S.players[S.me]); $('lbStart').classList.toggle('off', !canStart);
   renderNetStatus();
 }
-$('lbReady').onclick = function () { S.ready = !S.ready; sendHello(); renderLobby(); };
+$('lbReady').onclick = function () { toggleReady(); };
 $('lbLoadout').onclick = function () { openLoadout(); };
 $('lbStart').onclick = function () { const chk = lobbyCheck(); if (!chk.ok || !S.ready) return; if (leaderId() === S.me) { tryLeaderStart(); } else if (NET.team) NET.team.send('startreq', { id: S.me }, true); };
 $('lbExit').onclick = function () { exitToArena(); };
@@ -1382,8 +1589,8 @@ function sendStart(rejoin, only) { // leader
   let msg;
   if (rejoin && S.round) msg = Object.assign({}, S.round.msg, { rejoin: true, to: only });
   else {
-    const roster = S.pendingRoster.map(function (m) { return { id: m.id, name: m.name, studio: L.studioKey(m.studioId), lvl: m.lvl || 1, tier: m.tier || 1, stats: m.stats || {}, picks: m.picks || [] }; });
-    msg = { id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), seed: (Math.random() * 2e9) | 0 || 1, resume: (S.nf.progress && S.nf.progress.cleared) | 0, roster: roster, roundSec: NET.roundSec, diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, leader: S.me };
+    const roster = S.pendingRoster.map(function (m) { return { id: m.id, name: m.name, studio: L.studioKey(m.studioId), lvl: m.lvl || 1, tier: m.tier || 1, stats: m.stats || {}, picks: m.picks || [], wg: L.clampWager(m.id === S.me ? S.stake : m.wg, m.lvl || 1, 1e9) }; });
+    msg = { id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), seed: (Math.random() * 2e9) | 0 || 1, resume: (S.nf.progress && S.nf.progress.cleared) | 0, roster: roster, roundSec: NET.roundSec, diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
   }
   if (!NET.team) return;
   NET.team.send('start', msg, true); setTimeout(function () { NET.team && NET.team.send('start', msg, true); }, 500); setTimeout(function () { NET.team && NET.team.send('start', msg, true); }, 1300);
@@ -1405,8 +1612,32 @@ function onStart(msg) {
 
 // ══════════ PLAYERS — shared by solo, co-op leader and co-op clients ══════════
 function psx(P, k) { const s = P && P.stats; return s ? sx(Number(s[k]) || 0) : 0; } // bounded ≤12% stat swing
-function phas(P, id) { return !!(P && P.eq && P.eq.list.indexOf(id) >= 0); }
-function ptrig(P, id) { return !P || !P.eq ? 0 : P.eq.list.filter(function (x) { return x === id; }).length - (P.eq.spent[id] | 0); }
+// Equipment is a list of item KEYS ("aegis", "aegis#2" …). Helpers work per FAMILY and use the best tier that is available.
+function phas(P, id) { return !!(P && P.eq && L.bestTier(P.eq.list, id) > 0); }
+function ptier(P, id) { return !P || !P.eq ? 0 : L.bestTier(P.eq.list, id); }
+function pfx(P, id) { return L.tierFx(id, ptier(P, id)); } // effect numbers of the best tier equipped (null if none)
+function keyCount(list, key) { let n = 0; (list || []).forEach(function (k) { if (k === key) n++; }); return n; }
+function availKey(P, key) { return !P || !P.eq ? 0 : Math.max(0, keyCount(P.eq.list, key) - (P.eq.spent[key] | 0)); }
+function bestAvailKey(P, id) { let best = null, bt = 0; if (!P || !P.eq) return null; P.eq.list.forEach(function (k) { const q = L.parseKey(k); if (q && q.id === id && q.tier > bt && availKey(P, k) > 0) { bt = q.tier; best = k; } }); return best; }
+function ptrig(P, id) { let n = 0; if (!P || !P.eq) return 0; const seen = {}; P.eq.list.forEach(function (k) { const q = L.parseKey(k); if (q && q.id === id && !seen[k]) { seen[k] = 1; n += availKey(P, k); } }); return n; }
+function spendKey(P, key) { P.eq.spent[key] = (P.eq.spent[key] | 0) + 1; }
+function aegisQueue(list) { const q = []; (list || []).forEach(function (k) { const p = L.parseKey(k); if (p && p.id === 'aegis') q.push({ k: k, t: p.tier, h: L.tierFx('aegis', p.tier).v, full: L.tierFx('aegis', p.tier).v }); }); q.sort(function (a, b) { return b.t - a.t; }); return q; }
+function aegisTotal(q) { return q.reduce(function (n, e) { return n + e.h; }, 0); }
+// One Aegis hit absorbed (queue head first). Returns true if a hit was absorbed.
+function aegisAbsorb(P) {
+  const q = P.eq.aq; if (!q) return false; while (q.length && q[0].h <= 0) q.shift(); if (!q.length) return false;
+  q[0].h--; P.eq.aegisHits = Math.max(0, (P.eq.aegisHits | 0) - 1); if (q[0].h <= 0) { spendKey(P, q[0].k); q.shift(); } return true;
+}
+// Hand-over / purchase helpers keep the Aegis queue and the hit counter in step with the item list.
+function eqAddItem(P, key) { P.eq.list.push(key); const p = L.parseKey(key); if (p && p.id === 'aegis') { const f = L.tierFx('aegis', p.tier).v; P.eq.aq = P.eq.aq || []; P.eq.aq.push({ k: key, t: p.tier, h: f, full: f }); P.eq.aq.sort(function (a, b) { return b.t - a.t; }); P.eq.aegisHits = (P.eq.aegisHits | 0) + f; } }
+function eqGiveable(P, key) { // an item can be handed over only while unused (a half-spent Aegis cannot)
+  if (!P || !P.eq || availKey(P, key) < 1) return false; const p = L.parseKey(key); if (p && p.id === 'aegis') return (P.eq.aq || []).some(function (e) { return e.k === key && e.h === e.full; }); return true;
+}
+function eqRemoveItem(P, key) {
+  const i = P.eq.list.lastIndexOf(key); if (i < 0) return false; P.eq.list.splice(i, 1);
+  const p = L.parseKey(key); if (p && p.id === 'aegis' && P.eq.aq) { const j = P.eq.aq.findIndex(function (e) { return e.k === key && e.h === e.full; }); if (j >= 0) { P.eq.aegisHits = Math.max(0, (P.eq.aegisHits | 0) - P.eq.aq[j].h); P.eq.aq.splice(j, 1); } }
+  return true;
+}
 function isAlive(P) { return !!P && !P.down && !P.away; }
 function isTarget(P) { return isAlive(P) && !(P.protect > 0); }
 function playerList() { return (S.order || []).map(function (id) { return S.players[id]; }).filter(Boolean); }
@@ -1419,7 +1650,8 @@ function mkPlayer(id, info) {
 }
 function buildEq(P) {
   const picks = L.validateLoadout(P.picks, null, P.lvl, true); // the cartridge of each player already validated against that player's own stock
-  P.eq = { inv: picks.slice(), list: picks.slice(), spent: {}, bought: [], aegisHits: 2 * picks.filter(function (x) { return x === 'aegis'; }).length, abilityLeft: L.reviveCharges(P.lvl), flash: 0 };
+  const aq = aegisQueue(picks);
+  P.eq = { inv: picks.slice(), list: picks.slice(), spent: {}, bought: [], aq: aq, aegisHits: aegisTotal(aq), abilityLeft: L.reviveCharges(P.lvl), flash: 0 };
 }
 // one-shot visual/audio events: the leader plays them locally and ships them to everyone else inside the next snapshot
 function emit(ev) { if (S.isLeader && S.role !== 'solo' && S.evq.length < 60) S.evq.push(ev); playEv(ev); }
@@ -1443,7 +1675,7 @@ function buildWorld(seed, resume) {
   S.enemies = []; S.shots = []; S.orbs = []; S.coins = []; S.stars = []; S.fx = []; S.rings = []; S.evq = []; S.xc = 0; S.xcDropped = 0; S.awarded = false; S.ledger = new L.DropLedger(); S.flows = {};
   S.areas = [0, 1, 2, 3, 4, 5].map(function (i) { const c = L.encounterFor(S.cfg.diff, i, S.cfg.team); return { idx: i, cfg: c, scale: L.stageScale(S.cfg.diff, i), enc: new L.Encounter(c, L.mulberry32((m.seed + i * 7919) >>> 0)), state: 'dormant', cd: 0 }; });
   bossState.max = L.bossHp(60, S.cfg.diff, S.cfg.team);
-  S.areaIdx = -1; S.crossed = {}; S.seenCut = {}; S.score = 0; S.kills = 0; S.bossDone = false; S.portal = null; S.ended = false; S.t = 0; S.timeSec = 0; S.secCleared = 0; S.lastSaved = -1; S.runLive = true; S.consumedSent = false; S.portalT = 0; S.nid = 1; S.obj = { t: 'Move into the first section', s: 'WASD / arrows' };
+  S.areaIdx = -1; S.crossed = {}; S.seenCut = {}; S.score = 0; S.kills = 0; S.bossDone = false; S.portal = null; S.ended = false; S.t = 0; S.timeSec = 0; S.secCleared = 0; S.lastSaved = -1; S.runLive = true; S.consumedSent = false; S.portalT = 0; S.nid = 1; S.revives = 0; S.keyItems = []; S.keyDrops = 0; S.rg = null; S.evT = 0; S.rainT = 0; S.clearSec = 0; S.obj = { t: 'Move into the first section', s: 'WASD / arrows' };
   const k = Math.max(0, Math.min(6, resume | 0));
   if (k > 0) { // team checkpoint: earlier sections stay cleared, gates open, start at the next section
     for (let i = 0; i < k && i < 6; i++) { S.areas[i].state = 'cleared'; m.gateOpen[i] = true; S.crossed[i] = true; S.seenCut['combat-0' + (i + 1)] = true; S.seenCut['transition-0' + (i + 1)] = true; }
@@ -1539,7 +1771,8 @@ function killEnemy(e, by) {
   const a = S.areas[S.areaIdx]; if (a) a.enc.onDefeat(e.type);
   const KP = S.players[by]; if (KP) KP.kills++;
   S.kills++; S.score += DEF[e.type].score; fxAt(e.x, e.y, 'burst', .5); dropCoins(e.type, e.x, e.y, 'xe' + e.id);
-  if (S.ledger.create('b' + e.id)) { const anySeeker = playerList().some(function (P) { return phas(P, 'seeker'); }); const bt = L.boosterDrop(e.type, S.rng, anySeeker); if (bt) S.stars.push({ id: 'b' + e.id, type: bt, x: e.x, y: e.y - 6, life: 14 }); }
+  if (e.type === 'sentry' && S.goals && S.keyDrops < S.goals.conf.keys && S.ledger.create('key' + e.id)) { S.keyDrops++; S.keyItems.push({ id: 'k' + e.id, x: e.x, y: e.y - 10, life: 20 }); emit({ k: 'banner', t: 'ACCESS KEY DROPPED' }); }
+  if (S.ledger.create('b' + e.id)) { const anySeeker = playerList().reduce(function (m, P) { return Math.max(m, phas(P, 'seeker') ? pfx(P, 'seeker').v : 1); }, 1); const bt = L.boosterDrop(e.type, S.rng, anySeeker); if (bt) S.stars.push({ id: 'b' + e.id, type: bt, x: e.x, y: e.y - 6, life: 14 }); }
   if (S.ledger.create('e' + e.id) && S.rng() < DEF[e.type].drop) {
     const n = e.type === 'sentry' ? 3 : 1;
     for (let i = 0; i < n; i++) S.orbs.push({ id: 'o' + e.id + '_' + i, x: e.x + (i - (n - 1) / 2) * 16, y: e.y + (i ? 6 : 0), life: 15 });
@@ -1579,26 +1812,26 @@ function updateAreas(dt) {
   } else {
     const k = enc.readyKind();
     if (k) { a.cd -= dt; if (a.cd <= 0) { enc.begin(k); a.sp = 0; a.cd = 1.8; emit({ k: 'banner', t: k === 'sentry' ? 'SENTRY + SCOUTS' : 'WAVE ' + enc.wavesIssued + ' / ' + a.cfg.waves }); } }
-    else if (enc.cleared()) { a.state = 'cleared'; S.score += 100; openGate(a.idx); S.secCleared = Math.max(S.secCleared, a.idx + 1); saveProgress(false); }
+    else if (enc.cleared()) { a.state = 'cleared'; S.score += 100; openGate(a.idx); S.secCleared = Math.max(S.secCleared, a.idx + 1); saveProgress(false); if (a.cfg.sentryAfter.length) startRegroup(); }
   }
 }
 
 // ══════════ DAMAGE / REVIVE (per player; leader only) ══════════
 function hurtPlayer(P, d, src) {
   if (!P || P.inv > 0 || P.hurtCd > 0 || S.ended || P.down || P.protect > 0 || P.away) return;
-  if (P.eq && P.eq.aegisHits > 0) { // Aegis Shell: absorbs hits (a unit is spent when it first activates)
-    if (P.eq.aegisHits % 2 === 0) P.eq.spent.aegis = (P.eq.spent.aegis | 0) + 1;
-    P.eq.aegisHits--; P.hurtCd = .5; ring(P.x, P.y, 40, '#7fd8ff', 10); emit({ k: 'toast', to: P.id, t: 'Aegis Shell absorbed the hit' }); return;
+  if (P.eq && P.eq.aegisHits > 0 && aegisAbsorb(P)) { // Aegis Shell: absorbs hits (each tier carries 2 / 3 / 4)
+    P.hurtCd = .5; ring(P.x, P.y, 40, '#7fd8ff', 10); emit({ k: 'toast', to: P.id, t: 'Aegis Shell absorbed the hit' }); return;
   }
   d = L.resolveIncoming({ raw: d, guarded: false, guardStat: psx(P, 'guard') }); P.vit -= d; P.hurtCd = .5; P.hit = .2; emit({ k: 'shake', to: P.id, n: 4 });
   if (P.vit <= 0) { evoDown(P); return; }
-  if (P.vit < P.maxVit * .3 && ptrig(P, 'repair') > 0) { P.eq.spent.repair = (P.eq.spent.repair | 0) + 1; P.vit = Math.min(P.maxVit, P.vit + 50); ring(P.x, P.y, 46, '#7dffb4', 8); emit({ k: 'toast', to: P.id, t: 'Repair Pack: +50 vitality' }); }
+  const rk = bestAvailKey(P, 'repair'), rf = rk && L.tierFx('repair', L.parseKey(rk).tier);
+  if (rf && P.vit < P.maxVit * rf.w) { spendKey(P, rk); P.vit = Math.min(P.maxVit, P.vit + rf.v); ring(P.x, P.y, 46, '#7dffb4', 8); emit({ k: 'toast', to: P.id, t: 'Repair Pack: +' + rf.v + ' vitality' }); }
 }
 // The Evo is down. Only a revive can bring it back: the free Evo-level ability first, then a ChronoRespawn from the loadout. Otherwise it is out for the round.
 function tryRevive(P) {
   const src = L.reviveSource(P.eq.abilityLeft, ptrig(P, 'chronorespawn'));
-  if (src === 'ability') { P.eq.abilityLeft--; return { src: src, frac: .5, label: 'EVO LEVEL ABILITY' }; }
-  if (src === 'item') { P.eq.spent.chronorespawn = (P.eq.spent.chronorespawn | 0) + 1; return { src: src, frac: .6, label: 'CHRONORESPAWN' }; }
+  if (src === 'ability') { P.eq.abilityLeft--; S.revives = (S.revives | 0) + 1; return { src: src, frac: .5, label: 'EVO LEVEL ABILITY' }; }
+  if (src === 'item') { const ck = bestAvailKey(P, 'chronorespawn'); spendKey(P, ck); S.revives = (S.revives | 0) + 1; return { src: src, frac: L.tierFx('chronorespawn', L.parseKey(ck).tier).v, label: 'CHRONORESPAWN' }; }
   return null;
 }
 function evoDown(P) {
@@ -1614,21 +1847,21 @@ function checkAllDown() { if (!S.ended && playerList().length && playerList().ev
 // ══════════ PLAYER ACTIONS ══════════
 // Dash is decided on the player's own device (movement is client-side); the leader only needs to know about the invulnerability window.
 function dash() {
-  const p = S.p; if (!p || S.mode !== 'play' || S.quizOpen || p.dashCd > 0 || p.down) return;
+  const p = S.p; if (!p || S.mode !== 'play' || S.quizOpen || S.rg || p.dashCd > 0 || p.down) return;
   let dx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + joy.x, dy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + joy.y;
   const m = Math.hypot(dx, dy); if (m < .1) { dx = Math.cos(p.face); dy = Math.sin(p.face); } else { dx /= m; dy /= m; }
   p.dash = .17; p.inv = .22; p.dashCd = 1.1; p.dvx = dx; p.dvy = dy;
   netAct({ k: 'dash' });
 }
 function surge() {
-  const p = S.p; if (!p || S.mode !== 'play' || S.quizOpen || p.down) return;
+  const p = S.p; if (!p || S.mode !== 'play' || S.quizOpen || S.rg || p.down) return;
   if (!S.quiz.spend(1)) { toast('No charge — open a LINK quiz (Q)'); return; }
   p.charge = S.quiz.charge; renderHud();
   if (S.isLeader) doSurge(p); else netAct({ k: 'surge' });
 }
 function doSurge(P) { // leader: SURGE ring around the player's reported position
   if (!P || P.down) return;
-  const amp = phas(P, 'surgeamp'), R = amp ? 185 : 150, SD = amp ? 9 : 6, powerB = 1 + psx(P, 'power'); ring(P.x, P.y, R, '#ffd740', 10); emit({ k: 'shake', n: 5 });
+  const amp = pfx(P, 'surgeamp'), R = amp ? amp.w : 150, SD = amp ? amp.v : 6, powerB = 1 + psx(P, 'power'); ring(P.x, P.y, R, '#ffd740', 10); emit({ k: 'shake', n: 5 });
   S.mats.forEach(function (mt) { if (!mt.dead && Math.hypot(mt.x - P.x, mt.y - P.y) < R) damageMat(mt, SD); });
   S.enemies.forEach(function (e) {
     if (e.dead) return; const d = Math.hypot(e.x - P.x, e.y - P.y);
@@ -1637,16 +1870,37 @@ function doSurge(P) { // leader: SURGE ring around the player's reported positio
   });
 }
 // In-round shop: the leader holds each player's run X-Coin and equipment, so every purchase is validated there.
-function doBuy(P, id) {
-  const u = L.UPGRADES[id]; if (!P || !P.eq || !u || u.kind !== 'game' || P.xc < u.price || P.eq.list.length >= L.slotsFor(P.lvl) || (!u.trigger && phas(P, id))) return false;
-  P.xc -= u.price; P.eq.list.push(id); P.eq.bought.push(id); if (id === 'aegis') P.eq.aegisHits += 2;
-  emit({ k: 'toast', to: P.id, t: u.name + ' equipped.' }); if (P.id !== S.me) netTo(P.id, { k: 'buyok', id: id });
+function doBuy(P, key) { // the price comes out of the JOINT team bank
+  const it = L.itemInfo(key); if (!P || !P.eq || !it || !S.bank || S.bank.value() < it.price || P.eq.list.length >= L.slotsFor(P.lvl) || (!it.trigger && phas(P, it.id))) return false;
+  if (!S.bank.spend(it.price)) return false;
+  eqAddItem(P, key); P.eq.bought.push(key);
+  emit({ k: 'toast', t: P.name + ' bought ' + it.name + ' (−' + it.price + ' from the team bank)' }); if (P.id !== S.me) netTo(P.id, { k: 'buyok', id: key });
   return true;
+}
+// ── Team inventory moment (after a Sentry section): hand unused items between squad members, up to each one's slot limit ──
+function startRegroup() {
+  if (S.rg || playerList().length < 2) return;
+  S.rg = { left: 30, ready: {} }; emit({ k: 'banner', t: 'TEAM INVENTORY — SHARE YOUR UPGRADES' });
+}
+function endRegroup() { if (!S.rg) return; S.rg = null; emit({ k: 'banner', t: 'BACK TO THE MISSION' }); }
+function regroupTick(dt) { if (!S.rg) return; S.rg.left -= dt; const live = livePlayers(); if (S.rg.left <= 0 || (live.length && live.every(function (P) { return S.rg.ready[P.id]; }))) endRegroup(); }
+function doGive(from, to, key) { // leader validates every hand-over
+  if (!S.rg || !from || !to || from === to || !from.eq || !to.eq) return false;
+  const it = L.itemInfo(key); if (!it || !eqGiveable(from, key)) return false;
+  if (to.eq.list.length >= L.slotsFor(to.lvl) || (!it.trigger && phas(to, it.id))) return false;
+  eqRemoveItem(from, key); eqAddItem(to, key);
+  emit({ k: 'toast', t: from.name + ' gave ' + it.name + ' to ' + to.name }); return true;
+}
+// ── System Events (from the X-Live session) shape the XC the squad collects ──
+function refreshEvents() {
+  const fx = L.eventFx(S.sevs || [], Date.now()), had = S.evNames || [];
+  (fx.names || []).forEach(function (n) { if (had.indexOf(n) < 0) { const names = { system_tax: 'SYSTEM TAX', xc_boost: 'DOUBLE XC', golden_hour: 'GOLDEN HOUR', xc_rain: 'XC RAIN', studio_surge: 'STUDIO SURGE' }; if (names[n]) emit({ k: 'banner', t: 'SYSTEM EVENT: ' + names[n] }); } });
+  S.evNames = fx.names || []; S.evFx = fx;
 }
 
 // ══════════ MOVEMENT (own Evo; runs on the player's own device, both as leader and as client) ══════════
 function localMove(dt) {
-  const p = S.p, m = S.map; if (!p || !m || p.down || S.quizOpen || S.shopOpen) return;
+  const p = S.p, m = S.map; if (!p || !m || p.down || S.quizOpen || S.shopOpen || S.rg) return;
   let ax = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + joy.x, ay = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + joy.y;
   const mag = Math.hypot(ax, ay); if (mag > 1) { ax /= mag; ay /= mag; }
   const spd = 190 * (1 + psx(p, 'speed'));
@@ -1676,7 +1930,7 @@ function simUpdate(dt) {
         const an = Math.atan2(best.y - P.y, best.x - P.x), mk = function (a, dmg, rad) { S.shots.push({ x: P.x, y: P.y, vx: Math.cos(a) * 540, vy: Math.sin(a) * 540, life: .7, dmg: dmg, rad: rad, by: P.id }); };
         if (P.boost.triple > 0) { mk(an - .2, 1, 0); mk(an + .2, 1, 0); mk(an, 2.5, 7); } // 3 projectiles, the 3rd one larger
         else mk(an, 1, 0);
-        P.shotCd = phas(P, 'rapid') ? .30 : .42; if (P.id === S.me) P.face = an; else P.aim = an;
+        P.shotCd = phas(P, 'rapid') ? pfx(P, 'rapid').v : .42; if (P.id === S.me) P.face = an; else P.aim = an;
       } else P.shotCd = .1;
     }
     Object.keys(P.boost).forEach(function (k) { if (P.boost[k] > 0) P.boost[k] = Math.max(0, P.boost[k] - dt); });
@@ -1684,7 +1938,7 @@ function simUpdate(dt) {
     if (P.boost.star > 0) { P.inv = Math.max(P.inv, .12); S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; e.starCd = Math.max(0, (e.starCd || 0) - dt); if (e.starCd <= 0 && Math.hypot(e.x - P.x, e.y - P.y) < P.r + e.r + 8) { e.starCd = .25; damageEnemy(e, 3, P.id); } }); }
   });
   // pickups: the nearest live Evo pulls and collects
-  const pullTo = function (o, base) { let bp = null, bd = 1e9; plist.forEach(function (P) { if (!isAlive(P)) return; const d = Math.hypot(o.x - P.x, o.y - P.y); if (d < bd) { bd = d; bp = P; } }); if (!bp) return null; const r = base * (phas(bp, 'magnet') ? 2.5 : 1); if (bd < r && bd > 1) { o.x += (bp.x - o.x) / bd * 220 * dt; o.y += (bp.y - o.y) / bd * 220 * dt; } return { P: bp, d: bd }; };
+  const pullTo = function (o, base) { let bp = null, bd = 1e9; plist.forEach(function (P) { if (!isAlive(P)) return; const d = Math.hypot(o.x - P.x, o.y - P.y); if (d < bd) { bd = d; bp = P; } }); if (!bp) return null; const r = base * (phas(bp, 'magnet') ? pfx(bp, 'magnet').v : 1); if (bd < r && bd > 1) { o.x += (bp.x - o.x) / bd * 220 * dt; o.y += (bp.y - o.y) / bd * 220 * dt; } return { P: bp, d: bd }; };
   S.stars.forEach(function (st) { st.life -= dt; const h = pullTo(st, 70); if (h && h.d < 24 && S.ledger.claim(st.id)) { st.life = -1; const B = L.BOOSTERS[st.type]; h.P.boost[st.type] = B.dur; ring(st.x, st.y, 50, B.color, 6); emit({ k: 'toast', to: h.P.id, t: B.name + '! ' + B.desc }); } });
   S.stars = S.stars.filter(function (st) { return st.life > 0; });
   S.shots.forEach(function (s) {
@@ -1736,15 +1990,22 @@ function simUpdate(dt) {
   S.orbs = S.orbs.filter(function (o) { return o.life > 0; });
   S.coins.forEach(function (c) {
     c.life -= dt; if (c.vy) { c.y += c.vy * dt; c.vy += 240 * dt; if (c.vy > 0) c.vy = 0; }
-    const h = pullTo(c, 90); if (h && h.d < 20 && S.ledger.claim(c.id)) { c.life = -1; h.P.xc++; fxAt(c.x, c.y - 8, 'txt', .8, '+1 X'); }
+    const h = pullTo(c, 90); if (h && h.d < 20 && S.ledger.claim(c.id)) { c.life = -1; const r = S.bank.add(1, S.evFx, h.P.studio); h.P.xc += r.gain; fxAt(c.x, c.y - 8, 'txt', .8, (r.tax ? '+' + r.gain + ' −' + r.tax + ' tax' : '+' + r.gain + ' X')); }
   });
   S.coins = S.coins.filter(function (c) { return c.life > 0; });
+  S.keyItems.forEach(function (k) { // Access Keys: any live Evo can pick one up; an unclaimed key is secured for the squad when it fades
+    k.life -= dt; const h = pullTo(k, 110); if ((k.life <= 0 || (h && h.d < 26)) && S.ledger.claim(k.id)) { k.life = -1; S.goals.keys++; ring(k.x, k.y, 60, '#ffd740', 8); emit({ k: 'banner', t: 'ACCESS KEY ' + Math.min(S.goals.keys, S.goals.conf.keys) + ' / ' + S.goals.conf.keys }); }
+  });
+  S.keyItems = S.keyItems.filter(function (k) { return k.life > 0; });
+  S.evT -= dt; if (S.evT <= 0) { S.evT = 1; refreshEvents(); }
+  if (S.evFx && S.evFx.rain) { S.rainT += dt; if (S.rainT >= S.evFx.rain.every) { S.rainT = 0; S.bank.grant(S.evFx.rain.amount); emit({ k: 'toast', t: '🌧 XC RAIN: +' + S.evFx.rain.amount + ' into the team bank' }); } }
+  regroupTick(dt);
   S.mats.forEach(function (mt) { mt.hurt = Math.max(0, (mt.hurt || 0) - dt); });
   updateAreas(dt);
   // exit portal: everyone alive reaching it (or 8 s after the first) closes the server
   if (S.portal && S.mode === 'play') {
     const inside = livePlayers().filter(function (P) { return Math.hypot(P.x - S.portal.x, P.y - S.portal.y) < 36; }), all = livePlayers();
-    if (inside.length) { S.portalT += dt; if (inside.length === all.length || S.portalT > 8 || all.length === 1) finish(); } else S.portalT = 0;
+    if (inside.length) { S.portalT += dt; if (inside.length === all.length || S.portalT > 8 || all.length === 1) { S.goals.clear = true; S.clearSec = Math.round(S.t); finish(); } } else S.portalT = 0;
   }
   S.obj = objectiveText();
   S.mirror();
@@ -1812,7 +2073,7 @@ function bossStrike() { // leader: the Elite's move hits every Evo, each with it
     let out = P.name + ' ';
     mv.hits.forEach(function (raw) {
       if (P.bvit <= 0) return;
-      if (P.eq.aegisHits > 0) { if (P.eq.aegisHits % 2 === 0) P.eq.spent.aegis = (P.eq.spent.aegis | 0) + 1; P.eq.aegisHits--; out += '[absorbed] '; return; }
+      if (P.eq.aegisHits > 0 && aegisAbsorb(P)) { out += '[absorbed] '; return; }
       const d = L.resolveIncoming({ raw: raw, guarded: !!b.guard[P.id], guardStat: psx(P, 'guard'), mitigate: L.BOSS_MOVES.guard.mitigate }); P.bvit -= d; out += '-' + d + ' ';
     });
     if (b.guard[P.id]) out += '(guarded)';
@@ -1880,7 +2141,8 @@ function beginRound(msg) {
   S.rng = L.mulberry32(((msg.seed >>> 0) ^ 0xA5A5A5) >>> 0);
   S.order.forEach(function (id, i) { const r = S.round.roster[id], P = mkPlayer(id, r); buildEq(P); const sp = spawnPoint(k, i, n); P.x = sp.x; P.y = sp.y; P.tx = P.x; P.ty = P.y; S.players[id] = P; });
   S.p = S.players[S.me]; S.mirror();
-  S.meter = new L.Meter(S.cfg.meterTarget); if (phas(S.p, 'capacitor')) S.meter.setFill(.4);
+  initEconomy(msg, k);
+  S.meter = new L.Meter(S.cfg.meterTarget); if (phas(S.p, 'capacitor')) S.meter.setFill(pfx(S.p, 'capacitor').v);
   setTicks('ammoU', S.meter.target); setTicks('qAmmoU', S.meter.target);
   S.quiz = new L.QuizDeck((S.deck && S.deck.cards) || [], L.mulberry32((Date.now() ^ 0x1234567) & 0xffffff)); S.quiz.setMeter(S.meter);
   S.quizOpen = false; S.sprint = null; S.shopOpen = false; $('shop').classList.remove('on'); $('quiz').classList.remove('on');
@@ -1896,8 +2158,8 @@ function beginRound(msg) {
 function beginWorld(n, opt) {
   opt = opt || {}; S.role = S.role === 'host' ? 'host' : (S.coop ? S.role : 'solo'); S.isLeader = true;
   const seed = (TEST && qs.get('seed')) ? (qs.get('seed') | 0) : ((Math.random() * 1e9) | 0 || 1);
-  const me = { id: S.me, name: S.player.brand, studio: L.studioKey(S.player.studioId), lvl: evoLevel(), tier: iconTier(), stats: (S.exo && S.exo.stats) || {}, picks: L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()) };
-  const msg = { id: 'solo' + Date.now(), seed: seed, resume: Math.max(0, Math.min(6, opt.resume | 0)), roster: [me], roundSec: opt.roundSec || (S.coop ? S.coop.rules.roundSec : 0), diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, leader: S.me };
+  const me = { id: S.me, name: S.player.brand, studio: L.studioKey(S.player.studioId), lvl: evoLevel(), tier: iconTier(), stats: (S.exo && S.exo.stats) || {}, picks: L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()), wg: S.stake | 0 };
+  const msg = { id: 'solo' + Date.now(), seed: seed, resume: Math.max(0, Math.min(6, opt.resume | 0)), roster: [me], roundSec: opt.roundSec || (S.coop ? S.coop.rules.roundSec : 0), diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
   S.round = { id: msg.id, msg: msg, roster: { [S.me]: me } };
   beginRound(msg);
 }
@@ -1915,7 +2177,8 @@ function encodeSnap() {
   const sn = {
     n: ++NET.snapSeq, md: S.mode === 'boss' ? 'b' : S.mode === 'end' ? 'e' : 'p', sd: S.seed, rd: S.round.id,
     ck: S.clock ? [r1(S.clock.left), S.clock.limit, S.clock.running ? 1 : 0] : 0, sc: S.score, sec: S.secCleared, bd: S.bossDone ? 1 : 0, ai: S.areaIdx, ob: [S.obj.t, S.obj.s],
-    g: S.map.gateOpen.map(function (x) { return x ? 1 : 0; }).join(''), po: S.portal ? [r0(S.portal.x), r0(S.portal.y)] : 0, xd: S.xcDropped,
+    g: S.map.gateOpen.map(function (x) { return x ? 1 : 0; }).join(''), po: S.portal ? [r0(S.portal.x), r0(S.portal.y)] : 0, xd: S.xcDropped, bk: S.bank.state(), gl: S.goals.state(), rv: S.revives | 0, evn: S.evNames || [],
+    ky: S.keyItems.map(function (k) { return [k.id, r0(k.x), r0(k.y), r1(k.life)]; }), rg: S.rg ? [r1(S.rg.left), Object.keys(S.rg.ready)] : 0,
     P: pl.map(function (P) { return { i: P.id, x: r0(P.x), y: r0(P.y), v: r0(P.vit), m: P.maxVit, a: Math.round(P.face * 100) / 100, f: (P.inv > 0 ? 1 : 0) | (P.hit > 0 ? 2 : 0) | (P.down ? 4 : 0) | (P.away ? 8 : 0) | (P.protect > 0 ? 16 : 0), xc: P.xc, o: P.orbs, k: P.kills, bv: r0(P.bvit), tp: P.teleport | 0, bo: P.boost, eq: P.eq ? { l: P.eq.list, s: P.eq.spent, a: P.eq.abilityLeft, h: P.eq.aegisHits } : 0 }; }),
     E: S.enemies.map(function (e) { const x = [e.id, ETYPES.indexOf(e.type), r0(e.x), r0(e.y), r1(e.hp), e.max, ESTATES.indexOf(e.state), e.spawnT > 0 ? 1 : 0, Math.round(e.tx * 100) / 100, Math.round(e.ty * 100) / 100]; if (e.petals) x.push(e.petals.map(function (q) { return [Math.round(q.a * 100) / 100, r1(q.hp), q.max]; })); return x; }),
     Sh: S.shots.map(function (s) { return [r0(s.x), r0(s.y), r0(s.vx), r0(s.vy), s.rad || 0]; }),
@@ -1933,6 +2196,9 @@ function onSnap(sn) {
   if (S.mode === 'end') return;
   const mode = sn.md === 'b' ? 'boss' : 'play';
   S.seed = sn.sd; S.score = sn.sc; S.secCleared = sn.sec; S.bossDone = !!sn.bd; S.areaIdx = sn.ai; S.obj = { t: sn.ob[0], s: sn.ob[1] }; S.xcDropped = sn.xd;
+  if (sn.bk && S.bank) S.bank.load(sn.bk); if (sn.gl && S.goals) S.goals.load(sn.gl); S.revives = sn.rv | 0; S.evNames = sn.evn || [];
+  S.keyItems = (sn.ky || []).map(function (a) { return { id: a[0], x: a[1], y: a[2], life: a[3] }; });
+  const rgWas = !!S.rg; S.rg = sn.rg ? { left: sn.rg[0], ready: sn.rg[1].reduce(function (o, id) { o[id] = 1; return o; }, {}) } : null; if (S.rg && !rgWas) openRegroup(); else if (!S.rg && rgWas) closeRegroup(); else if (S.rg) renderRegroup();
   if (sn.ck && S.clock) { S.clock.left = sn.ck[0]; S.clock.limit = sn.ck[1]; S.clock.running = !!sn.ck[2]; S.clock.over = sn.ck[0] <= 0; }
   for (let i = 0; i < sn.g.length; i++) S.map.gateOpen[i] = sn.g[i] === '1';
   S.portal = sn.po ? { x: sn.po[0], y: sn.po[1] } : null;
@@ -1941,7 +2207,7 @@ function onSnap(sn) {
     let P = S.players[d.i]; if (!P) { const r = S.round.roster[d.i]; if (!r) return; P = mkPlayer(d.i, r); P.eq = { inv: [], list: [], spent: {}, bought: [], aegisHits: 0, abilityLeft: 0 }; S.players[d.i] = P; S.order = Object.keys(S.players).sort(); }
     const prevHp = P.vit; P.vit = d.v; P.maxVit = d.m; P.down = !!(d.f & 4); P.away = !!(d.f & 8); P.protect = d.f & 16 ? 1 : 0; P.xc = d.xc; P.orbs = d.o; P.kills = d.k; P.bvit = d.bv; P.boost = d.bo || {}; P.lastSeen = now;
     if (d.f & 2 && !(P.hit > 0)) P.hit = .2; if (d.f & 1) P.inv = Math.max(P.inv, .1);
-    if (d.eq) { P.eq = P.eq || { inv: [], spent: {} }; P.eq.list = d.eq.l; P.eq.spent = d.eq.s; P.eq.abilityLeft = d.eq.a; P.eq.aegisHits = d.eq.h; }
+    if (d.eq) { P.eq = P.eq || { inv: [], spent: {} }; P.eq.list = d.eq.l.slice(); P.eq.spent = d.eq.s; P.eq.abilityLeft = d.eq.a; P.eq.aegisHits = d.eq.h; }
     if (P.id === S.me) { if ((d.tp | 0) !== (P.tpSeen | 0)) { P.x = d.x; P.y = d.y; P.tpSeen = d.tp | 0; S.cam.x = P.x - VW / 2; S.cam.y = P.y - VH / 2; } if (P.down) { P.x = d.x; P.y = d.y; } }
     else { P.tx = d.x; P.ty = d.y; P.face = d.a; if ((d.tp | 0) !== (P.tpSeen | 0)) { P.x = d.x; P.y = d.y; P.tpSeen = d.tp | 0; } }
   });
@@ -1972,7 +2238,8 @@ function takeLead() {
   S.enemies.forEach(function (e) { e.x = e.gx != null ? e.gx : e.x; e.y = e.gy != null ? e.gy : e.y; e.cd = 1.2; e.dead = false; e.touchCd = 0; e.vx = 0; e.vy = 0; if (e.spawnT == null) e.spawnT = 0; });
   S.shots = []; S.areas.forEach(function (a, i) { if (i < S.secCleared) a.state = 'cleared'; });
   const a = S.areas[S.areaIdx]; if (a && sn.en) { const en = a.enc, x = sn.en; a.state = 'active'; a.cd = 1; Object.assign(en, { wavesIssued: x[0], pending: x[1], pendingKind: x[2] || null, sentryDue: !!x[3], alive: x[4], escortLeft: x[5], sentriesSpawnedThisWave: !!x[6], sentriesSpawned: x[7], sentriesDefeated: x[8], kills: x[9] }); }
-  Object.keys(S.players).forEach(function (id) { const P = S.players[id]; P.lastSeen = performance.now(); if (P.eq) { P.eq.flash = 0; } });
+  Object.keys(S.players).forEach(function (id) { const P = S.players[id]; P.lastSeen = performance.now(); if (P.eq) { P.eq.flash = 0; P.eq.inv = P.eq.inv && P.eq.inv.length ? P.eq.inv : P.eq.list.slice(); P.eq.bought = P.eq.bought || []; P.eq.aq = aegisQueue(P.eq.list).filter(function (e) { return !(P.eq.spent[e.k] | 0); }); P.eq.aegisHits = aegisTotal(P.eq.aq); } });
+  S.evT = 0; S.keyDrops = Math.max(S.keyDrops | 0, S.goals ? S.goals.keys + S.keyItems.length : 0);
   S.round.msg.leader = S.me; emit({ k: 'banner', t: 'NEW SQUAD LEADER: ' + S.player.brand.toUpperCase() }); toast('The previous leader dropped out — you are now running the round');
 }
 function sendBeacon() {
@@ -1984,8 +2251,12 @@ function sendBeacon() {
 // ══════════════════════════ ENDING A ROUND ══════════════════════════
 function endRound(kind) { // leader
   if (S.ended) return; S.ended = true;
-  const stats = playerList().map(function (P) { return { i: P.id, n: P.name, s: P.studio, xc: P.xc, k: P.kills, d: P.down ? 1 : 0 }; });
-  const msg = { id: S.round.id, kind: kind, sc: S.score, sec: S.secCleared, bd: S.bossDone ? 1 : 0, t: Math.round(S.t), stats: stats };
+  if (kind === 'clear') S.goals.clear = true;
+  const stats = playerList().map(function (P) { return { i: P.id, n: P.name, s: P.studio, xc: P.xc, k: P.kills, d: P.down ? 1 : 0, aw: P.away ? 1 : 0, qc: P.qc | 0, qn: P.qn | 0, wg: (S.round.roster[P.id] && S.round.roster[P.id].wg) | 0 }; });
+  const bankV = S.bank.value(), gm = S.goals.met(), st = L.settle(bankV, gm, S.wagerTotal, S.bankCap);
+  const team = { archives: S.kills, correct: S.goals.correct, answered: S.goals.answered, keys: S.goals.keys, bank: bankV, revives: S.revives | 0, clearSec: S.clearSec | 0, cleared: kind === 'clear' };
+  const msg = { id: S.round.id, kind: kind, sc: S.score, sec: S.secCleared, bd: S.bossDone ? 1 : 0, t: Math.round(S.t), stats: stats, bank: bankV, wt: S.wagerTotal, gm: gm ? 1 : 0, pay: st.payout, gl: S.goals.state(), gc: S.goals.conf, ts: L.teamStatsOf(team), tm: team,
+    cs: L.collabScore({ score: S.score, correct: team.correct, keys: team.keys, goalMet: gm }), rv: S.revives | 0 };
   if (NET.team) { NET.team.send('end', msg, true); setTimeout(function () { NET.team && NET.team.send('end', msg, true); }, 500); setTimeout(function () { NET.team && NET.team.send('end', msg, true); }, 1500); }
   S.ended = false; onEnd(msg);
 }
@@ -1996,13 +2267,15 @@ function onEnd(msg) {
   if (S.endShown || (S.round && msg.id && msg.id !== S.round.id)) return; S.endShown = true; S.ended = true; S.mode = 'end';
   S.timeSec = msg.t | 0; S.score = msg.sc; S.secCleared = Math.max(S.secCleared, msg.sec | 0); if (msg.bd) S.bossDone = true;
   const mine = msg.stats.filter(function (x) { return x.i === S.me; })[0]; if (mine) { S.xc = mine.xc; if (S.p) S.p.xc = mine.xc; }
-  S.quizOpen && closeQuiz(); closeShop();
+  S.quizOpen && closeQuiz(); closeShop(); closeRegroup(); S.rg = null;
+  if (S.bank && msg.bank != null) { S.bankFinal = msg.bank; }
   const q = S.quiz.stats, mm = Math.floor(S.timeSec / 60), ss = String(S.timeSec % 60).padStart(2, '0');
   $('endT').textContent = msg.kind === 'clear' ? 'SERVER 01 CLEARED' : msg.kind === 'time' ? 'TIME UP' : 'ROUND OVER';
-  $('endS').textContent = (msg.kind === 'clear' ? 'Studio Defense Grid is secure.' : msg.kind === 'time' ? 'The round clock ran out.' : 'Every Evo in the squad went down with no revive left.') + ' Sections cleared are saved for your squad — the next launch continues from the checkpoint. X-Coin collected is proposed to the Arena (host-approved).';
-  const cells = [[S.score, 'SQUAD SCORE'], [mm + ':' + ss, 'TIME'], [S.secCleared + ' / 6', 'SECTIONS CLEARED'], [q.correct + '/' + q.answered, 'YOUR LINK ANSWERS'], [S.xc, 'YOUR X-COIN']];
+  $('endS').textContent = (msg.kind === 'clear' ? 'Studio Defense Grid is secure.' : msg.kind === 'time' ? 'The round clock ran out.' : 'Every Evo in the squad went down with no revive left.') + ' Sections cleared are saved for your squad — the next launch continues from the checkpoint.';
+  const cells = [[S.score, 'SQUAD SCORE'], [mm + ':' + ss, 'TIME'], [S.secCleared + ' / 6', 'SECTIONS CLEARED'], [q.correct + '/' + q.answered, 'YOUR LINK ANSWERS'], [msg.bank != null ? msg.bank : S.xc, 'TEAM BANK']];
   $('endStats').innerHTML = cells.map(function (a) { return '<div><b>' + a[0] + '</b><span class="mono">' + a[1] + '</span></div>'; }).join('') + (msg.stats.length > 1 ? '<div style="grid-column:1/-1;text-align:left;font-size:.8em">' + msg.stats.map(function (x) { return '<span style="color:' + L.STUDIO_COLORS[x.s] + '">●</span> ' + escapeHtml(x.n) + ' — ' + x.k + ' defeated · ' + x.xc + ' X-Coin' + (x.d ? ' · down' : ''); }).join('<br>') + '</div>' : '');
   const coop = S.role !== 'solo'; $('endAgain').style.display = coop ? 'none' : ''; $('endNext').style.display = coop ? '' : 'none';
+  settleRound(msg); renderEndExtra(msg);
   saveProgress(true); setMode('end');
 }
 // Team progress: posted to the Arena (which merges it into the shared squad record). Items used up leave the player's stock only when a round really started.
@@ -2010,11 +2283,11 @@ function saveProgress(final) {
   if (!S.runLive && !final) return;
   if (!final && S.secCleared <= S.lastSaved) return;
   S.lastSaved = Math.max(S.lastSaved, S.secCleared);
-  const consumed = (final && !S.consumedSent && S.eq) ? L.consumedItems(S.eq.inv, S.eq.spent) : null;
+  const consumed = (final && !S.consumedSent && S.eq) ? L.consumedItems(S.eq.inv) : null;
   if (final) { S.consumedSent = true; S.runLive = false; }
-  const msg = { type: 'pflx_arena_game_save', game: 'nexus-frontiers', scope: S.nf && S.nf.scope, diff: S.cfg.diff, team: S.cfg.team, cleared: S.secCleared, bossDone: !!S.bossDone, score: S.score, final: !!final, consumed: consumed };
+  const msg = { type: 'pflx_arena_game_save', game: 'nexus-frontiers', scope: S.nf && S.nf.scope, diff: S.cfg.diff, team: S.cfg.team, cleared: S.secCleared, bossDone: !!S.bossDone, score: S.score, final: !!final, consumed: consumed, orbs: (final && consumed) ? (S.p ? S.p.orbs | 0 : 0) : 0 };
   if (final && S.nf && !S.nf.standalone) S.nf.progress = { cleared: S.bossDone ? 0 : Math.max((S.nf.progress && S.nf.progress.cleared) | 0, S.secCleared) }; // the Arena merges it too; this keeps the next launch in step before its reply
-  if (S.nf && S.nf.standalone) { if (consumed) Object.keys(consumed).forEach(function (k) { S.nf.owned[k] = Math.max(0, ownedN(k) - consumed[k]); }); S.nf.progress = { cleared: S.bossDone ? 0 : Math.max((S.nf.progress && S.nf.progress.cleared) | 0, S.secCleared) }; }
+  if (S.nf && S.nf.standalone) { if (consumed) { Object.keys(consumed).forEach(function (k) { S.nf.owned[k] = Math.max(0, ownedN(k) - consumed[k]); }); S.nf.orbs = (S.nf.orbs | 0) + (S.p ? S.p.orbs | 0 : 0); } S.nf.progress = { cleared: S.bossDone ? 0 : Math.max((S.nf.progress && S.nf.progress.cleared) | 0, S.secCleared) }; }
   else post(msg);
   window.__lastSave = msg;
 }
@@ -2026,13 +2299,13 @@ function renderHud() {
   const mt = S.meter; if (mt) { $('ammoF').style.width = (mt.fill * 100) + '%'; $('ammoTxt').textContent = Math.round(mt.fill * mt.target) + '/' + mt.target; }
   if (S.eq) {
     const cap = L.slotsFor(evoLevel()), inv = $('inv'); inv.innerHTML = '';
-    const seen = {}; for (let i = 0; i < cap; i++) { const id = S.eq.list[i], d = document.createElement('div'); d.className = 'slot'; if (id) { const u = L.UPGRADES[id]; seen[id] = (seen[id] | 0) + 1; const done = u.trigger && seen[id] <= (S.eq.spent[id] | 0); d.className += ' full' + (done ? ' spent' : ''); d.textContent = u.icon; d.title = u.name; } inv.appendChild(d); }
+    const seen = {}; for (let i = 0; i < cap; i++) { const key = S.eq.list[i], d = document.createElement('div'); d.className = 'slot'; if (key) { const u = L.itemInfo(key); seen[key] = (seen[key] | 0) + 1; const done = u.trigger && seen[key] <= (S.eq.spent[key] | 0); d.className += ' full' + (done ? ' spent' : ''); slotFace(d, u); d.title = u.name; } inv.appendChild(d); }
     $('slotTxt').textContent = S.eq.list.length + '/' + cap + (S.eq.abilityLeft ? ' · REVIVE ×' + S.eq.abilityLeft : '');
     const bx = $('boosts'); bx.innerHTML = Object.keys(S.boost || {}).filter(function (k) { return S.boost[k] > 0; }).map(function (k) { const B = L.BOOSTERS[k]; return '<div class="bst mono" style="color:' + B.color + '">' + B.icon + ' ' + B.name + '<span class="tb"><i style="width:' + (S.boost[k] / B.dur * 100) + '%;background:' + B.color + '"></i></span></div>'; }).join('');
   }
   const ip = $('pips'); const c = S.quiz.charge; if (ip.children.length !== 5) { ip.innerHTML = ''; for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'pip'; ip.appendChild(d); } }
   for (let i = 0; i < 5; i++) ip.children[i].className = 'pip' + (i < c ? ' on' : '');
-  $('scoreV').textContent = S.score; $('xcV').textContent = S.xc; $('orbV').textContent = S.orbCount;
+  $('scoreV').textContent = S.score; $('xcV').textContent = S.bank ? S.bank.value() : S.xc; $('orbV').textContent = S.orbCount; renderGoals();
   $('linkBtn').classList.toggle('pulse', c === 0 && S.enemies.some(function (e) { return !e.dead; }));
   const o = $('obj'); o.firstChild.nodeValue = S.obj.t; o.lastChild.textContent = S.obj.s;
   const ck = $('clock'); if (S.clock) { ck.style.display = ''; ck.textContent = '⏱ ' + S.clock.fmt(); ck.classList.toggle('low', S.clock.left < 60); } else ck.style.display = 'none';
@@ -2080,6 +2353,7 @@ function render() {
   ctx.translate(-Math.round(S.cam.x) + shx, -Math.round(S.cam.y) + shy);
   drawWorld(S.cam.x, S.cam.y, VW, VH);
   S.stars.forEach(function (st) { const B = L.BOOSTERS[st.type], f = st.life < 4 && Math.floor(S.t * 8) % 2 ? .4 : 1; ctx.globalAlpha = f; ctx.shadowColor = B.color; ctx.shadowBlur = 14; ctx.fillStyle = B.color; ctx.beginPath(); ctx.arc(st.x, st.y + Math.sin(S.t * 5 + st.x) * 2, 11, 0, 7); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = '#021'; ctx.font = '800 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(st.type === 'triple' ? '3' : st.type === 'nova' ? 'N' : '★', st.x, st.y + 4); ctx.globalAlpha = 1; });
+  (S.keyItems || []).forEach(function (k) { const bob = Math.sin(S.t * 4 + k.x) * 3; ctx.save(); ctx.shadowColor = '#ffd740'; ctx.shadowBlur = 16; ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🗝', k.x, k.y + bob); ctx.restore(); });
   S.coins.forEach(function (c) { const ci = img(ASSET + 'sprites/xcoin-64.png'), f = c.life < 4 && Math.floor(S.t * 8) % 2 ? .4 : 1, w = Math.max(.25, Math.abs(Math.cos(S.t * 4 + c.x * .05))) * 20; ctx.globalAlpha = f; ctx.shadowColor = '#ffd740'; ctx.shadowBlur = 8; if (ready(ci)) ctx.drawImage(ci, c.x - w / 2, c.y - 10, w, 20); else { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(c.x, c.y, 7, 0, 7); ctx.fill(); } ctx.shadowBlur = 0; ctx.globalAlpha = 1; });
   drawEnemies(S.enemies, S.t);
   S.shots.forEach(function (s) { ctx.fillStyle = s.rad ? '#ffe9a0' : '#9ff'; ctx.shadowColor = s.rad ? '#fc0' : '#0ff'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(s.x, s.y, 4 + (s.rad || 0), 0, 7); ctx.fill(); ctx.shadowBlur = 0; });
@@ -2180,7 +2454,7 @@ function step(ts, draw) {
   if (S.round && !S.ended && (S.mode === 'play' || S.mode === 'boss')) {
     const now = performance.now();
     if (S.isLeader) {
-      if (S.clock) { S.clock.tick(dt); if (S.clock.over) timeUp(); }
+      if (S.clock) { if (S.rg) S.clock.running = false; else if (S.clock.left > 0) S.clock.running = true; S.clock.tick(dt); if (S.clock.over) timeUp(); }
       const frozen = (S.quizOpen || S.shopOpen) && soloLike();
       if (!S.ended) { if (S.mode === 'play') { if (!frozen) simUpdate(dt); } else if (S.mode === 'boss') bossTick(dt); }
       ageFx(dt); S.t += S.mode === 'boss' ? dt : 0;
@@ -2355,14 +2629,144 @@ function drawDashboard(list) {
   if (pages > 1) { [['◀', -1, VW - 90], ['▶', 1, VW - 50]].forEach(function (b) { ctx.fillStyle = 'rgba(0,229,255,.15)'; ctx.fillRect(b[2], VH - 30, 34, 22); ctx.fillStyle = '#e6f7ff'; ctx.textAlign = 'center'; ctx.fillText(b[0], b[2] + 17, VH - 14); (function (d, xx) { OB.hits.push({ x: xx, y: VH - 30, w: 34, h: 22, fn: function () { OB.page = (OB.page + d + pages) % pages; } }); })(b[1], b[2]); }); ctx.textAlign = 'right'; ctx.fillText((OB.page + 1) + '/' + pages, VW - 98, VH - 14); }
 }
 
-// ─── src/g_hooks.js ───
+// ─── src/g_econ.js ───
+
+// ══════════════════════════ ROUND ECONOMY (Oct 2026): wager → joint team bank → goals → payout, badges, team stats ══════════════════════════
+// The Arena owns every real X-Coin movement (wager hold, payout, badges, orbs); this file is the cartridge side: UI + glue.
+function goalFromConfig() { const c = S.config || {}; return { nfGoalCorrect: c.nfGoalCorrect, nfGoalKeys: c.nfGoalKeys, nfGoalClear: c.nfGoalClear }; }
+function initEconomy(msg, resumeK) {
+  let wt = 0; msg.roster.forEach(function (r) { wt += Math.max(0, r.wg | 0); });
+  S.wagerTotal = wt; S.bankCap = msg.cap || L.BANK_CAP_DEFAULT; S.bank = new L.Bank(wt, S.bankCap);
+  S.goals = new L.Goals(L.goalConfig(msg.goal || {}, resumeK, msg.diff || S.cfg.diff));
+  S.evFx = null; S.evNames = []; S.keyItems = S.keyItems || []; S.rg = null; S.bankFinal = null;
+  S.roundBadges = null; S.lastEnd = null;
+  pollSevs(true);
+  if (S.nf && !S.nf.standalone) post({ type: 'pflx_arena_nf_arm', game: 'nexus-frontiers', roundId: msg.id, scope: S.coop ? S.coop.scope : '', team: NET.teamKey || 'solo', teamName: NET.teamName || 'SOLO', members: msg.roster.map(function (r) { return { id: r.id, name: r.name }; }), startedAt: Date.now(), stake: S.stake | 0 });
+}
+// ── System Events from the X-Live session (published by the host's X-Live as app_data key pflx_xlive_sev_live) ──
+let sevPollAt = 0;
+function pollSevs(force) {
+  const now = Date.now(); if (!force && now - sevPollAt < 9000) return; sevPollAt = now;
+  const net = (S.coop && S.coop.net) || (S.nf && S.nf.net); if (!net || !net.url) { if (S.nf && S.nf.sevs) S.sevs = S.nf.sevs; return; }
+  try { fetch(net.url + '/rest/v1/app_data?key=eq.pflx_xlive_sev_live&select=data', { headers: { apikey: net.key, Authorization: 'Bearer ' + net.key } }).then(function (r) { return r.json(); }).then(function (rows) { const v = rows && rows[0] && rows[0].data; S.sevs = (v && Array.isArray(v.events)) ? v.events : []; }).catch(function () {}); } catch (e) {}
+}
+setInterval(function () { if (S.round && S.isLeader && !S.ended) pollSevs(false); }, 3000);
+
+// ── Wager (pre-match) ──
+function wagerMax() { return L.clampWager(1e9, evoLevel(), S.nf ? S.nf.xc : 0); }
+function renderWager(wcap) {
+  const box = $('ldWager'); if (!box) return; const mx = wagerMax(), have = S.nf.xc | 0;
+  S.wagerWant = Math.max(0, Math.min(mx, Math.floor((S.wagerWant | 0) / 5) * 5));
+  const lock = !!S.ready || !!S.stakePending;
+  box.innerHTML = '<div class="lbl mono">YOUR WAGER · UP TO ' + wcap + ' XC AT EVO LEVEL ' + evoLevel() + (have < wcap ? ' (you hold ' + have + ')' : '') + '</div>' +
+    '<div class="wrow"><button class="btn" data-w="-25">−25</button><button class="btn" data-w="-5">−5</button><b class="mono" id="wagerV">' + S.wagerWant + ' XC</b><button class="btn" data-w="5">+5</button><button class="btn" data-w="25">+25</button><button class="btn" data-w="max">MAX</button><button class="btn" data-w="0">NONE</button></div>' +
+    '<div class="ldsum" style="margin:.3em 0 0">' + (S.stake ? '<b style="color:#7dffb4">' + S.stake + ' XC wagered and locked in.</b> ' : '') + 'All squad wagers are pooled into ONE team bank everyone can see and spend from. Reach the goals and <b>every member</b> receives the whole bank; miss them and the wagers are lost. Locked in when you press READY.</div>';
+  box.querySelectorAll('button[data-w]').forEach(function (b) {
+    b.disabled = lock; b.onclick = function () { const v = b.dataset.w; S.wagerWant = v === 'max' ? mx : v === '0' ? 0 : Math.max(0, Math.min(mx, S.wagerWant + (v | 0))); renderLoadout(); };
+  });
+}
+function toggleReady() {
+  if (S.stakePending) return;
+  if (S.ready) { S.ready = false; releaseStake(); sendHello(); renderLobby(); return; }
+  const w = L.clampWager(S.wagerWant, evoLevel(), S.nf.xc);
+  if (w <= 0) { S.stake = 0; S.ready = true; sendHello(); renderLobby(); return; }
+  if (S.nf.standalone) { S.nf.xc -= w; S.stake = w; S.ready = true; sendHello(); renderLobby(); return; }
+  S.stakePending = true; S.stakeIntent = 'ready'; $('lbNote').textContent = 'Locking in your wager…';
+  post({ type: 'pflx_arena_nf_wager', game: 'nexus-frontiers', amount: w, level: evoLevel(), scope: S.coop ? S.coop.scope : '' });
+  clearTimeout(toggleReady.t); toggleReady.t = setTimeout(function () { if (S.stakePending) { S.stakePending = false; toast('The Arena did not answer — your wager was not taken.'); renderLobby(); } }, 8000);
+}
+function releaseStake() {
+  if (!S.stake) return; if (S.nf.standalone) { S.nf.xc += S.stake; S.stake = 0; return; }
+  S.stakeIntent = 'cancel'; post({ type: 'pflx_arena_nf_wager', game: 'nexus-frontiers', amount: 0, cancel: true, level: evoLevel(), scope: S.coop ? S.coop.scope : '' }); S.stake = 0;
+}
+function onStakeReply(m) {
+  S.stakePending = false; clearTimeout(toggleReady.t);
+  if (m.error) { S.stake = S.stakeIntent === 'cancel' ? 0 : (S.stake | 0); if (S.stakeIntent === 'ready') { S.ready = false; toast(m.error); } }
+  else { S.stake = m.stake | 0; if (S.stakeIntent === 'ready') S.ready = true; }
+  if (S.armCb) { const cb = S.armCb; S.armCb = null; if (!m.error) cb(); else { S.ld.note = m.error; renderLoadout(); } }
+  if (typeof sendHello === 'function' && S.role === 'player') sendHello();
+  if (S.mode === 'lobby') renderLobby(); if (S.mode === 'loadout') renderLoadout();
+}
+function armSoloWager(cb) { // solo / dev start: the wager is taken right before the round
+  const w = L.clampWager(S.wagerWant, evoLevel(), S.nf.xc);
+  if (w <= 0) { S.stake = 0; cb(); return; }
+  if (S.nf.standalone) { S.nf.xc -= w; S.stake = w; cb(); return; }
+  S.stakeIntent = 'solo'; S.armCb = cb; S.stakePending = true; post({ type: 'pflx_arena_nf_wager', game: 'nexus-frontiers', amount: w, level: evoLevel(), scope: S.coop ? S.coop.scope : '' });
+}
+
+// ── HUD: goals checklist ──
+function renderGoals() {
+  const el = $('goals'); if (!el || !S.goals) return; const g = S.goals.status();
+  const html = g.map(function (x) { return '<div class="goal' + (x.done ? ' done' : '') + '"><span>' + (x.done ? '✔' : '◻') + '</span> ' + escapeHtml(x.label) + ' <b>' + x.have + '/' + x.need + '</b></div>'; }).join('') +
+    '<div class="goal ev">' + (S.evNames && S.evNames.length ? S.evNames.map(function (n) { return { system_tax: '💸 SYSTEM TAX', xc_boost: '⚡ DOUBLE XC', golden_hour: '🌟 GOLDEN HOUR', xc_rain: '🌧 XC RAIN', studio_surge: '🏢 STUDIO SURGE' }[n] || ''; }).filter(Boolean).join(' · ') : '') + '</div>';
+  if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; }
+}
+
+// ── Team inventory moment (after a Sentry section) ──
+function openRegroup() { $('regroup').classList.add('on'); S.rgSel = null; S.rgSig = ''; renderRegroup(); }
+function closeRegroup() { const e = $('regroup'); if (e) e.classList.remove('on'); S.rgSel = null; }
+function renderRegroup() {
+  if (!S.rg) return; const left = Math.max(0, Math.ceil(S.rg.left)); $('rgT').textContent = left + 's';
+  const pl = playerList(), sig = [S.rgSel, Object.keys(S.rg.ready).join(), pl.map(function (P) { return P.id + ':' + (P.eq ? P.eq.list.join(',') + '|' + JSON.stringify(P.eq.spent) : ''); }).join(';'), S.bank ? S.bank.value() : 0].join('#');
+  if (sig === S.rgSig) return; S.rgSig = sig;
+  $('rgBank').textContent = S.bank ? S.bank.value() : 0;
+  const cols = $('rgCols'); cols.innerHTML = '';
+  pl.forEach(function (P) {
+    const me = P.id === S.me, cap = L.slotsFor(P.lvl), col = document.createElement('div'); col.className = 'rgc' + (me ? ' me' : ''); col.style.borderColor = P.color;
+    let h = '<div class="rgh" style="color:' + P.color + '">' + escapeHtml(P.name.slice(0, 14)) + (me ? ' (you)' : '') + (S.rg.ready[P.id] ? ' ✔' : '') + '</div><div class="rgs"></div>';
+    col.innerHTML = h; const grid = col.querySelector('.rgs'), list = (P.eq && P.eq.list) || [], seen = {};
+    for (let i = 0; i < cap; i++) {
+      const key = list[i], d = document.createElement('div'); d.className = 'slot'; if (key) {
+        const it = L.itemInfo(key); seen[key] = (seen[key] | 0) + 1; const used = it.trigger && seen[key] <= ((P.eq.spent && P.eq.spent[key]) | 0);
+        d.className += ' full' + (used ? ' spent' : '') + (me && S.rgSel === key && !used ? ' sel' : ''); slotFace(d, it); d.title = it.name + (used ? ' (used)' : '');
+        if (me && !used) d.onclick = function () { S.rgSel = S.rgSel === key ? null : key; S.rgSig = ''; renderRegroup(); };
+      }
+      grid.appendChild(d);
+    }
+    if (!me) { const b = document.createElement('button'); b.className = 'btn'; b.textContent = S.rgSel ? 'GIVE ' + L.itemInfo(S.rgSel).name.toUpperCase() + ' ▸' : 'PICK YOUR ITEM FIRST'; b.disabled = !S.rgSel || list.length >= cap; b.onclick = function () { netAct({ k: 'give', key: S.rgSel, to: P.id }); S.rgSel = null; S.rgSig = ''; }; col.appendChild(b); }
+    cols.appendChild(col);
+  });
+}
+$('rgReady').onclick = function () { netAct({ k: 'rgready' }); $('rgReady').textContent = 'WAITING FOR THE SQUAD…'; };
+$('rgShop').onclick = function () { if (S.rg) { S.shopOpen = false; openShop(); } };
+
+// ── Settlement + end screen ──
+function settleRound(msg) {
+  S.lastEnd = msg; const mine = msg.stats.filter(function (x) { return x.i === S.me; })[0]; if (!mine) return;
+  const badges = L.completionBadges(true, msg.t, !mine.aw), pay = msg.gm ? msg.pay : 0;
+  S.roundBadges = badges;
+  if (S.nf && S.nf.standalone) { S.nf.xc += pay; S.stake = 0; return; }
+  post({ type: 'pflx_arena_nf_settle', game: 'nexus-frontiers', roundId: msg.id, scope: S.coop ? S.coop.scope : '', team: NET.teamKey || 'solo', teamName: NET.teamName || 'SOLO', payout: pay, wager: S.stake | 0, goalMet: !!msg.gm, badges: badges, kind: msg.kind, t: msg.t,
+    members: msg.stats.map(function (x) { return x.i; }), cs: msg.cs, ts: msg.ts, tm: msg.tm, score: msg.sc, bank: msg.bank });
+  S.stake = 0;
+}
+function renderEndExtra(msg) {
+  const el = $('endExtra'); if (!el || !msg) return; S.lastEnd = msg;
+  const g = new L.Goals(msg.gc || { correct: 0, keys: 0, clear: false }); g.load(msg.gl);
+  const goals = g.status().map(function (x) { return '<div class="goal' + (x.done ? ' done' : '') + '"><span>' + (x.done ? '✔' : '✖') + '</span> ' + escapeHtml(x.label) + ' <b>' + x.have + '/' + x.need + '</b></div>'; }).join('');
+  const result = msg.gm ? '<div class="bankres win">GOALS MET — TEAM BANK <b>' + msg.bank + ' XC</b> paid to <b>every</b> squad member.</div>' : '<div class="bankres lose">GOALS MISSED — the squad\'s wagers (' + (msg.wt | 0) + ' XC) are lost. Team bank would have been ' + msg.bank + ' XC.</div>';
+  const mine = (msg.stats || []).filter(function (x) { return x.i === S.me; })[0], b = (S.roundBadges || []).map(function (k) { const B = L.BADGES[k]; return '<span class="bdg">🏅 ' + B.name + ' <i>' + B.xc + ' XC</i></span>'; }).join('');
+  const aw = (S.awards || []).map(function (a) { return '<span class="bdg gold">🏆 ' + escapeHtml(a.name) + (a.xc ? ' <i>' + a.xc + ' XC</i>' : '') + '</span>'; }).join('');
+  const ss = S.sessStats && S.sessStats.cats || {};
+  const stats = L.TEAM_STATS.map(function (d) { const v = msg.ts ? msg.ts[d.id] : 0, lead = ss[d.id]; if (d.id === 'fastest' && !v) return ''; return '<div class="tsr"><span>' + d.icon + ' ' + d.name + '</span><b>' + v + d.unit + '</b>' + (lead ? '<em>' + (lead.mine ? '★ SESSION BEST' : 'best: ' + escapeHtml(lead.name) + ' ' + lead.value + d.unit) + '</em>' : '') + '</div>'; }).join('');
+  el.innerHTML = '<div class="eg">' + goals + '</div>' + result +
+    '<div class="lbl mono" style="margin-top:.7em">BADGES EARNED</div><div class="bdgs">' + (b || '<span class="ldsum">No completion badges this round.</span>') + aw + '</div>' +
+    (S.pendingWin ? '<div class="ldsum">Battle Arena Champion and Beacon of Collaboration are decided when every squad in this launch has finished — they will pop up here.</div>' : '') +
+    '<div class="lbl mono" style="margin-top:.7em">TEAM STATS</div><div class="tsg">' + stats + '</div>';
+}
+function showAwards(list) { // badges decided after the fact (Champion / Beacon) arrive from the Arena
+  S.awards = (S.awards || []).concat(list || []); (list || []).forEach(function (a) { banner('🏆 ' + String(a.name).toUpperCase() + ' EARNED'); }); if (S.mode === 'end') renderEndExtra(S.lastEnd);
+}
+setInterval(function () { if (S.coop && S.role === 'player' && (S.mode === 'lobby' || S.mode === 'end') && S.nf && !S.nf.standalone) post({ type: 'pflx_arena_nf_claim', game: 'nexus-frontiers', scope: S.coop.scope, team: NET.teamKey || '' }); }, 20000);
+
+// ─── src/h_hooks.js ───
 
 // ── Test hooks (only with ?test=1) ──
 function stepSim(dt) { // advance the leader's sim exactly like the frame loop does (tests drive time by hand)
   if (S.mode === 'cut') cutAdvance(true);
   if (!S.round || S.ended) return;
   if (S.mode === 'play' && !((S.quizOpen || S.shopOpen) && soloLike())) simUpdate(dt); else if (S.mode === 'boss') bossTick(dt);
-  if (S.clock) { S.clock.tick(dt); if (S.clock.over) timeUp(); }
+  if (S.clock) { S.clock.running = !S.rg; S.clock.tick(dt); if (S.clock.over) timeUp(); }
   ageFx(dt); S.mirror(); renderHud();
 }
 if (TEST) window.__nf = {
@@ -2374,8 +2778,8 @@ if (TEST) window.__nf = {
   fillAmmo: function (f) { S.meter.setFill(f); S.quiz.setMeter(S.meter); renderHud(); },
   eq: function () { return S.p && S.p.eq; }, meter: function () { return S.meter; }, sprint: function () { return S.sprint; }, setPicks: function (l) { S.ld.picks = l; }, openLoadout: openLoadout, openShop: openShop, shopBuy: shopBuy, leaveSprint: leaveSprint,
   evoDown: function () { return evoDown(S.p); }, hurt: function (d, src) { return hurtPlayer(S.p, d, src); }, saveProgress: saveProgress, roundOver: roundOver, sprintTick: function (sec) { if (S.sprint) { S.sprint.tick(sec); renderSprintHud(); if (S.sprint.over && !answered) endSprint(); } },
-  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossWin: bossWin, startBoss: startBoss, enterBoss: enterBoss,
-  hurtId: function (id, d) { const P = S.players[id]; if (P) { P.hurtCd = 0; P.inv = 0; P.protect = 0; hurtPlayer(P, d, 't'); } }, strip: function (id) { const P = S.players[id]; if (P && P.eq) { P.eq.abilityLeft = 0; P.eq.list = []; P.eq.inv = []; P.eq.aegisHits = 0; } }, addXc: function (id, n) { const P = S.players[id]; if (P) P.xc += n; S.mirror(); },
+  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossWin: bossWin, endRound: endRound, startBoss: startBoss, enterBoss: enterBoss,
+  hurtId: function (id, d) { const P = S.players[id]; if (P) { P.hurtCd = 0; P.inv = 0; P.protect = 0; hurtPlayer(P, d, 't'); } }, strip: function (id) { const P = S.players[id]; if (P && P.eq) { P.eq.abilityLeft = 0; P.eq.list = []; P.eq.inv = []; P.eq.aq = []; P.eq.aegisHits = 0; } }, addXc: function (id, n) { const P = S.players[id]; if (P) P.xc += n; S.mirror(); }, addBank: function (n) { S.bank.grant(n); }, startRegroup: startRegroup, doGive: doGive, aegisAbsorb: aegisAbsorb, settleRound: settleRound, renderEndExtra: renderEndExtra, refreshEvents: refreshEvents,
   playerList: playerList, doBuy: doBuy, handleAct: handleAct, netAct: netAct, members: members, lobbyCheck: lobbyCheck, leaderId: leaderId, backToLobby: backToLobby, stepSim: stepSim,
   snapNow: function () { return encodeSnap && encodeSnap(); }
 };

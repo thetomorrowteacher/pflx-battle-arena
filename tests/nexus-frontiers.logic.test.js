@@ -185,25 +185,88 @@ t('config mapping: host difficulty, legacy difficulty, meter target', () => {
   assert.strictEqual(L.diffFromConfig({ nfDifficulty: 'expert' }), 'expert'); assert.strictEqual(L.diffFromConfig({ difficulty: 'easy' }), 'cadet'); assert.strictEqual(L.diffFromConfig({ difficulty: 'hard' }), 'veteran'); assert.strictEqual(L.diffFromConfig(null), 'ranger'); assert.strictEqual(L.diffFromConfig({ nfDifficulty: 'zzz' }), 'ranger');
   assert.strictEqual(L.meterTargetFrom({}, 'expert'), 10); assert.strictEqual(L.meterTargetFrom({ nfMeter: 8 }, 'cadet'), 8); assert.strictEqual(L.meterTargetFrom({ nfMeter: 100 }, 'cadet'), 12);
 });
-t('loadout slots equal the Evo level (L1 = 1 … L10 = 10); only owned game upgrades fit', () => {
-  for (let l = 1; l <= 10; l++) assert.strictEqual(L.slotsFor(l), l); assert.strictEqual(L.slotsFor(0), 1); assert.strictEqual(L.slotsFor(40), 10);
-  const owned = { chronorespawn: 2, aegis: 1, magnet: 1, deadline: 3 };
-  assert.deepStrictEqual(L.validateLoadout(['chronorespawn', 'aegis', 'magnet'], owned, 1), ['chronorespawn']);
-  assert.deepStrictEqual(L.validateLoadout(['chronorespawn', 'chronorespawn', 'chronorespawn', 'aegis', 'magnet'], owned, 5), ['chronorespawn', 'chronorespawn', 'aegis', 'magnet']);
-  assert.deepStrictEqual(L.validateLoadout(['deadline', 'repair', 'nonsense', 'magnet', 'magnet'], owned, 5), ['magnet']);
+t('loadout slots by Evo level: 1-2 → 3, 3-4 → 4, 5-6 → 5, 7-8 → 6, 9-10 → 7; only owned game items fit; a passive family fits once', () => {
+  const want = { 1: 3, 2: 3, 3: 4, 4: 4, 5: 5, 6: 5, 7: 6, 8: 6, 9: 7, 10: 7 }; for (let l = 1; l <= 10; l++) assert.strictEqual(L.slotsFor(l), want[l], 'level ' + l);
+  assert.strictEqual(L.slotsFor(0), 3); assert.strictEqual(L.slotsFor(40), 7);
+  const owned = { chronorespawn: 2, aegis: 1, magnet: 1, 'magnet#2': 1, 'aegis#2': 1, deadline: 3 };
+  assert.deepStrictEqual(L.validateLoadout(['chronorespawn', 'aegis', 'magnet', 'chronorespawn'], owned, 1), ['chronorespawn', 'aegis', 'magnet']);
+  assert.deepStrictEqual(L.validateLoadout(['chronorespawn', 'chronorespawn', 'chronorespawn', 'aegis', 'magnet'], owned, 3), ['chronorespawn', 'chronorespawn', 'aegis', 'magnet']);
+  assert.deepStrictEqual(L.validateLoadout(['deadline', 'repair', 'nonsense', 'magnet', 'magnet#2'], owned, 5), ['magnet'], 'session items and unowned are dropped; a passive family only once (any tier)');
+  assert.deepStrictEqual(L.validateLoadout(['aegis', 'aegis#2'], owned, 5), ['aegis', 'aegis#2'], 'trigger families may hold several tiers');
+  assert.deepStrictEqual(L.validateLoadout(['aegis#3'], owned, 5), [], 'an unowned tier is refused');
+});
+t('upgrades last ONE round: everything brought in is used up, fired or not (in-run purchases never touch stock)', () => {
+  assert.deepStrictEqual(L.consumedItems(['chronorespawn', 'aegis', 'magnet#2', 'aegis']), { chronorespawn: 1, aegis: 2, 'magnet#2': 1 });
+  assert.deepStrictEqual(L.consumedItems([]), {}); assert.deepStrictEqual(L.consumedItems(['nonsense', 'deadline']), {});
+});
+t('catalog: game upgrades only (no session kinds), 9 families × 3 tiers, every price a multiple of 5 and ≥ 10, higher tiers cost and do more', () => {
+  const U = L.UPGRADES; assert.strictEqual(Object.keys(U).length, 9); assert.ok(!U.deadline && !U.reassess, 'session upgrades live only in X-Live');
+  Object.keys(U).forEach(id => { assert.strictEqual(U[id].kind, 'game'); assert.strictEqual(U[id].tiers.length, 3, id); for (let t = 0; t < 3; t++) { const p = U[id].tiers[t].p; assert.ok(p >= 10 && p % 5 === 0, id + ' tier ' + (t + 1) + ' price ' + p); if (t) assert.ok(p > U[id].tiers[t - 1].p, id + ' price rises with tier'); } });
+  assert.strictEqual(L.marketKeys().length, 27); assert.ok(L.marketKeys().every(k => { const i = L.itemInfo(k); return i && i.price >= 10 && i.price % 5 === 0 && i.name && i.desc; }));
+  assert.strictEqual(Math.min.apply(null, L.marketKeys().map(L.priceOf)), 10);
+  const v = (id, f) => [1, 2, 3].map(t => L.tierFx(id, t)[f]); assert.deepStrictEqual(v('aegis', 'v'), [2, 3, 4]); assert.deepStrictEqual(v('chronorespawn', 'v'), [.6, .75, .9]); assert.deepStrictEqual(v('repair', 'v'), [50, 70, 100]);
+  assert.deepStrictEqual(v('capacitor', 'v'), [.4, .6, .8]); assert.deepStrictEqual(v('surgeamp', 'v'), [9, 11, 13]); assert.deepStrictEqual(v('magnet', 'v'), [2.5, 3.5, 4.5]); assert.deepStrictEqual(v('rapid', 'v'), [.30, .26, .22]);
+  assert.deepStrictEqual(v('linkext', 'v'), [10, 15, 20]); assert.deepStrictEqual(v('seeker', 'v'), [2, 3, 4]);
+});
+t('item keys: aegis / aegis#2 / aegis#3 round-trip; junk and tier 4 are rejected', () => {
+  assert.strictEqual(L.keyOf('aegis', 1), 'aegis'); assert.strictEqual(L.keyOf('aegis', 3), 'aegis#3'); assert.deepStrictEqual(L.parseKey('aegis#2'), { id: 'aegis', tier: 2 });
+  assert.strictEqual(L.parseKey('aegis#4'), null); assert.strictEqual(L.parseKey('deadline'), null); assert.strictEqual(L.parseKey('Aegis'), null); assert.strictEqual(L.parseKey(''), null);
+  assert.strictEqual(L.bestTier(['aegis', 'aegis#3', 'magnet'], 'aegis'), 3); assert.strictEqual(L.bestTier(['magnet'], 'aegis'), 0);
+});
+t('host catalog overrides: name / description / image / price — prices stay multiples of 5, images must be https or data:image', () => {
+  const o = L.applyCatalog({ aegis: { name: 'Bubble', desc: 'x', image: 'https://ex.com/a.png', price: 25 }, 'aegis#2': { price: 42 }, 'magnet': { image: 'javascript:alert(1)' }, junk: { price: 10 }, repair: { price: 5 } });
+  assert.deepStrictEqual(Object.keys(o), ['aegis']); assert.strictEqual(L.priceOf('aegis'), 25); assert.strictEqual(L.priceOf('aegis#2'), 40); assert.strictEqual(L.itemInfo('aegis').name, 'Bubble'); assert.strictEqual(L.itemInfo('aegis').image, 'https://ex.com/a.png');
+  assert.strictEqual(L.priceOf('repair'), 20, 'price 5 refused (below 10)'); L.applyCatalog({}); assert.strictEqual(L.priceOf('aegis'), 20); assert.strictEqual(L.itemInfo('aegis').name, 'Aegis Shell');
+});
+t('orb evolution: one Mk-N item + orbs → one Mk-(N+1); not enough orbs / no item / already Mk III refused; pure', () => {
+  assert.deepStrictEqual(L.evolveCost('aegis'), { from: 'aegis', to: 'aegis#2', orbs: 8 }); assert.deepStrictEqual(L.evolveCost('aegis#2'), { from: 'aegis#2', to: 'aegis#3', orbs: 16 }); assert.strictEqual(L.evolveCost('aegis#3'), null);
+  const own = { aegis: 2 }; const r = L.evolve(own, 10, 'aegis'); assert.deepStrictEqual(r, { owned: { aegis: 1, 'aegis#2': 1 }, orbs: 2, to: 'aegis#2' }); assert.deepStrictEqual(own, { aegis: 2 }, 'input untouched');
+  assert.strictEqual(L.evolve(own, 7, 'aegis'), null); assert.strictEqual(L.evolve({}, 99, 'aegis'), null); assert.strictEqual(L.evolve({ 'aegis#3': 1 }, 99, 'aegis#3'), null);
+  assert.deepStrictEqual(L.evolve({ aegis: 1 }, 8, 'aegis').owned, { 'aegis#2': 1 });
+});
+t('wager: Evo level × 50 XC cap, multiples of 5, never more than the player holds', () => {
+  assert.strictEqual(L.wagerCap(1), 50); assert.strictEqual(L.wagerCap(4), 200); assert.strictEqual(L.wagerCap(10), 500); assert.strictEqual(L.wagerCap(99), 500);
+  assert.strictEqual(L.clampWager(200, 4, 1000), 200); assert.strictEqual(L.clampWager(9999, 4, 1000), 200); assert.strictEqual(L.clampWager(137, 10, 1000), 135); assert.strictEqual(L.clampWager(300, 10, 80), 80); assert.strictEqual(L.clampWager(-5, 3, 100), 0); assert.strictEqual(L.clampWager('x', 3, 100), 0);
+});
+t('team bank — Ennis\'s example: 4 × 200 wagered, upgrades + collected XC → 750 at the end, every member is paid 750', () => {
+  const b = new L.Bank(800); assert.strictEqual(b.value(), 800); assert.ok(b.spend(100)); for (let i = 0; i < 50; i++) b.add(1, null, 'gentech'); assert.strictEqual(b.value(), 750);
+  assert.deepStrictEqual(L.settle(b.value(), true, 800), { payout: 750, lost: 0, won: true }); assert.deepStrictEqual(L.settle(b.value(), false, 800), { payout: 0, lost: 800, won: false });
+  assert.strictEqual(b.spend(751), false, 'cannot overspend the bank'); assert.strictEqual(b.value(), 750);
+});
+t('team bank: collected XC joins the bank; System Events (double XC, tax with carry, studio surge); payouts capped', () => {
+  const now = 1000, ev = (o) => Object.assign({ startAt: 0, endAt: 5000 }, o);
+  let fx = L.eventFx([ev({ type: 'xc_boost', mult: 2 })], now); const b = new L.Bank(0); for (let i = 0; i < 10; i++) b.add(1, fx, 'x'); assert.strictEqual(b.value(), 20, 'double XC');
+  fx = L.eventFx([ev({ type: 'system_tax', pct: 10 })], now); const c = new L.Bank(0); let taxed = 0; for (let i = 0; i < 40; i++) taxed += c.add(1, fx, 'x').tax; assert.strictEqual(taxed, 4, 'a 10% tax on 40 single coins is 4 (fractions carry)'); assert.strictEqual(c.value(), 36);
+  fx = L.eventFx([ev({ type: 'studio_surge', studio: 'gentech', bonus: 50 })], now); const d = new L.Bank(0); for (let i = 0; i < 10; i++) d.add(1, fx, 'gentech'); for (let i = 0; i < 10; i++) d.add(1, fx, 'innov8'); assert.strictEqual(d.value(), 25);
+  assert.deepStrictEqual(L.eventFx([ev({ type: 'xc_boost', mult: 2, endAt: 500 })], now).mult, 1, 'expired events do nothing'); assert.deepStrictEqual(L.eventFx([ev({ type: 'xc_boost', mult: 2, startAt: 2000 })], now).mult, 1, 'not started yet');
+  fx = L.eventFx([ev({ type: 'xc_rain', rain: 25, every: 60 })], now); assert.deepStrictEqual(fx.rain, { amount: 25, every: 60 }); const e = new L.Bank(0, 100); e.grant(500); assert.strictEqual(e.value(), 100, 'bank cap'); assert.strictEqual(e.add(1, null, 'x').gain, 0);
+  assert.strictEqual(L.settle(5000, true, 100, 2000).payout, 2000); assert.strictEqual(L.bankCapFrom({}), 2000); assert.strictEqual(L.bankCapFrom({ nfBankCap: 99999 }), 5000);
+  const f = new L.Bank(10); f.load(new L.Bank(0).state()); assert.strictEqual(f.value(), 0); const g = new L.Bank(300); g.add(1, null, 'a'); g.spend(50); const h = new L.Bank(0); h.load(g.state()); assert.strictEqual(h.value(), g.value());
+});
+t('round goals: 20 correct answers, Access Keys from the first Sentries, defeat the boss + exit; keys never exceed the Sentries left on a resumed run', () => {
+  const gc = L.goalConfig({}, 0, 'ranger'); assert.deepStrictEqual(gc, { correct: 20, keys: 3, clear: true });
+  assert.strictEqual(L.goalConfig({}, 5, 'ranger').keys, 2, 'resuming at section 6 leaves 2 Sentries'); assert.strictEqual(L.goalConfig({ nfGoalKeys: 0, nfGoalCorrect: 10, nfGoalClear: false }, 0, 'cadet').keys, 0);
+  const g = new L.Goals(gc); assert.strictEqual(g.met(), false); g.correct = 19; g.keys = 3; g.clear = true; assert.strictEqual(g.met(), false); g.correct = 20; assert.strictEqual(g.met(), true);
+  assert.deepStrictEqual(g.status().map(x => x.id), ['correct', 'keys', 'clear']); const h = new L.Goals(gc); h.load(g.state()); assert.strictEqual(h.met(), true);
+  assert.strictEqual(new L.Goals({ correct: 0, keys: 0, clear: false }).met(), false, 'a round with no goals cannot be "won"');
+});
+t('digital badges: the three completion badges for finishing a full round (goal met or not); Beacon only by beating the team\'s own best; Champion to first place', () => {
+  assert.deepStrictEqual(L.completionBadges(true, 200, true).map(k => L.BADGES[k].name), ['Positive Participant', 'Master Collaborator', 'Resilient Learner']);
+  assert.deepStrictEqual(L.completionBadges(true, 30, true), [], 'a round must really be played'); assert.deepStrictEqual(L.completionBadges(true, 600, false), [], 'not for someone who was gone at the end'); assert.deepStrictEqual(L.completionBadges(false, 600, true), []);
+  ['participant', 'collaborator', 'resilient'].forEach(k => assert.ok(L.BADGES[k].xc >= 100)); assert.strictEqual(L.BADGES.champion.name, 'Battle Arena Champion'); assert.strictEqual(L.BADGES.beacon.name, 'Beacon of Collaboration');
+  assert.strictEqual(L.beaconEligible(500, 0), true, 'first time'); assert.strictEqual(L.beaconEligible(500, 500), false, 'equal is not a new record'); assert.strictEqual(L.beaconEligible(501, 500), true); assert.strictEqual(L.beaconEligible(0, 0), false);
+});
+t('team stats (no "kills"), collaboration score and picking the best squad of a launch', () => {
+  assert.ok(L.TEAM_STATS.every(s => !/kill/i.test(s.name))); assert.ok(L.TEAM_STATS.some(s => s.id === 'correct') && L.TEAM_STATS.some(s => s.id === 'archives'));
+  assert.deepStrictEqual(L.teamStatsOf({ archives: 30, correct: 21, answered: 28, keys: 3, bank: 750, revives: 1, clearSec: 480, cleared: true }), { archives: 30, correct: 21, accuracy: 75, keys: 3, bank: 750, revives: 1, fastest: 480 });
+  assert.strictEqual(L.teamStatsOf({ correct: 0, answered: 0 }).accuracy, 0); assert.strictEqual(L.teamStatsOf({ clearSec: 300, cleared: false }).fastest, 0);
+  assert.strictEqual(L.collabScore({ score: 1000, correct: 20, keys: 3, goalMet: true }), 1000 + 200 + 450 + 500);
+  assert.deepStrictEqual(L.pickWinner({ a: { score: 900, endedAt: 5 }, b: { score: 1200, endedAt: 9 }, c: { score: 1200, endedAt: 7 } }), { winner: 'c', ranking: ['c', 'b', 'a'] }, 'ties go to whoever finished first');
+  assert.deepStrictEqual(L.pickWinner({}), { winner: null, ranking: [] });
 });
 t('revives: only the Evo-level ability (Lv5+ once, Lv10 twice) or a ChronoRespawn; otherwise none', () => {
   assert.strictEqual(L.reviveCharges(1), 0); assert.strictEqual(L.reviveCharges(4), 0); assert.strictEqual(L.reviveCharges(5), 1); assert.strictEqual(L.reviveCharges(9), 1); assert.strictEqual(L.reviveCharges(10), 2);
   assert.strictEqual(L.reviveSource(1, 1), 'ability'); assert.strictEqual(L.reviveSource(0, 1), 'item'); assert.strictEqual(L.reviveSource(0, 0), null);
-});
-t('inventory use-up: passives are used when a round starts, trigger items only if they fired', () => {
-  assert.deepStrictEqual(L.consumedItems(['chronorespawn', 'aegis', 'magnet'], { chronorespawn: 0, aegis: 1 }), { aegis: 1, magnet: 1 });
-  assert.deepStrictEqual(L.consumedItems(['chronorespawn', 'chronorespawn'], { chronorespawn: 1 }), { chronorespawn: 1 });
-  assert.deepStrictEqual(L.consumedItems([], { chronorespawn: 3 }), {}); // in-run purchases never touch stock
-});
-t('catalog: every upgrade has a price; game vs live-session kinds; ChronoRespawn exists', () => {
-  const U = L.UPGRADES; assert.strictEqual(U.chronorespawn.kind, 'game'); assert.ok(Object.keys(U).filter(k => U[k].kind === 'game').length >= 9);
-  assert.strictEqual(U.deadline.kind, 'session'); assert.strictEqual(U.reassess.kind, 'session'); Object.keys(U).forEach(k => { assert.ok(U[k].price > 0 && U[k].name && U[k].desc, k); });
 });
 t('boosters: 10 s, triple / nova / star; drop odds by enemy, Star Seeker doubles, sentry always drops', () => {
   assert.deepStrictEqual(Object.keys(L.BOOSTERS).sort(), ['nova', 'star', 'triple']); Object.values(L.BOOSTERS).forEach(b => assert.strictEqual(b.dur, 10));

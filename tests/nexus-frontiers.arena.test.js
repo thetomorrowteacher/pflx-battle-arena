@@ -11,16 +11,21 @@ const L = new Function(game.slice(game.indexOf('/*LOGIC-START*/'), game.indexOf(
 function harness() {
   const db = {}, sent = [], awards = []; const env = {
     state: { player: { id: 'p1', xc: 100 } }, arenaGame: { open: true, frame: { contentWindow: { postMessage: m => sent.push(m) } }, opts: { sessionId: 's1' } },
-    baSessions: { byId: id => id === 's1' ? { id: 's1', seasonMode: true, seasonId: 'fall' } : null },
+    baSessions: { byId: id => id === 's1' ? { id: 's1', seasonMode: true, seasonId: 'fall', config: env.sessCfg || {} } : (id === 'sx' ? { id: 'sx', config: env.sessCfg || {} } : null) },
     supabaseLoad: async k => db[k] === undefined ? null : JSON.parse(JSON.stringify(db[k])), supabaseSave: async (k, v) => { if (env.failSave) return false; db[k] = JSON.parse(JSON.stringify(v)); return true; },
-    exoSpend: (amt) => { if (env.state.player.xc < amt) return false; env.state.player.xc -= amt; return true; }, arenaPostAward: (pid, a) => awards.push(a), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_KEY: 'anon-key'
+    exoGamePayloadFor: () => ({ level: env.level || 5 }), PFLX_BADGES: [], exoSpend: (amt) => { if (env.state.player.xc < amt) return false; env.state.player.xc -= amt; return true; }, arenaPostAward: (pid, a) => awards.push(a), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_KEY: 'anon-key'
   };
-  const f = new Function('env', 'with (env) {' + block + '\n return { NF_MARKET, nfMergeTeam, nfApplyConsumed, nfScopeFor, nfHandleBuy, nfHandleSave, nfLoadState, nfClamp, nfCoopRules, nfSquadFor, nfCoopContext, nfHandleScope, nfSessionTagsHtml }; }')(env);
+  const f = new Function('env', 'with (env) {' + block + '\n return { NF_MARKET, nfMergeTeam, nfApplyConsumed, nfScopeFor, nfHandleBuy, nfHandleSave, nfLoadState, nfClamp, nfHandleWager, nfHandleEvolve, nfHandleArm, nfHandleSettle, nfHandleClaim, nfReleaseStale, nfEvalWindows, nfWindowFor, nfMergeCats, nfPickWinner, nfCleanCatalog, nfPriceOf, nfWagerCap, nfClampWager, NF_ORB_COST, NF_BADGES, NF_MIN_ROUND_SEC, NF_BANK_CAP_DEFAULT, NF_STATS, nfCoopRules, nfSquadFor, nfCoopContext, nfHandleScope, nfSessionTagsHtml }; }')(env);
   return { f, db, sent, awards, env };
 }
 (async () => {
-  await t('prices in the Arena match the cartridge catalog exactly (and every cartridge upgrade is for sale)', () => {
-    const h = harness(); Object.keys(L.UPGRADES).forEach(k => assert.strictEqual(h.f.NF_MARKET[k], L.UPGRADES[k].price, k)); assert.deepStrictEqual(Object.keys(h.f.NF_MARKET).sort(), Object.keys(L.UPGRADES).sort());
+  await t('prices in the Arena match the cartridge catalog exactly (27 tiered keys; session upgrades are NOT sold here)', () => {
+    const h = harness(), keys = L.marketKeys(); assert.strictEqual(keys.length, 27); keys.forEach(k => assert.strictEqual(h.f.NF_MARKET[k], L.priceOf(k), k)); assert.deepStrictEqual(Object.keys(h.f.NF_MARKET).sort(), keys.slice().sort());
+    assert.ok(!('deadline' in h.f.NF_MARKET) && !('reassess' in h.f.NF_MARKET));
+    keys.forEach(k => { const pr = h.f.NF_MARKET[k]; assert.ok(pr >= 10 && pr % 5 === 0, k + ' price is >= 10 and a multiple of 5'); });
+    assert.deepStrictEqual(Array.from(h.f.NF_ORB_COST), L.ORB_COST); Object.keys(L.BADGES).forEach(k => { assert.strictEqual(h.f.NF_BADGES[k].id, L.BADGES[k].id); assert.strictEqual(h.f.NF_BADGES[k].name, L.BADGES[k].name); assert.strictEqual(h.f.NF_BADGES[k].xc, L.BADGES[k].xc, k); });
+    assert.strictEqual(h.f.NF_MIN_ROUND_SEC, L.MIN_ROUND_SEC); assert.strictEqual(h.f.NF_BANK_CAP_DEFAULT, L.BANK_CAP_DEFAULT); assert.deepStrictEqual(Array.from(h.f.NF_STATS), L.TEAM_STATS.map(x => x.id));
+    [1, 3, 5, 10].forEach(l => assert.strictEqual(h.f.nfWagerCap(l), L.wagerCap(l))); assert.strictEqual(h.f.nfClampWager(437, 5), L.clampWager(437, 5, 1e9)); assert.strictEqual(h.f.nfClampWager(9999, 3), 150);
   });
   await t('scope: season sessions share ONE team record; plain sessions, games and solo are separate', () => {
     const h = harness(); assert.strictEqual(h.f.nfScopeFor({ sessionId: 's1' }, 'p1'), 'season_fall'); assert.strictEqual(h.f.nfScopeFor({ sessionId: 'zz' }, 'p1'), 'sess_zz');
@@ -38,14 +43,14 @@ function harness() {
     const { f } = harness(); assert.deepStrictEqual(f.nfApplyConsumed({ aegis: 2, magnet: 1 }, { aegis: 1, magnet: 5, hax: 3 }), { aegis: 1 }); assert.deepStrictEqual(f.nfApplyConsumed(null, { aegis: 1 }), {});
   });
   await t('buying: charges X-Coin through exoSpend, stores stock, replies with the confirmed state', async () => {
-    const h = harness(); await h.f.nfHandleBuy('chronorespawn'); assert.strictEqual(h.env.state.player.xc, 75); assert.deepStrictEqual(h.db.pflx_nf_p_p1.owned, { chronorespawn: 1 });
-    const r = h.sent.pop(); assert.strictEqual(r.type, 'pflx_arena_nf_state'); assert.strictEqual(r.xc, 75); assert.deepStrictEqual(r.owned, { chronorespawn: 1 });
+    const h = harness(); await h.f.nfHandleBuy('chronorespawn'); assert.strictEqual(h.env.state.player.xc, 50); assert.deepStrictEqual(h.db.pflx_nf_p_p1.owned, { chronorespawn: 1 });
+    const r = h.sent.pop(); assert.strictEqual(r.type, 'pflx_arena_nf_state'); assert.strictEqual(r.xc, 50); assert.deepStrictEqual(r.owned, { chronorespawn: 1 });
   });
   await t('buying: unknown item, too poor, over the stock limit, and a failed save (refunded) never leave a half-purchase', async () => {
     const h = harness(); await h.f.nfHandleBuy('hax'); assert.ok(h.sent.pop().error); assert.strictEqual(h.env.state.player.xc, 100);
     h.env.state.player.xc = 3; await h.f.nfHandleBuy('aegis'); assert.ok(h.sent.pop().error); assert.ok(!h.db.pflx_nf_p_p1);
     h.env.state.player.xc = 500; h.db.pflx_nf_p_p1 = { owned: { aegis: 9 } }; await h.f.nfHandleBuy('aegis'); assert.ok(/maximum/.test(h.sent.pop().error)); assert.strictEqual(h.env.state.player.xc, 500);
-    h.env.failSave = true; h.db.pflx_nf_p_p1 = { owned: {} }; await h.f.nfHandleBuy('magnet'); const r = h.sent.pop(); assert.ok(/returned/.test(r.error)); assert.strictEqual(h.env.state.player.xc, 500); assert.strictEqual(h.awards.length, 1); assert.strictEqual(h.awards[0].xc, 6);
+    h.env.failSave = true; h.db.pflx_nf_p_p1 = { owned: {} }; await h.f.nfHandleBuy('magnet'); const r = h.sent.pop(); assert.ok(/returned/.test(r.error)); assert.strictEqual(h.env.state.player.xc, 500); assert.strictEqual(h.awards.length, 1); assert.strictEqual(h.awards[0].xc, 10);
   });
   await t('saving: merges the team checkpoint and removes used-up stock in one step; a mid-round save does not touch stock', async () => {
     const h = harness(); h.db.pflx_nf_p_p1 = { owned: { chronorespawn: 2, aegis: 1, magnet: 1 } };
@@ -59,7 +64,7 @@ function harness() {
     const h = harness(); await h.f.nfHandleSave({ scope: '../../evil key!', cleared: 1, final: false }); assert.ok(Object.keys(h.db).every(k => /^[A-Za-z0-9_\-]+$/.test(k)));
   });
   await t('Studio: host settings exist for Nexus Frontiers, are saved into the game/session config, and non-NF games are untouched', () => {
-    ['stNfDiff', 'stNfRound', 'stNfSolo', 'stNfStudio', 'stNfMeter', 'stNfShop'].forEach(id => assert.ok(arena.includes('id="' + id + '"'), id));
+    ['stNfDiff', 'stNfRound', 'stNfSolo', 'stNfStudio', 'stNfMeter', 'stNfShop', 'stNfGoalC', 'stNfGoalK', 'stNfGoalX', 'stNfCap', 'stNfMinT'].forEach(id => assert.ok(arena.includes('id="' + id + '"'), id));
     assert.ok(/nfDifficulty: studioSelTemplate === 'nexus-frontiers'/.test(arena)); assert.ok(/if \(c\.template === 'nexus-frontiers'\) \{ o\.nfDifficulty/.test(arena));
     assert.ok(/set\('stNfDiff'/.test(arena) && /set\('stNfShop'/.test(arena));
   });
@@ -96,6 +101,113 @@ function harness() {
   await t('session tags: Nexus cards show the co-op rule and an Observe button only for hosts', () => {
     const h = harness(); h.env.isHostUser = () => false; let html = h.f.nfSessionTagsHtml({ id: 's1', config: { nfRoundMin: 7 } }); assert.ok(/Co-op/.test(html) && /7 min rounds/.test(html) && !/OBSERVE/.test(html));
     h.env.isHostUser = () => true; html = h.f.nfSessionTagsHtml({ id: 's1', config: {} }); assert.ok(/OBSERVE SQUADS/.test(html) && /10 min rounds/.test(html));
+  });
+
+  // ── Round economy (Oct 2026) ──
+  const settleMsg = (o) => Object.assign({ roundId: 'r1', scope: 'sx', team: 'alpha', teamName: 'Alpha', payout: 400, wager: 200, goalMet: true, badges: ['participant', 'collaborator', 'resilient'], kind: 'clear', t: 400, members: ['p1', 'p2'], cs: 2500, ts: { archives: 40, correct: 22, accuracy: 85, keys: 3, bank: 400, revives: 1, fastest: 380 }, tm: {}, score: 900, bank: 400 }, o || {});
+  const armMsg = (o) => Object.assign({ roundId: 'r1', scope: 'sx', team: 'alpha', teamName: 'Alpha', members: [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B' }], startedAt: Date.now(), stake: 200 }, o || {});
+  const lastState = (h) => h.sent[h.sent.length - 1];
+  await t('wager: the cap is 50 XC x Evo level (taken from the Evo, not the cartridge), steps of 5, X-Coin leaves the wallet and is held', async () => {
+    const h = harness(); h.env.state.player.xc = 1000; h.env.level = 3;
+    await h.f.nfHandleWager({ amount: 400, level: 10, scope: 'sx' }); const r = lastState(h);
+    assert.strictEqual(r.stakeReply, true); assert.strictEqual(r.stake, 150); assert.strictEqual(r.xc, 850); assert.strictEqual(h.db.pflx_nf_p_p1.stake.amount, 150); assert.strictEqual(h.db.pflx_nf_p_p1.stake.round, null);
+    assert.ok(h.awards.some(a => a.xc === -150 && a.noMultiplier === true && /^exo\./.test(a.reason)), 'a debit through the award path that does not feed Evo sync XP');
+    await h.f.nfHandleWager({ amount: 77 }); assert.strictEqual(lastState(h).stake, 75); assert.strictEqual(lastState(h).xc, 925); // changing the wager moves only the difference
+  });
+  await t('wager: too poor is refused, unready/cancel refunds, and a round-locked wager cannot be changed', async () => {
+    const h = harness(); h.env.state.player.xc = 40; h.env.level = 5; await h.f.nfHandleWager({ amount: 100 }); assert.ok(/Not enough/.test(lastState(h).error)); assert.ok(!h.db.pflx_nf_p_p1);
+    h.env.state.player.xc = 500; await h.f.nfHandleWager({ amount: 100 }); assert.strictEqual(h.env.state.player.xc, 400);
+    await h.f.nfHandleWager({ cancel: true, amount: 0 }); assert.strictEqual(lastState(h).stake, 0); assert.strictEqual(h.env.state.player.xc, 500); assert.strictEqual(h.db.pflx_nf_p_p1.stake, null);
+    await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg()); await h.f.nfHandleWager({ amount: 50 }); assert.ok(/locked/.test(lastState(h).error)); assert.strictEqual(h.env.state.player.xc, 400);
+    h.env.failSave = true; const h2 = harness(); h2.env.failSave = true; h2.env.state.player.xc = 300; await h2.f.nfHandleWager({ amount: 100 }); assert.ok(/not be saved/.test(lastState(h2).error)); assert.strictEqual(h2.env.state.player.xc, 300, 'a failed save returns the held X-Coin');
+  });
+  await t('stale holds: an unarmed hold is returned when the cartridge opens; a fresh armed round is left alone', async () => {
+    const h = harness(); h.env.state.player.xc = 100; h.db.pflx_nf_p_p1 = { owned: {}, stake: { amount: 120, round: null, at: Date.now() } };
+    await h.f.nfReleaseStale(); assert.strictEqual(h.env.state.player.xc, 220); assert.strictEqual(h.db.pflx_nf_p_p1.stake, null);
+    h.db.pflx_nf_p_p1 = { owned: {}, stake: { amount: 120, round: 'r9', at: Date.now() } }; await h.f.nfReleaseStale(); assert.strictEqual(h.env.state.player.xc, 220); assert.strictEqual(h.db.pflx_nf_p_p1.stake.amount, 120);
+    h.db.pflx_nf_p_p1 = { owned: {}, stake: { amount: 120, round: 'r9', at: Date.now() - 31 * 60000 } }; await h.f.nfReleaseStale(); assert.strictEqual(h.env.state.player.xc, 340, 'a round that never settled for 30 min is returned');
+  });
+  await t('evolve: one Mk-N plus orbs becomes one Mk-(N+1); not enough orbs, not owned and Mk III are refused; a failed save spends nothing', async () => {
+    const h = harness(); h.db.pflx_nf_p_p1 = { owned: { aegis: 2, 'repair#2': 1 }, orbs: 30 };
+    await h.f.nfHandleEvolve('aegis'); let r = lastState(h); assert.deepStrictEqual(r.owned, { aegis: 1, 'aegis#2': 1, 'repair#2': 1 }); assert.strictEqual(r.orbs, 22);
+    await h.f.nfHandleEvolve('repair#2'); r = lastState(h); assert.strictEqual(r.orbs, 6); assert.strictEqual(r.owned['repair#3'], 1); assert.ok(!r.owned['repair#2']);
+    await h.f.nfHandleEvolve('aegis#2'); assert.ok(/needs 16 orbs/.test(lastState(h).error)); assert.strictEqual(h.db.pflx_nf_p_p1.orbs, 6);
+    await h.f.nfHandleEvolve('magnet'); assert.ok(/do not hold/.test(lastState(h).error)); await h.f.nfHandleEvolve('repair#3'); assert.ok(/cannot evolve/.test(lastState(h).error)); await h.f.nfHandleEvolve('hax'); assert.ok(lastState(h).error);
+    const h2 = harness(); h2.db.pflx_nf_p_p1 = { owned: { aegis: 1 }, orbs: 30 }; h2.env.failSave = true; await h2.f.nfHandleEvolve('aegis'); assert.ok(lastState(h2).error); assert.deepStrictEqual(lastState(h2).owned, { aegis: 1 }); assert.strictEqual(lastState(h2).orbs, 30);
+  });
+  await t('orbs collected in a round are banked with the final save (and only then)', async () => {
+    const h = harness(); h.db.pflx_nf_p_p1 = { owned: { aegis: 1 }, orbs: 3 };
+    await h.f.nfHandleSave({ scope: 'sx', cleared: 2, final: false, consumed: { aegis: 1 }, orbs: 40 }); assert.strictEqual(h.db.pflx_nf_p_p1.orbs, 3);
+    await h.f.nfHandleSave({ scope: 'sx', cleared: 2, final: true, consumed: { aegis: 1 }, orbs: 40 }); assert.strictEqual(h.db.pflx_nf_p_p1.orbs, 43); assert.strictEqual(lastState(h).orbs, 43);
+    await h.f.nfHandleSave({ scope: 'sx', cleared: 2, final: true, consumed: {}, orbs: 99999 }); assert.strictEqual(h.db.pflx_nf_p_p1.orbs, 343, 'one round banks at most 300 orbs');
+  });
+  await t('settle: goals met pays the whole team bank once; the same round id never pays twice; the hold is cleared', async () => {
+    const h = harness(); h.env.state.player.xc = 800; h.env.level = 5; await h.f.nfHandleWager({ amount: 200 }); await h.f.nfHandleArm(armMsg());
+    await h.f.nfHandleSettle(settleMsg()); const pays = () => h.awards.filter(a => /payout/.test(a.reason));
+    assert.strictEqual(pays().length, 1); assert.strictEqual(pays()[0].xc, 400); assert.strictEqual(pays()[0].noMultiplier, true); assert.strictEqual(h.env.state.player.xc, 1000); assert.strictEqual(h.db.pflx_nf_p_p1.stake, null); assert.ok(h.db.pflx_nf_p_p1.settled.includes('r1'));
+    await h.f.nfHandleSettle(settleMsg()); assert.strictEqual(pays().length, 1, 'idempotent'); assert.strictEqual(h.env.state.player.xc, 1000);
+  });
+  await t('settle: goals missed pays nothing (the wager is already gone) but the completion badges are still earned', async () => {
+    const h = harness(); h.env.state.player.xc = 500; await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg({ roundId: 'r2' }));
+    await h.f.nfHandleSettle(settleMsg({ roundId: 'r2', goalMet: false, payout: 400 })); assert.strictEqual(h.awards.filter(a => /payout/.test(a.reason)).length, 0); assert.strictEqual(h.env.state.player.xc, 400);
+    const b = h.awards.filter(a => a.badge); assert.deepStrictEqual(b.map(a => a.badge.name), ['Positive Participant', 'Master Collaborator', 'Resilient Learner']); assert.ok(b.every(a => a.badge.xcValue === 100 && a.noMultiplier));
+    assert.ok(/lost/.test(lastState(h).note));
+  });
+  await t('settle: nothing is paid without an armed round, a payout is capped, short rounds earn no badges, only the 3 completion badges can be claimed', async () => {
+    const h = harness(); await h.f.nfHandleSettle(settleMsg({ roundId: 'nope' })); assert.strictEqual(h.awards.length, 0, 'never armed -> no payout, no badges');
+    h.env.sessCfg = { nfBankCap: 1000 }; h.env.state.player.xc = 300; h.env.level = 5; await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg({ roundId: 'r3', scope: '' }));
+    await h.f.nfHandleSettle(settleMsg({ roundId: 'r3', scope: '', payout: 999999, badges: ['participant', 'champion', 'beacon', 'hax'], t: 60 }));
+    h.env.arenaGame = null; const pay = h.awards.find(a => /payout/.test(a.reason)); assert.ok(!pay || pay.xc <= 5000); assert.strictEqual(h.awards.filter(a => a.badge).length, 0, 'under 2 minutes and non-completion badges earn nothing');
+  });
+  await t('settle: a payout is capped by the host\'s bank cap', async () => {
+    const h = harness(); h.env.arenaGame.opts = { sessionId: 's1', config: { nfBankCap: 500 } }; h.env.state.player.xc = 300; await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg({ roundId: 'r4', scope: '' }));
+    await h.f.nfHandleSettle(settleMsg({ roundId: 'r4', scope: '', payout: 4000, badges: [] })); assert.strictEqual(h.awards.find(a => /payout/.test(a.reason)).xc, 500);
+  });
+  await t('launch windows: squads launched together compete; the highest collaboration score wins, ties go to the earlier finish', () => {
+    const { f } = harness(); assert.strictEqual(f.nfPickWinner({ a: { score: 100, endedAt: 5 }, b: { score: 300, endedAt: 9 } }).winner, 'b'); assert.strictEqual(f.nfPickWinner({ a: { score: 300, endedAt: 9 }, b: { score: 300, endedAt: 5 } }).winner, 'b'); assert.strictEqual(f.nfPickWinner({}).winner, null);
+    const doc = { windows: [] }, t0 = 1e12; const w1 = f.nfWindowFor(doc, t0, 'a', 'ra'), w2 = f.nfWindowFor(doc, t0 + 60000, 'b', 'rb'); assert.strictEqual(w1, w2); w1.teams.a = { roundId: 'ra' };
+    const w3 = f.nfWindowFor(doc, t0 + 600000, 'c', 'rc'); assert.notStrictEqual(w3, w1, 'a squad launched 10 minutes later is a new window');
+    const w4 = f.nfWindowFor(doc, t0 + 70000, 'a', 'ra2'); assert.notStrictEqual(w4, w1, 'the same squad launching again starts a new window');
+  });
+  await t('Champion is ALWAYS first place; Beacon needs first place AND beating the squad\'s own record; both need the host\'s minimum number of squads', async () => {
+    const { f } = harness(), now = Date.now(), mk = () => ({ windows: [{ id: 'w', first: now, status: 'open', claims: {}, teams: { a: { name: 'A', members: ['a1', 'a2'], roundId: 'ra', res: { cs: 3000, at: 2 } }, b: { name: 'B', members: ['b1'], roundId: 'rb', res: { cs: 2000, at: 1 } } } }], rec: {}, cats: {} });
+    let d = mk(); assert.strictEqual(f.nfEvalWindows(d, 2, now), true); assert.strictEqual(d.windows[0].winner, 'a'); assert.deepStrictEqual(d.windows[0].claims, { a1: { champion: 1, beacon: 1 }, a2: { champion: 1, beacon: 1 } }); assert.strictEqual(d.rec.a.best, 3000); assert.strictEqual(d.rec.b.best, 2000);
+    assert.strictEqual(f.nfEvalWindows(d, 2, now), false, 'idempotent once closed');
+    d = mk(); d.rec.a = { best: 3000 }; f.nfEvalWindows(d, 2, now); assert.deepStrictEqual(d.windows[0].claims.a1, { champion: 1, beacon: 0 }, 'first place but no new record: Champion yes, Beacon no');
+    d = mk(); d.rec.a = { best: 2999 }; f.nfEvalWindows(d, 2, now); assert.strictEqual(d.windows[0].claims.a1.beacon, 1);
+    d = mk(); delete d.windows[0].teams.b; f.nfEvalWindows(d, 2, now); assert.strictEqual(d.windows[0].winner, null, 'one squad alone does not win when the host needs two'); f.nfEvalWindows(Object.assign(mk(), {}), 1, now);
+    d = mk(); delete d.windows[0].teams.b; f.nfEvalWindows(d, 1, now); assert.strictEqual(d.windows[0].winner, 'a');
+    d = mk(); d.windows[0].teams.b.res = null; assert.strictEqual(f.nfEvalWindows(d, 2, now), false, 'waits for every squad'); assert.strictEqual(f.nfEvalWindows(d, 2, now + 16 * 60000), true, 'a squad that never reports does not block the window forever'); assert.strictEqual(d.windows[0].winner, 'a');
+  });
+  await t('end to end: two squads settle, the winner claims Champion + Beacon exactly once, the other squad gets neither, session-best stats are tracked', async () => {
+    const h = harness(); h.env.state.player.xc = 1000; h.env.level = 5; h.env.sessCfg = { nfAwardMinTeams: 2 };
+    await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg());
+    // a second squad (other players) registers + settles directly in the shared session doc
+    h.db.pflx_nf_sess_sx = JSON.parse(JSON.stringify(h.db.pflx_nf_sess_sx)); const w = h.db.pflx_nf_sess_sx.windows[0]; w.teams.bravo = { name: 'Bravo', members: ['q1', 'q2'], roundId: 'rq', startedAt: w.first, res: { cs: 1500, goalMet: false, at: Date.now() } };
+    await h.f.nfHandleSettle(settleMsg({ cs: 2600 }));
+    let sess = h.db.pflx_nf_sess_sx; assert.strictEqual(sess.windows[0].status, 'done'); assert.strictEqual(sess.windows[0].winner, 'alpha'); assert.deepStrictEqual(sess.windows[0].claims.p1, { champion: 1, beacon: 1 }); assert.strictEqual(sess.cats.correct.value, 22); assert.strictEqual(sess.cats.fastest.value, 380);
+    h.awards.length = 0; await h.f.nfHandleClaim({ scope: 'sx', team: 'alpha' }); const names = h.awards.filter(a => a.badge).map(a => a.badge.name).sort(); assert.deepStrictEqual(names, ['Battle Arena Champion', 'Beacon of Collaboration']);
+    const r = lastState(h); assert.deepStrictEqual(r.award.map(a => a.name).sort(), ['Battle Arena Champion', 'Beacon of Collaboration']); assert.strictEqual(r.sessStats.cats.correct.mine, true);
+    h.awards.length = 0; await h.f.nfHandleClaim({ scope: 'sx', team: 'alpha' }); assert.strictEqual(h.awards.length, 0, 'claimed once');
+    assert.strictEqual(sess.rec.alpha.best, 2600);
+  });
+  await t('session-best stats: higher wins, except fastest clear where lower wins; zero never counts', () => {
+    const { f } = harness(), d = {}; f.nfMergeCats(d, 'a', 'A', { archives: 10, fastest: 400, keys: 0 }); f.nfMergeCats(d, 'b', 'B', { archives: 8, fastest: 380, keys: 2 }); f.nfMergeCats(d, 'c', 'C', { archives: 12, fastest: 0 });
+    assert.strictEqual(d.cats.archives.team, 'c'); assert.strictEqual(d.cats.fastest.team, 'b'); assert.ok(!d.cats.keys || d.cats.keys.team === 'b');
+  });
+  await t('host catalog: names, descriptions, pictures and prices are validated (prices: multiples of 5, 10-2000); unknown keys are dropped', () => {
+    const { f } = harness(); const c = f.nfCleanCatalog({ aegis: { name: '  Shield  ', desc: 'x', price: 35, image: 'data:image/png;base64,AAAA' }, 'aegis#2': { price: 33 }, magnet: { price: 5 }, hax: { name: 'z' }, rapid: { image: 'javascript:alert(1)', price: 2500 } });
+    assert.deepStrictEqual(c, { aegis: { name: 'Shield', desc: 'x', image: 'data:image/png;base64,AAAA', price: 35 } }); assert.strictEqual(f.nfPriceOf('aegis', c), 35); assert.strictEqual(f.nfPriceOf('aegis#2', c), f.NF_MARKET['aegis#2']);
+  });
+  await t('buying uses the host catalog price when one is set', async () => {
+    const h = harness(); h.db.pflx_nf_catalog = { items: { aegis: { price: 35 } } }; h.env.state.player.xc = 100; await h.f.nfHandleBuy('aegis'); assert.strictEqual(h.env.state.player.xc, 65);
+    h.env.state.player.xc = 200; await h.f.nfHandleBuy('aegis#3'); assert.strictEqual(h.env.state.player.xc, 200 - h.f.NF_MARKET['aegis#3']);
+  });
+  await t('wiring: the router handles wager / evolve / arm / settle / claim; the deck carries orbs, catalog and net; host settings and catalog editor exist', () => {
+    ['wager', 'evolve', 'arm', 'settle', 'claim'].forEach(k => assert.ok(new RegExp("pflx_arena_nf_" + k + "' && arenaGame\\.open").test(arena), k));
+    assert.ok(/orbs: st\.orbs, catalog: st\.catalog/.test(arena) && /net: \{ url: SUPABASE_URL, key: SUPABASE_KEY \}/.test(arena) && /nfReleaseStale\(\)/.test(arena));
+    ['pflx_arena_nf_wager', 'pflx_arena_nf_evolve', 'pflx_arena_nf_arm', 'pflx_arena_nf_settle', 'pflx_arena_nf_claim'].forEach(k => assert.ok(game.includes(k), 'cartridge posts ' + k));
+    ['nfGoalCorrect', 'nfGoalKeys', 'nfGoalClear', 'nfBankCap', 'nfAwardMinTeams'].forEach(k => assert.ok(arena.includes(k), k)); assert.ok(/onclick="nfCatalogToggle\(\)"/.test(arena) && /function nfCatImage/.test(arena) && /type="file" accept="image\/\*"/.test(arena));
   });
 
   console.log('\n' + n + ' arena-side tests passed');
