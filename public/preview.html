@@ -3763,6 +3763,38 @@ function nfHandleSave(m) {
   });
 }
 
+// ── Co-op (v0.3): squads of 2-4 from different studios, launched from an Arena (X-Live) session; hosts observe from above ──
+// The cartridge talks to its squad over Supabase Realtime broadcast (anon key, no schema change). The Arena only tells it WHO it plays with.
+function nfCoopRules(cfg) {
+  cfg = cfg || {};
+  return { nfRoundMin: nfClamp(cfg.nfRoundMin == null ? 10 : cfg.nfRoundMin, 1, 10), nfAllowSolo: cfg.nfAllowSolo === true, nfStudioRule: cfg.nfStudioRule === 'relaxed' ? 'relaxed' : 'strict' };
+}
+function nfSquadFor(lite, pid) { // X-Live squads: pflx_lite_config.teams.assign[playerId] = squad name
+  const a = lite && lite.teams && lite.teams.assign, n = a && a[pid];
+  return typeof n === 'string' ? n.slice(0, 40) : '';
+}
+function nfCoopContext(opts, sess, player, lite) {
+  if (!opts || !opts.coop || !opts.sessionId || !sess) return null;
+  return {
+    role: opts.observe ? 'host' : 'player', scope: String(sess.id).replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 60), sessionId: sess.id, title: sess.title || '',
+    squad: opts.observe ? '' : nfSquadFor(lite, player && player.id), rules: nfCoopRules(sess.config), net: { url: SUPABASE_URL, key: SUPABASE_KEY }, transport: 'ws'
+  };
+}
+function nfHandleScope(scope) { // a squad was formed: load THAT squad's checkpoint + this player's stock
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    scope = String(scope || '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 80); if (!scope) return;
+    const st = await nfLoadState(scope, p.id);
+    nfReply({ owned: st.owned, progress: st.progress, xc: p.xc || 0 });
+  });
+}
+function nfSessionTagsHtml(sess) {
+  const host = (typeof isHostUser === 'function') && isHostUser(state.player), c = nfCoopRules(sess.config);
+  return '<span class="mode-tag team">Co-op · 2–4 players · one per studio</span><span class="mode-tag ranked">' + c.nfRoundMin + ' min rounds</span>' +
+    (host ? '<button class="btn-arena btn-arena-gold" style="font-size:0.48rem;padding:5px 10px;margin-left:auto" onclick="event.stopPropagation();arenaSessionPlay(\'' + sess.id + '\')">👁 OBSERVE SQUADS</button>' : '');
+}
+
+
 // ═══ ARENA GAME CARTRIDGE LAUNCHER (contract v0.1) ═══
 // Opens a game in a fullscreen iframe overlay, hands it the bound
 // deck via postMessage, receives the result, proposes XC through
@@ -3791,7 +3823,7 @@ function arenaGameLaunch(deckId, gameFile, opts) {
       '<span id="arenaGameXcNote" style="font-family:Orbitron,monospace;font-size:0.55rem;color:#ffd740"></span>' +
       '<button class="btn-arena btn-arena-red" style="font-size:0.55rem;padding:6px 14px" onclick="arenaGameClose()">✕ CLOSE</button>' +
     '</div>' +
-    '<iframe id="arenaGameFrame" src="' + (gameFile || 'games/quiz-card-duel.html') + '" style="flex:1;border:none;width:100%"></iframe>';
+    '<iframe id="arenaGameFrame" src="' + (gameFile || 'games/quiz-card-duel.html') + ((opts && opts.dev && /nexus-frontiers/.test(gameFile || '')) ? '?dev=1' : '') + '" style="flex:1;border:none;width:100%"></iframe>';
   document.body.appendChild(ov);
   arenaGame.frame = document.getElementById('arenaGameFrame');
   SFX.click();
@@ -3814,7 +3846,7 @@ window.addEventListener('message', function (e) {
     const d = baDecks.byId(arenaGame.deckId);
     if (!d) return;
     const frameEl = arenaGame.frame, isNf = /nexus-frontiers/.test(m.game || '') || /nexus-frontiers/.test(frameEl.getAttribute('src') || '');
-    const sendDeck = function (nf) {
+    const sendDeck = function (nf, coop) {
     if (!arenaGame.open || arenaGame.frame !== frameEl) return;
     frameEl.contentWindow.postMessage({
       type: 'pflx_arena_deck',
@@ -3823,16 +3855,22 @@ window.addEventListener('message', function (e) {
       config: (arenaGame.opts && arenaGame.opts.config) || null,
       exo: (state.player ? exoGamePayloadFor(state.player.id) : null),
       rivals: (state.player ? exoGameRivals(state.player.id) : []),
-      nf: nf || null
+      nf: nf || null,
+      coop: coop || null
     }, '*');
     };
     if (isNf && state.player) {
-      const scope = nfScopeFor(arenaGame.opts, state.player.id);
-      nfLoadState(scope, state.player.id).then(function (st) { sendDeck({ scope: scope, market: true, xc: state.player.xc || 0, owned: st.owned, progress: st.progress }); })
-        .catch(function () { sendDeck({ scope: scope, market: false, xc: state.player.xc || 0, owned: {}, progress: { cleared: 0 } }); });
+      const scope = nfScopeFor(arenaGame.opts, state.player.id), o = arenaGame.opts || {};
+      const sessCo = (o.coop && o.sessionId) ? baSessions.byId(o.sessionId) : null;
+      const coopP = sessCo ? Promise.resolve(supabaseLoad('pflx_lite_config')).catch(function () { return null; }).then(function (lite) { return nfCoopContext(o, sessCo, state.player, lite); }) : Promise.resolve(null);
+      const stP = nfLoadState(scope, state.player.id).then(function (st) { return { scope: scope, market: true, xc: state.player.xc || 0, owned: st.owned, progress: st.progress }; })
+        .catch(function () { return { scope: scope, market: false, xc: state.player.xc || 0, owned: {}, progress: { cleared: 0 } }; });
+      Promise.all([stP, coopP]).then(function (r) { sendDeck(r[0], r[1]); });
     } else sendDeck(null);
   } else if (m.type === 'pflx_arena_nf_buy' && arenaGame.open && arenaGame.frame) {
     nfHandleBuy(String(m.id || ''));
+  } else if (m.type === 'pflx_arena_nf_scope' && arenaGame.open) {
+    nfHandleScope(m.scope);
   } else if (m.type === 'pflx_arena_game_save' && arenaGame.open) {
     nfHandleSave(m);
   } else if (m.type === 'pflx_arena_game_result' && arenaGame.open) {
@@ -4393,9 +4431,10 @@ function sessionTimeLeft(sess) {
   return Math.floor(m / 1440) + 'd left';
 }
 
-async function studioLaunchLive() {
+async function studioLaunchLive(quick) {
   if (!isHostUser(state.player)) { alert('Only hosts can launch live sessions.'); return; }
   const c = studioReadConfig();
+  if (quick && !c.deckId) { const dd = (baDecks.list || []).find(function (x) { return (x.cards || []).length >= 4; }); if (dd) c.deckId = dd.id; }
   const errEl = document.getElementById('stErr');
   function fail(m) { if (errEl) { errEl.textContent = m; errEl.style.display = 'block'; } }
   if (!c.deckId || !baDecks.byId(c.deckId)) { fail('Pick a Knowledge Deck before launching.'); return; }
@@ -4442,7 +4481,8 @@ function arenaSessionPlay(id) {
   if (!d) { alert('The Knowledge Deck behind this session was deleted.'); return; }
   const cfg = Object.assign({ title: sess.title }, sess.config || {});
   cfg.difficulty = sessionDifficultyFor(sess);
-  arenaGameLaunch(sess.deckId, tpl.file, { title: sess.title, sessionId: sess.id, seasonMode: !!sess.seasonMode, config: cfg });
+  const nx = sess.template === 'nexus-frontiers';
+  arenaGameLaunch(sess.deckId, tpl.file, { title: sess.title, sessionId: sess.id, seasonMode: !!sess.seasonMode, config: cfg, coop: nx, observe: nx && isHostUser(state.player) });
 }
 // Side Quests LIVE NOW shelf — active host sessions, player-facing.
 function arenaLiveEventsShelfHtml() {
@@ -4481,7 +4521,7 @@ function arenaLiveSessionsHtml() {
         '</div>' +
         '<div class="mode-desc">' + tpl.icon + ' ' + tpl.name + ' on "' + dkEsc(d ? d.name : 'deck deleted') + '"' + (d && d.subject ? ' · ' + dkEsc(d.subject) : '') + '</div>' +
         '<div class="mode-tags" style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="mode-tag ranked">Live Session</span><span class="mode-tag team">All Players</span>' +
-          '<button class="btn-arena" style="font-size:0.48rem;padding:5px 10px;margin-left:auto" onclick="event.stopPropagation();baRoomCreate(\'' + sess.template + '\',\'' + sess.deckId + '\',\'' + dkEsc(sess.title).replace(/'/g, '') + '\')">👥 START CO-OP ROOM</button></div>' +
+          (sess.template === 'nexus-frontiers' ? nfSessionTagsHtml(sess) : '') + (sess.template === 'nexus-frontiers' ? '' : '<button class="btn-arena" style="font-size:0.48rem;padding:5px 10px;margin-left:auto" onclick="event.stopPropagation();baRoomCreate(\'' + sess.template + '\',\'' + sess.deckId + '\',\'' + dkEsc(sess.title).replace(/'/g, '') + '\')">👥 START CO-OP ROOM</button>') + '</div>' +
         '</div></div>';
     }).join('') + '</div>' + arenaLiveEventsShelfHtml();
 }
@@ -4536,7 +4576,9 @@ function studioEditGame(id) {
     set('stPowerups', (g.config && g.config.powerups === false) ? 'off' : 'on');
     set('stMusic', (g.config && g.config.music === false) ? 'off' : 'on');
     set('stNfDiff', (g.config && g.config.nfDifficulty) || 'ranger');
-    set('stNfTeam', (g.config && g.config.nfTeam) || 4);
+    set('stNfRound', (g.config && g.config.nfRoundMin) || 10);
+    set('stNfSolo', (g.config && g.config.nfAllowSolo) ? 'on' : 'off');
+    set('stNfStudio', (g.config && g.config.nfStudioRule === 'relaxed') ? 'relaxed' : 'strict');
     set('stNfMeter', (g.config && g.config.nfMeter) || 0);
     set('stNfShop', (g.config && g.config.nfShop === false) ? 'off' : 'on');
     studioPreview();
@@ -4566,7 +4608,9 @@ function studioReadConfig() {
     powerups: val('stPowerups', 'on') !== 'off',
     music: val('stMusic', 'on') !== 'off',
     nfDifficulty: studioSelTemplate === 'nexus-frontiers' ? (['cadet', 'ranger', 'veteran', 'expert'].indexOf(val('stNfDiff', 'ranger')) !== -1 ? val('stNfDiff', 'ranger') : 'ranger') : undefined,
-    nfTeam: studioSelTemplate === 'nexus-frontiers' ? Math.max(1, Math.min(4, parseInt(val('stNfTeam', '4'), 10) || 4)) : undefined,
+    nfRoundMin: studioSelTemplate === 'nexus-frontiers' ? Math.max(1, Math.min(10, parseInt(val('stNfRound', '10'), 10) || 10)) : undefined,
+    nfAllowSolo: studioSelTemplate === 'nexus-frontiers' ? val('stNfSolo', 'off') === 'on' : undefined,
+    nfStudioRule: studioSelTemplate === 'nexus-frontiers' ? (val('stNfStudio', 'strict') === 'relaxed' ? 'relaxed' : 'strict') : undefined,
     nfMeter: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(12, parseInt(val('stNfMeter', '0'), 10) || 0)) : undefined,
     nfShop: studioSelTemplate === 'nexus-frontiers' ? val('stNfShop', 'on') !== 'off' : undefined,
     rivalName: (val('stRival', '') || '').trim() || 'RIVAL AI',
@@ -4577,7 +4621,7 @@ function studioConfigOf(c) {
   const o = { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
            ordered: c.ordered, sound: c.sound, music: c.music, powerups: c.powerups, rivalName: c.rivalName, roundTime: c.roundTime };
   // Nexus Frontiers host pre-launch settings (saved with the game / session, so they carry through the season)
-  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfTeam = c.nfTeam || 4; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; }
+  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfRoundMin = c.nfRoundMin || 10; o.nfAllowSolo = !!c.nfAllowSolo; o.nfStudioRule = c.nfStudioRule || 'strict'; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; }
   return o;
 }
 
@@ -4586,7 +4630,7 @@ function studioTest() {
   if (!c.deckId) { alert('Pick a Knowledge Deck first (import one on the DECKS screen).'); return; }
   const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === c.template && t.ready; });
   if (!tpl) return;
-  arenaGameLaunch(c.deckId, tpl.file, { title: c.title || tpl.name, config: Object.assign({ title: c.title }, studioConfigOf(c)) });
+  arenaGameLaunch(c.deckId, tpl.file, { title: c.title || tpl.name, dev: isHostUser(state.player), config: Object.assign({ title: c.title }, studioConfigOf(c)) });
 }
 
 async function studioPublish() {
@@ -4846,10 +4890,12 @@ function renderStudio() {
           <select id="stNfDiff" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="cadet">Cadet — learning pace</option><option value="ranger" selected>Ranger — standard</option><option value="veteran">Veteran — hard</option><option value="expert">Expert — starts at stage-5 waves</option>
           </select></div>
-        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">TEAM SIZE (SCALES ARCHIVES)</div>
-          <select id="stNfTeam" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
-            <option value="1">1 player</option><option value="2">2 players</option><option value="3">3 players</option><option value="4" selected>4 players (recommended)</option>
-          </select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">ROUND TIME (MAX 10 MIN — HOST CAN ±1 MIN LIVE)</div>
+          <select id="stNfRound" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(function (n) { return '<option value="' + n + '"' + (n === 10 ? ' selected' : '') + '>' + n + ' min' + (n === 10 ? ' (default)' : '') + '</option>'; }).join('')}</select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">SQUAD SIZE</div>
+          <select id="stNfSolo" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff"><option value="off" selected>2–4 players per squad (default)</option><option value="on">Also allow 1-player squads (this cohort / season)</option></select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">STUDIO RULE</div>
+          <select id="stNfStudio" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff"><option value="strict" selected>Every teammate from a different studio (default)</option><option value="relaxed">Allow same-studio teammates</option></select></div>
         <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">AMMO METER FULL AT (CORRECT ANSWERS IN 60 s)</div>
           <select id="stNfMeter" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="0" selected>Auto — set by difficulty</option>${[4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (n) { return '<option value="' + n + '">' + n + ' answers</option>'; }).join('')}
@@ -4874,6 +4920,7 @@ function renderStudio() {
             ${SESSION_DURATIONS.map(function (o) { return '<option value="' + o.m + '"' + (o.m === 60 ? ' selected' : '') + '>' + o.label + '</option>'; }).join('')}
           </select>
           <button id="stLaunchBtn" class="btn-arena btn-arena-red" style="font-size:0.6rem;padding:10px 22px" onclick="studioLaunchLive()">🔴 LAUNCH LIVE</button>
+          ${studioSelTemplate === 'nexus-frontiers' ? '<button class="btn-arena btn-arena-gold" style="font-size:0.6rem;padding:10px 18px" onclick="studioLaunchLive(true)" title="Start a Nexus Frontiers co-op session now with these settings (first deck if none picked)">⚡ QUICK LAUNCH</button>' : ''}
         </span>` : ''}
       </div>
       ${isHostUser(state.player) && baSessions.active().length ? `<div style="margin-top:14px">

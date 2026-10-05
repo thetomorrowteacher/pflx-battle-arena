@@ -14,7 +14,7 @@
      REWARDS: none by default. A result (and therefore X-Coin) is posted ONLY if config.rewards === true.
      Orbs are run-temporary; nothing here converts to XP/X-Coin or removes persistent progress.
      PROTOTYPE values (damage, HP, wave sizes, orb effect, boss cards) are flagged in the HANDOFF; they
-     are not canon. Dialogue is neutral DRAFT copy. Solo only: co-op / base-building / puzzles come later.
+     are not canon. Dialogue is neutral DRAFT copy. v0.3: CO-OP — squads of 2–4 (one per studio) launched from an X-Live session; hosts observe from a higher viewpoint. Solo only via the dev URL / host-enabled cohorts.
      ═══════════════════════════════════════════════════════════════ -->
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -129,6 +129,31 @@
   #end .row { display:flex; gap:.8em; justify-content:center; margin-top:.8em; }
   #toast { position:absolute; left:50%; bottom:11%; transform:translateX(-50%); font-size:.85em; background:rgba(4,8,22,.85); border:1px solid rgba(255,215,64,.5); border-radius:.6em; padding:.4em 1em; opacity:0; transition:opacity .3s; pointer-events:none; }
   #toast.on { opacity:1; }
+  /* v0.3: co-op squad lobby, squad HUD, round clock, host observation */
+  #clock { position:absolute; left:50%; top:11.5%; transform:translateX(-50%); font-family:'Orbitron','Rajdhani',monospace; font-weight:800; letter-spacing:.12em; font-size:1.05em; color:#ffd740; background:rgba(4,8,22,.78); border:1px solid rgba(255,215,64,.5); border-radius:.5em; padding:.15em .8em; pointer-events:none; text-shadow:0 0 .6em rgba(0,0,0,.8); }
+  #clock.low { color:#ff7b92; border-color:#ff4d6d; animation:pl .9s infinite; }
+  #squad { position:absolute; right:1.2%; top:16%; width:16%; display:flex; flex-direction:column; gap:.3em; pointer-events:none; }
+  body.touch #squad { top:27%; }
+  .sqm { display:grid; grid-template-columns:.7em 1fr; grid-template-rows:auto auto; column-gap:.4em; align-items:center; font-size:.7em; font-weight:700; background:rgba(4,8,22,.72); border:1px solid; border-radius:.5em; padding:.25em .5em; }
+  .sqm > i { width:.7em; height:.7em; border-radius:50%; grid-row:1; } .sqm > span { grid-row:1; grid-column:2; } .sqm .bar { grid-column:1 / 3; height:.45em; margin:.2em 0 0; } .sqm small { position:absolute; right:.5em; font-size:.8em; color:#ffd740; }
+  .sqm { position:relative; }
+  #lobby, #blocked { background:radial-gradient(ellipse at 50% 0, rgba(20,10,60,.55), rgba(2,4,10,.97) 70%); align-items:center; justify-content:center; text-align:center; }
+  #lobby .panel { width:74%; max-height:94%; overflow:auto; }
+  #lobby h2 { font-size:1.7em; letter-spacing:.22em; color:#fff; text-shadow:0 0 .8em #00e5ff; }
+  #lbNet { font-size:.6em; letter-spacing:.2em; color:#7fd8ff; margin-bottom:.4em; }
+  #lbMembers { display:grid; grid-template-columns:1fr 1fr; gap:.5em; margin:.7em 0; text-align:left; }
+  .lbm { display:flex; align-items:center; gap:.6em; background:rgba(10,14,34,.9); border:1px solid; border-radius:.7em; padding:.5em .7em; font-size:.85em; }
+  .lbm.off { opacity:.45; } .lbm > i { width:1.1em; height:1.1em; border-radius:50%; flex:none; box-shadow:0 0 .8em currentColor; } .lbm .tx { flex:1; } .lbm .tx b { color:#fff; } .lbm .tx small { display:block; color:#9aa7c7; letter-spacing:.1em; font-size:.75em; }
+  .lbm .rdy { color:#7dffb4; font-size:.6em; } .lbm .wait { color:#ffb4c0; font-size:.6em; }
+  #lbRules { font-size:.72em; color:#9bb8d6; letter-spacing:.05em; } #lbNote { font-size:.85em; color:#cfe; min-height:2.4em; margin:.5em 0; }
+  #blocked .panel { width:56%; } #blocked h2 { font-size:1.5em; letter-spacing:.2em; color:#fff; } #blocked p { color:#9bb8d6; font-size:.9em; line-height:1.5; margin:.7em 0; }
+  #obs { pointer-events:none; flex-direction:column; justify-content:space-between; }
+  #obs .btn { pointer-events:auto; padding:.35em .8em; font-size:.62em; }
+  #obsTop { display:flex; align-items:center; gap:.5em; padding:.5em .8em; background:linear-gradient(180deg, rgba(2,4,12,.94), rgba(2,4,12,.55)); height:10.4%; flex-wrap:wrap; align-content:center; }
+  #obsTitle { font-size:.8em; font-weight:800; letter-spacing:.14em; color:#fff; flex:1 1 30%; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #obsPinned { font-size:.6em; letter-spacing:.2em; color:#ffd740; min-width:7em; text-align:center; }
+  #obsTop .grp { display:flex; gap:.35em; align-items:center; }
+  @media (prefers-reduced-motion: reduce) { #clock.low { animation:none; } }
   @media (prefers-reduced-motion: reduce) { #banner.show { animation:none; opacity:1; } .btn.pulse, #linkBtn.pulse { animation:none; } }
 </style>
 </head>
@@ -146,6 +171,8 @@
     </div>
     <div class="hudbox" id="hudC"><div id="obj">—<small></small></div></div>
     <div class="hudbox" id="hudR"><div class="lbl mono">SCORE <b id="scoreV" style="color:#fff">0</b></div><div class="lbl mono" style="margin-top:.3em"><img src="/assets/nexus-frontiers/sprites/xcoin-32.png" alt="" style="width:1.3em;height:1.3em;vertical-align:-.3em;margin-right:.3em">X-COIN <b id="xcV" style="color:#ffd740">0</b></div><div class="lbl mono" style="margin-top:.3em">ORBS (THIS RUN) <b id="orbV" style="color:#7fd8ff">0</b></div></div>
+    <div id="clock" style="display:none"></div>
+    <div id="squad"></div>
     <div id="banner" class="mono"></div>
     <div id="toast"></div>
     <div id="joy"><i></i></div>
@@ -176,7 +203,29 @@
     <div id="cards"></div>
   </div>
 
-  <div class="ov" id="end"><div class="panel" style="min-width:56%"><h2 class="mono" id="endT"></h2><div id="endS" style="color:#9bb8d6;font-size:.9em"></div><div class="st" id="endStats"></div><div class="row"><button class="btn gold" id="endAgain">PLAY AGAIN</button><button class="btn" id="endExit">EXIT TO ARENA</button></div></div></div>
+  <div class="ov" id="lobby"><div class="panel">
+    <div id="lbNet" class="mono">LOCAL</div>
+    <h2 class="mono" id="lbTitle">FINDING YOUR SQUAD…</h2>
+    <div class="ldsum" id="lbSub"></div>
+    <div id="lbMembers"></div>
+    <div id="lbRules" class="mono"></div>
+    <div id="lbNote"></div>
+    <div class="row" style="display:flex;gap:.8em;justify-content:center;flex-wrap:wrap"><button class="btn" id="lbLoadout">LOADOUT &amp; MARKET</button><button class="btn gold" id="lbReady">READY</button><button class="btn gold" id="lbStart">LAUNCH ROUND</button><button class="btn" id="lbExit">EXIT TO ARENA</button></div>
+  </div></div>
+  <div class="ov" id="blocked"><div class="panel">
+    <h2 class="mono">LAUNCH FROM AN X-LIVE SESSION</h2>
+    <p>Nexus Frontiers is a co-op game for squads of 2–4 Evos from different studios. Open it from a live X-Live session activity (or the host's Quick Launch) so your squad can join you.</p>
+    <button class="btn" id="blkExit">EXIT TO ARENA</button>
+  </div></div>
+  <div class="ov" id="obs">
+    <div id="obsTop">
+      <div id="obsTitle" class="mono">OBSERVING</div>
+      <div class="grp"><button class="btn" id="obsRot">ROTATE</button><button class="btn" id="obsDash">DASHBOARD</button><button class="btn" id="obsPrev">◀</button><span id="obsPinned" class="mono"></span><button class="btn" id="obsNext">▶</button></div>
+      <div class="grp"><button class="btn" id="obsScope">CLOCK: THIS SQUAD</button><button class="btn" id="obsM1">−1 MIN</button><button class="btn" id="obsP1">+1 MIN</button><button class="btn gold" id="obsStart">LAUNCH ALL</button><button class="btn" id="obsExit">EXIT</button></div>
+    </div>
+    <div></div>
+  </div>
+  <div class="ov" id="end"><div class="panel" style="min-width:56%"><h2 class="mono" id="endT"></h2><div id="endS" style="color:#9bb8d6;font-size:.9em"></div><div class="st" id="endStats"></div><div class="row"><button class="btn gold" id="endAgain">PLAY AGAIN</button><button class="btn gold" id="endNext" style="display:none">BACK TO SQUAD LOBBY</button><button class="btn" id="endExit">EXIT TO ARENA</button></div></div></div>
   <div class="ov" id="loadout"><div class="panel">
     <h2 class="mono">LOADOUT</h2>
     <div class="ldsum" id="ldSum"></div>
@@ -254,22 +303,22 @@ const NFLogic = (function () {
   Encounter.prototype.begin = function (kind) {
     if (this.readyKind() !== kind) return false;
     if (kind === 'wave') { this.wavesIssued++; this.pending = this.cfg.size; this.pendingKind = 'wave'; }
-    else { this.sentryDue = false; this.pending = 1; this.pendingKind = 'sentry'; }
+    else { this.sentriesSpawnedThisWave = false; this.sentryDue = false; this.escortLeft = Math.max(0, this.cfg.escort | 0); this.pending = 1 + this.escortLeft; this.pendingKind = 'sentry'; } // the Sentry plus its Scout escort (never a lone mini-boss)
     return true;
   };
   // Type of the next unit to place (does NOT consume). Null if nothing pending.
   Encounter.prototype.requestSpawn = function () {
     if (this.pending <= 0) return null;
-    if (this.pendingKind === 'sentry') return 'sentry';
+    if (this.pendingKind === 'sentry') return this.sentriesSpawnedThisWave ? 'scout' : 'sentry';
     if (!this.cfg.interceptors) return 'scout';
     return this.bag.peek();
   };
   // Call only after the unit was actually placed in the room.
   Encounter.prototype.confirmSpawn = function () {
     const t = this.requestSpawn(); if (!t) return null;
-    if (t !== 'sentry' && this.cfg.interceptors) this.bag.commit();
+    if (this.pendingKind === 'wave' && this.cfg.interceptors) this.bag.commit(); // escorts never touch the 7:1 bag
     this.pending--; this.alive++; this.spawnedTypes[t]++;
-    if (t === 'sentry') this.sentriesSpawned++;
+    if (t === 'sentry') { this.sentriesSpawned++; this.sentriesSpawnedThisWave = true; }
     return t;
   };
   Encounter.prototype.onDefeat = function (type) {
@@ -618,10 +667,13 @@ const NFLogic = (function () {
     for (let w = 3; w <= waves; w += 3) sa.push(w);
     return { waves: waves, size: size, interceptors: true, sentryAfter: sa };
   }
+  // Scouts that arrive with (and after) each Sentry. PROTOTYPE: 3 + 1 per stage, so a Sentry is never alone.
+  function escortFor(scale) { return Math.min(10, 3 + Math.max(1, scale | 0)); }
   function teamSizeMul(diff, team) { return 1 + (DIFFS[diff] || DIFFS.ranger).teamK * (clampInt(team, 1, 4, 1) - 1); }
   function encounterFor(diff, areaIdx, team) {
-    const e = baseEncounter(stageScale(diff, areaIdx));
+    const sc = stageScale(diff, areaIdx), e = baseEncounter(sc);
     e.size = Math.min(30, Math.max(1, Math.round(e.size * teamSizeMul(diff, team || 1))));
+    e.escort = e.sentryAfter.length ? Math.min(16, Math.max(2, Math.round(escortFor(sc) * (1 + .25 * (clampInt(team, 1, 4, 1) - 1))))) : 0;
     return e;
   }
   function activeCap(team) { return Math.min(24, 9 + 3 * (clampInt(team, 1, 4, 1) - 1)); }
@@ -648,11 +700,11 @@ const NFLogic = (function () {
   function reviveCharges(level) { level = clampInt(level, 1, 10, 1); return level >= 10 ? 2 : level >= 5 ? 1 : 0; } // Evo-level ability: Lv5+ once per round, Lv10 twice
   function reviveSource(abilityLeft, chronoLeft) { return abilityLeft > 0 ? 'ability' : chronoLeft > 0 ? 'item' : null; } // free Evo ability first, then the item
   // Keep only owned, game-kind upgrades, within the slot limit. Duplicates need duplicate stock; passive duplicates are dropped.
-  function validateLoadout(ids, owned, level) {
+  function validateLoadout(ids, owned, level, trust) { // trust: the picks were already checked against that player's own stock on their device (co-op leader)
     const out = [], used = {}, cap = slotsFor(level);
     (ids || []).forEach(function (id) {
       const u = UPGRADES[id]; if (!u || u.kind !== 'game' || out.length >= cap) return;
-      if ((used[id] || 0) >= ((owned && owned[id]) | 0)) return;
+      if (!trust && (used[id] || 0) >= ((owned && owned[id]) | 0)) return;
       if (!u.trigger && used[id]) return;
       used[id] = (used[id] || 0) + 1; out.push(id);
     });
@@ -684,11 +736,81 @@ const NFLogic = (function () {
     const ids = Object.keys(BOOSTERS); return ids[Math.floor(rng() * ids.length)];
   }
 
+  // ── Co-op (Oct 2026): 2–4 players, one per studio, launched from an X-Live session; host-set round clock ──
+  const STUDIO_IDS = ['gentech', 'mindforge', 'emagination', 'innov8'];
+  const STUDIO_COLORS = { gentech: '#00e676', mindforge: '#b388ff', emagination: '#ff6bd6', innov8: '#ffab40', unknown: '#7fd8ff' }; // PROTOTYPE token colours
+  const COOP = { MIN: 2, MAX: 4, ROUND_MAX_MIN: 10, ROUND_MIN_MIN: 1, STEP_SEC: 60, EXTEND_CEILING_SEC: 20 * 60 };
+  function studioKey(s) { s = String(s || '').toLowerCase().replace(/^studio-/, ''); return STUDIO_IDS.indexOf(s) >= 0 ? s : 'unknown'; }
+  function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32); }
+  function coopRules(cfg) {
+    cfg = cfg || {};
+    return { minPlayers: cfg.nfAllowSolo ? 1 : COOP.MIN, studioRule: cfg.nfStudioRule === 'relaxed' ? 'relaxed' : 'strict', roundSec: clampInt(cfg.nfRoundMin, COOP.ROUND_MIN_MIN, COOP.ROUND_MAX_MIN, COOP.ROUND_MAX_MIN) * 60, solo: !!cfg.nfAllowSolo };
+  }
+  // members: [{id, studioId, ready, online}] → can this squad launch right now?
+  function lobbyCheck(members, rules) {
+    rules = rules || coopRules({});
+    const live = (members || []).filter(function (m) { return m && m.online !== false; });
+    const act = live.filter(function (m) { return m.ready; });
+    const seen = {}, dup = [];
+    act.forEach(function (m) { const k = studioKey(m.studioId); if (k === 'unknown') return; if (seen[k] && dup.indexOf(k) < 0) dup.push(k); seen[k] = 1; });
+    const reasons = [];
+    if (act.length < rules.minPlayers) reasons.push(rules.minPlayers > 1 ? 'Need at least ' + rules.minPlayers + ' ready players (have ' + act.length + ').' : 'Need 1 ready player.');
+    if (act.length > COOP.MAX) reasons.push('A squad holds at most ' + COOP.MAX + ' players.');
+    if (rules.studioRule === 'strict' && dup.length) reasons.push('Each player must be from a different studio (duplicate: ' + dup.join(', ') + ').');
+    if (live.length > act.length) reasons.push((live.length - act.length) + ' player(s) not ready yet.');
+    const blocking = reasons.filter(function (r) { return r.indexOf('not ready') < 0; });
+    return { ok: blocking.length === 0 && act.length >= 1, active: act.length, online: live.length, dupStudios: dup, reasons: reasons, ready: act.map(function (m) { return m.id; }) };
+  }
+  // Deterministic squad assignment: X-Live squads win; everyone else is placed in open squads, one studio each. Locked players never move.
+  // players: [{id, studioId, squad?}], locked: {playerId: teamKey}
+  function assignTeams(players, locked, rules) {
+    locked = locked || {}; rules = rules || coopRules({});
+    const teams = [], byKey = {};
+    function team(key, name, squad) { if (!byKey[key]) { byKey[key] = { key: key, name: name, squad: !!squad, members: [], studios: {} }; teams.push(byKey[key]); } return byKey[key]; }
+    function put(t, p) { t.members.push(p.id); const k = studioKey(p.studioId); if (k !== 'unknown') t.studios[k] = (t.studios[k] | 0) + 1; }
+    const list = (players || []).slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+    const rest = [];
+    list.forEach(function (p) { // 1. locked players stay in their team
+      if (locked[p.id]) { const t = team(locked[p.id], p.squad || locked[p.id], !!p.squad); put(t, p); } else rest.push(p);
+    });
+    const open = [];
+    rest.forEach(function (p) { // 2. X-Live squads
+      if (!p.squad) { open.push(p); return; }
+      const key = slug(p.squad) || 'squad'; let t = byKey[key], n = 1;
+      while (t && t.members.length >= COOP.MAX) { n++; t = byKey[key + '-' + n]; if (!t) { t = team(key + '-' + n, p.squad + ' ' + n, true); break; } }
+      if (!t) t = team(key, p.squad, true);
+      put(t, p);
+    });
+    open.forEach(function (p) { // 3. open squads, never two of one studio when avoidable
+      const k = studioKey(p.studioId);
+      let t = teams.filter(function (q) { return !q.squad && !lockedTeam(q) && q.members.length < COOP.MAX && (rules.studioRule !== 'strict' || k === 'unknown' || !q.studios[k]); })[0];
+      if (!t) { const n = teams.filter(function (q) { return !q.squad; }).length + 1; t = team('open-' + n, 'OPEN SQUAD ' + n, false); }
+      put(t, p);
+    });
+    function lockedTeam(q) { return q.members.some(function (id) { return locked[id]; }); }
+    return teams.map(function (t) { return { key: t.key, name: t.name, squad: t.squad, members: t.members }; });
+  }
+  // Round clock: host sets up to 10 min; +1 / −1 minute buttons work during play. Extending can never exceed the ceiling.
+  function RoundClock(sec) { this.limit = Math.max(60, Math.min(COOP.ROUND_MAX_MIN * 60, Math.round(sec) || COOP.ROUND_MAX_MIN * 60)); this.left = this.limit; this.running = false; this.over = false; this.adjusts = 0; }
+  RoundClock.prototype.start = function () { this.running = true; };
+  RoundClock.prototype.tick = function (dt) { if (!this.running || this.over) return this.left; this.left = Math.max(0, this.left - dt); if (this.left <= 0) { this.over = true; this.running = false; } return this.left; };
+  RoundClock.prototype.adjust = function (deltaSec) {
+    if (this.over) return this.left;
+    const d = Math.max(-COOP.STEP_SEC, Math.min(COOP.STEP_SEC, Math.round(deltaSec) || 0));
+    this.left = Math.max(0, Math.min(COOP.EXTEND_CEILING_SEC, this.left + d)); this.adjusts++;
+    if (this.left <= 0) { this.over = true; this.running = false; }
+    return this.left;
+  };
+  RoundClock.prototype.fmt = function () { const s = Math.ceil(this.left); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  // Progress points for a team when the clock runs out: sections already cleared are kept for the team checkpoint.
+  function timeoutOutcome(secCleared, bossDone) { return { saved: Math.max(0, Math.min(6, secCleared | 0)), bossDone: !!bossDone, reason: 'time' }; }
+
   return {
     Meter: Meter, Sprint: Sprint, SPRINT_SEC: SPRINT_SEC, DIFFS: DIFFS, diffFromConfig: diffFromConfig, teamSizeFrom: teamSizeFrom, stageScale: stageScale,
     baseEncounter: baseEncounter, encounterFor: encounterFor, activeCap: activeCap, hpMul: hpMul, scaledHp: scaledHp, bossHp: bossHp, meterTargetFrom: meterTargetFrom, teamSizeMul: teamSizeMul,
     UPGRADES: UPGRADES, slotsFor: slotsFor, reviveCharges: reviveCharges, reviveSource: reviveSource, validateLoadout: validateLoadout, consumedItems: consumedItems,
     BOOSTERS: BOOSTERS, BOOSTER_RULES: BOOSTER_RULES, boosterDrop: boosterDrop,
+    STUDIO_IDS: STUDIO_IDS, STUDIO_COLORS: STUDIO_COLORS, COOP: COOP, studioKey: studioKey, slug: slug, coopRules: coopRules, lobbyCheck: lobbyCheck, assignTeams: assignTeams, RoundClock: RoundClock, timeoutOutcome: timeoutOutcome, escortFor: escortFor,
     XC_RULES: XC_RULES, coinDrop: coinDrop, placeMaterials: placeMaterials,
     T: T, mulberry32: mulberry32, shuffle: shuffle, SpawnBag: SpawnBag, Encounter: Encounter, W01_ENCOUNTERS: W01_ENCOUNTERS,
     QuizDeck: QuizDeck, FALLBACK_DECK: FALLBACK_DECK, BOSS_MOVES: BOSS_MOVES, resolveAttack: resolveAttack, resolveIncoming: resolveIncoming,
@@ -700,8 +822,82 @@ const NFLogic = (function () {
 
 </script>
 <script>
-(function () {
-'use strict';
+/*NET-START*/
+// NFNet — tiny broadcast transport for Nexus Frontiers co-op.
+//   'ws'    Supabase Realtime (Phoenix protocol) over one WebSocket, many topics. Anon key only, no schema change.
+//   'bc'    BroadcastChannel (same browser; used for local testing / dev)
+//   'local' loopback only (solo rounds, standalone)
+// Messages are {e: eventName, p: payload}; the sender never receives its own message.
+const NFNet = (function () {
+  function Chan(hub, topic) { this.hub = hub; this.topic = topic; this.fn = null; this.joined = false; this.q = []; this.refJoin = null; this.bc = null; }
+  Chan.prototype.on = function (fn) { this.fn = fn; return this; };
+  Chan.prototype.deliver = function (e, p) { if (this.fn) { try { this.fn(e, p); } catch (x) { if (typeof console !== 'undefined') console.error('[NFNet]', x); } } };
+  Chan.prototype.send = function (e, p, reliable) { this.hub._send(this, e, p, reliable); };
+  Chan.prototype.leave = function () { this.hub._leave(this); };
+
+  function Hub(o) {
+    o = o || {}; this.o = o; this.mode = o.transport || (o.url && o.key ? 'ws' : 'local'); this.chans = {}; this.ws = null; this.ref = 1; this.closed = false;
+    this.status = 'idle'; this.onStatus = o.onStatus || null; this.backoff = 500; this.hb = null; this.stats = { out: 0, inn: 0 };
+    this.WS = o.WebSocket || (typeof WebSocket !== 'undefined' ? WebSocket : null);
+    if (this.mode === 'ws' && !this.WS) this.mode = 'local';
+    if (this.mode === 'ws') this._open();
+    else this._setStatus(this.mode === 'bc' ? 'online' : 'local');
+  }
+  Hub.prototype._setStatus = function (s) { if (this.status !== s) { this.status = s; if (this.onStatus) { try { this.onStatus(s); } catch (x) {} } } };
+  Hub.prototype.channel = function (name) {
+    const topic = 'nf-' + String(name).replace(/[^A-Za-z0-9_\-:.]/g, '').slice(0, 90);
+    if (this.chans[topic]) return this.chans[topic];
+    const c = new Chan(this, topic); this.chans[topic] = c;
+    if (this.mode === 'bc' && typeof BroadcastChannel !== 'undefined') { c.bc = new BroadcastChannel(topic); c.bc.onmessage = function (ev) { const m = ev.data; if (m && m.e) { c.hub.stats.inn++; c.deliver(m.e, m.p); } }; c.joined = true; }
+    else if (this.mode === 'ws') this._join(c);
+    else c.joined = true;
+    return c;
+  };
+  Hub.prototype._open = function () {
+    const self = this; if (this.closed) return;
+    this._setStatus('connecting');
+    let ws; try { ws = new this.WS(this.o.url.replace(/^http/, 'ws').replace(/\/+$/, '') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(this.o.key) + '&vsn=1.0.0'); } catch (x) { this._retry(); return; }
+    this.ws = ws;
+    ws.onopen = function () { if (self.ws !== ws) return; self.backoff = 500; self._setStatus('online'); Object.keys(self.chans).forEach(function (k) { self._join(self.chans[k]); }); clearInterval(self.hb); self.hb = setInterval(function () { self._raw({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(self.ref++) }); }, 25000); };
+    ws.onmessage = function (ev) {
+      let m; try { m = JSON.parse(ev.data); } catch (x) { return; }
+      const c = self.chans[String(m.topic || '').replace(/^realtime:/, '')];
+      if (!c) return;
+      if (m.event === 'phx_reply' && m.ref && m.ref === c.refJoin) { c.joined = (m.payload && m.payload.status) === 'ok'; if (c.joined) { const q = c.q; c.q = []; q.forEach(function (x) { self._send(c, x[0], x[1], true); }); c.deliver('_joined', {}); } else c.deliver('_joinfail', m.payload); }
+      else if (m.event === 'broadcast' && m.payload) { self.stats.inn++; c.deliver(m.payload.event, m.payload.payload); }
+      else if (m.event === 'phx_error' || m.event === 'phx_close') { c.joined = false; }
+    };
+    ws.onclose = function () { if (self.ws !== ws) return; self.ws = null; clearInterval(self.hb); Object.keys(self.chans).forEach(function (k) { self.chans[k].joined = false; }); self._retry(); };
+    ws.onerror = function () { try { ws.close(); } catch (x) {} };
+  };
+  Hub.prototype._retry = function () { const self = this; if (this.closed) return; this._setStatus('offline'); const d = this.backoff; this.backoff = Math.min(6000, this.backoff * 2); setTimeout(function () { self._open(); }, d); };
+  Hub.prototype._raw = function (o) { if (this.ws && this.ws.readyState === 1) { try { this.ws.send(JSON.stringify(o)); return true; } catch (x) {} } return false; };
+  Hub.prototype._join = function (c) {
+    if (!this.ws || this.ws.readyState !== 1) return;
+    c.refJoin = String(this.ref++);
+    this._raw({ topic: 'realtime:' + c.topic, event: 'phx_join', payload: { config: { broadcast: { self: false, ack: false }, presence: { key: '' }, private: false } }, ref: c.refJoin, join_ref: c.refJoin });
+  };
+  Hub.prototype._send = function (c, e, p, reliable) {
+    this.stats.out++;
+    if (this.mode === 'bc') { if (c.bc) { try { c.bc.postMessage({ e: e, p: p }); } catch (x) {} } return; }
+    if (this.mode !== 'ws') return;
+    if (!c.joined) { if (reliable && c.q.length < 60) c.q.push([e, p]); return; }
+    this._raw({ topic: 'realtime:' + c.topic, event: 'broadcast', payload: { type: 'broadcast', event: e, payload: p }, ref: String(this.ref++) });
+  };
+  Hub.prototype._leave = function (c) {
+    delete this.chans[c.topic];
+    if (c.bc) { try { c.bc.close(); } catch (x) {} c.bc = null; }
+    if (this.mode === 'ws') this._raw({ topic: 'realtime:' + c.topic, event: 'phx_leave', payload: {}, ref: String(this.ref++) });
+  };
+  Hub.prototype.close = function () { this.closed = true; clearInterval(this.hb); Object.keys(this.chans).forEach(function (k) { const c = this.chans[k]; if (c.bc) { try { c.bc.close(); } catch (x) {} } }, this); this.chans = {}; if (this.ws) { try { this.ws.close(); } catch (x) {} this.ws = null; } this._setStatus('closed'); };
+  return { connect: function (o) { return new Hub(o); } };
+})();
+/*NET-END*/
+
+</script>
+<script>
+(function () { 'use strict';
+// ─── src/a_head.js ───
 const L = NFLogic, T = L.T;
 const $ = function (id) { return document.getElementById(id); };
 const qs = new URLSearchParams(location.search);
@@ -720,7 +916,9 @@ const LINES = {
 
 // ── State ──
 const S = {
-  mode: 'boot', // boot | menu | cut | play | boss | end
+  mode: 'boot', // boot | menu | lobby | loadout | cut | play | boss | end | observer
+  role: 'solo', // solo (dev / standalone) | player (squad lobby) | host (observer)
+  coop: null, me: 'p', players: {}, order: [], isLeader: true, round: null, clock: null, team: null, ready: false, evq: [], flows: {}, seed: 1, obj: { t: 'Enter the first section', s: '' }, iconCache: {}, endShown: false, bossBusy: false, portalT: 0,
   deck: null, player: { id: 'p', brand: 'Challenger', studioId: 'gentech' }, config: {}, exo: null,
   worldNames: {}, iconCard: null, quiz: null, rng: null, map: null, t: 0,
   p: null, enemies: [], shots: [], orbs: [], coins: [], mats: [], xc: 0, xcDropped: 0, awarded: false, fx: [], rings: [], ledger: null,
@@ -744,7 +942,12 @@ let deckApplied = false;
 function applyDeck(m) {
   if (deckApplied) return; deckApplied = true;
   S.player = Object.assign(S.player, m.player || {}); S.config = m.config || {}; S.exo = m.exo || null;
-  S.deck = m.deck || null; S.nf = m.nf || null; start();
+  S.deck = m.deck || null; S.nf = m.nf || null; S.me = String(S.player.id || 'p');
+  if (m.coop && m.coop.scope) { // launched from an X-Live session: squad lobby (players) or observation (host)
+    const c = m.coop; S.coop = { scope: String(c.scope).replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 60), base: (S.nf && S.nf.scope) || ('sess_' + c.scope), title: c.title || '', squad: c.squad || '', net: c.net || null, transport: c.transport || '', rules: L.coopRules(c.rules || {}), sessionId: c.sessionId || '' };
+    S.role = c.role === 'host' ? 'host' : 'player';
+  } else S.role = 'solo';
+  start();
 }
 function readCfg() {
   const c = S.config || {}; let diff = L.diffFromConfig(c), team = L.teamSizeFrom(c);
@@ -754,6 +957,7 @@ function readCfg() {
   if (TEST && qs.get('meter')) S.cfg.meterTarget = Math.max(3, Math.min(12, qs.get('meter') | 0));
   if (!S.nf) S.nf = { scope: 'solo', owned: {}, xc: 0, progress: { cleared: 0 }, market: false };
 }
+function embedded() { return window.parent !== window; }
 function evoLevel() { return Math.max(1, Math.min(10, (S.exo && S.exo.level) | 0 || 1)); }
 function ownedN(id) { return (S.nf && S.nf.owned && S.nf.owned[id]) | 0; }
 function applyNfState(m) {
@@ -771,6 +975,9 @@ function start() {
   S.quiz = new L.QuizDeck((S.deck && S.deck.cards) || [], L.mulberry32((Date.now() ^ 0x5bd1e995) & 0xffffff));
   loadIcons();
   fetch(ASSET + 'world-routes.json').then(function (r) { return r.json(); }).then(function (j) { (j.worlds || []).forEach(function (w) { S.worldNames[w.world] = w.name; }); buildMenu(); }).catch(buildMenu);
+  if (S.role === 'host') { coopInit(); return; }
+  if (S.role === 'player') { S.ready = false; coopInit(); setMode('lobby'); renderLobby(); return; }
+  if (embedded() && !qs.get('dev') && !TEST) { setMode('blocked'); return; } // inside the Arena the game only opens from an X-Live session
   buildMenu(); setMode('menu');
   if (qs.get('autostart') === '1') beginWorld(1, { resume: TEST ? (qs.get('resume') | 0) : 0 });
 }
@@ -789,8 +996,9 @@ img(ASSET + 'sprites/circuit-portal-open-256.png'); img(ASSET + 'web/void.jpg');
 
 function setMode(m) {
   S.mode = m;
-  ['menu', 'cut', 'quiz', 'boss', 'end', 'loadout'].forEach(function (k) { $(k).classList.toggle('on', k === m || (k === 'quiz' && S.quizOpen)); });
+  ['menu', 'cut', 'quiz', 'boss', 'end', 'loadout', 'lobby', 'blocked', 'observer'].forEach(function (k) { $(k === 'observer' ? 'obs' : k).classList.toggle('on', k === m || (k === 'quiz' && S.quizOpen)); });
   $('hud').classList.toggle('on', m === 'play');
+  if (m === 'observer') { $('hud').classList.remove('on'); }
 }
 function buildMenu() {
   const w = $('worlds'); w.innerHTML = '';
@@ -802,7 +1010,7 @@ function buildMenu() {
     w.appendChild(d);
   }
 }
-$('menuExit').onclick = exitToArena; $('endExit').onclick = exitToArena; $('exitBtn').onclick = exitToArena;
+$('blkExit').onclick = exitToArena; $('menuExit').onclick = exitToArena; $('endExit').onclick = exitToArena; $('exitBtn').onclick = exitToArena;
 $('endAgain').onclick = function () { awardRun(); openLoadout(); };
 // X-Coin is the ONLY thing that leaves the game, as an explicit capped amount (the Arena turns it into a host-approved award proposal).
 // Hosts can switch it off with config.rewards === false. Orbs, score and charge never convert to anything.
@@ -831,34 +1039,18 @@ function cutAdvance(skip) {
 $('cut').addEventListener('click', function (e) { if (e.target.id !== 'cutSkip') cutAdvance(false); });
 $('cutSkip').onclick = function () { cutAdvance(true); };
 
-// ── World start ──
-function beginWorld(n, opt) {
-  opt = opt || {};
-  S.map = L.buildWorldMap(S.rng() * 1e9 | 0 || 1);
-  if (TEST && qs.get('seed')) S.map = L.buildWorldMap(qs.get('seed') | 0);
-  const m = S.map; S.enemies = []; S.shots = []; S.orbs = []; S.coins = []; S.xc = 0; S.xcDropped = 0; S.awarded = false; S.fx = []; S.rings = []; S.ledger = new L.DropLedger(); S.mats = L.placeMaterials(m, S.rng);
-  S.areas = [0, 1, 2, 3, 4, 5].map(function (i) { const c = L.encounterFor(S.cfg.diff, i, S.cfg.team); return { idx: i, cfg: c, scale: L.stageScale(S.cfg.diff, i), enc: new L.Encounter(c, L.mulberry32((m.seed + i * 7919) >>> 0)), state: 'dormant', cd: 0 }; });
-  bossState.max = L.bossHp(60, S.cfg.diff, S.cfg.team);
-  // loadout -> run equipment (owned, game-kind, within the Evo's slots)
-  const picks = L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel());
-  S.eq = { inv: picks.slice(), list: picks.slice(), spent: {}, bought: [], aegisHits: 2 * picks.filter(function (x) { return x === 'aegis'; }).length, abilityLeft: L.reviveCharges(evoLevel()), flash: 0 };
-  S.meter = new L.Meter(S.cfg.meterTarget); if (has('capacitor')) S.meter.setFill(.4);
-  setTicks('ammoU', S.meter.target); setTicks('qAmmoU', S.meter.target);
-  S.boost = {}; S.stars = []; S.novaCd = 0; S.sprint = null; S.shopOpen = false; $('shop').classList.remove('on'); S.secCleared = 0; S.runLive = true; S.consumedSent = false; S.lastSaved = -1;
-  S.areaIdx = -1; S.crossed = {}; S.seenCut = {}; S.score = 0; S.orbCount = 0; S.kills = 0; S.bossDone = false; S.portal = null; S.ended = false; S.t = 0; S.timeSec = 0;
-  S.quiz = new L.QuizDeck((S.deck && S.deck.cards) || [], L.mulberry32((Date.now() ^ 0x1234567) & 0xffffff)); S.quiz.setMeter(S.meter);
-  S.p = { x: m.start.x, y: m.start.y, r: 11, vit: 100, maxVit: 100, vx: 0, vy: 0, face: 0, dash: 0, dashCd: 0, inv: 0, hit: 0, shotCd: 0, charge: 0, hurtCd: 0 };
-  S.startedAt = performance.now(); S.cam.x = S.p.x - VW / 2; S.cam.y = S.p.y - VH / 2;
-  const k = Math.max(0, Math.min(6, opt.resume | 0));
-  if (k > 0) { // team checkpoint: earlier sections stay cleared, gates open, start at the next section
-    for (let i = 0; i < k && i < 6; i++) { S.areas[i].state = 'cleared'; m.gateOpen[i] = true; S.crossed[i] = true; S.seenCut['combat-0' + (i + 1)] = true; S.seenCut['transition-0' + (i + 1)] = true; }
-    S.seenCut.intro = true; S.areaIdx = Math.min(5, k - 1); S.secCleared = k; S.lastSaved = k;
-    const r = m.rooms[k]; S.p.x = (r.x + 3) * T + 16; S.p.y = (r.y + r.rowL + 1) * T + 16; S.cam.x = S.p.x - VW / 2; S.cam.y = S.p.y - VH / 2;
-  }
-  setMode('play'); renderHud();
-  playCut('intro', LINES.intro, function () { /* encounter starts when the player is inside room 1 */ });
-  if (k > 0) toast('Team checkpoint: continuing from section ' + (k + 1));
+// ── Small UI helpers ──
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove('on'); }, 1900); }
+function banner(t) { const b = $('banner'); b.textContent = t; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
+function shake(n) { if (!REDUCED) S.shake = Math.max(S.shake, n); }
+// after a round (co-op): back to the squad lobby for the next launch
+function backToLobby() {
+  awardRun();
+  S.round = null; S.endShown = false; S.ended = false; S.runLive = false; S.ready = false; S.players = {}; S.order = []; S.clock = null; S.enemies = []; S.p = null; S.awarded = false; S.consumedSent = false; S.quizOpen && closeQuiz(); closeShop();
+  if (S.coop) post({ type: 'pflx_arena_nf_scope', game: 'nexus-frontiers', scope: S.nf.scope });
+  setMode('lobby'); if (typeof sendHello === 'function') sendHello(); renderLobby();
 }
+$('endNext').onclick = function () { backToLobby(); };
 
 // ── Equipment helpers ──
 function has(id) { return !!(S.eq && S.eq.list.indexOf(id) >= 0); }
@@ -893,7 +1085,8 @@ function renderLoadout() {
   const held = Object.keys(L.UPGRADES).filter(function (k) { return L.UPGRADES[k].kind === 'session'; });
   const ss = $('ldSession'); ss.innerHTML = '<div class="lbl mono" style="margin:.7em 0 .3em">LIVE-SESSION UPGRADES (HOST-APPLIED, NOT USED IN A ROUND)</div>'; const l2 = document.createElement('div'); l2.className = 'ulist'; held.forEach(function (k) { l2.appendChild(upRow(L.UPGRADES[k], 'ld')); }); ss.appendChild(l2);
   $('ldNote').textContent = S.ld.pending ? 'Purchasing…' : (S.ld.note || (S.nf.market ? '' : 'Marketplace purchases are not available here.'));
-  $('ldStart').textContent = cl > 0 ? 'CONTINUE FROM SECTION ' + (cl + 1) : 'START ROUND'; $('ldFresh').style.display = cl > 0 ? '' : 'none';
+  const co = S.role === 'player';
+  $('ldStart').textContent = co ? 'LOCK IN LOADOUT' : (cl > 0 ? 'CONTINUE FROM SECTION ' + (cl + 1) : 'START ROUND'); $('ldFresh').style.display = (!co && cl > 0) ? '' : 'none';
 }
 function buyUpgrade(id) {
   const u = L.UPGRADES[id]; if (!u || S.ld.pending) return;
@@ -901,13 +1094,16 @@ function buyUpgrade(id) {
   S.ld.pending = true; S.ld.note = ''; renderLoadout(); post({ type: 'pflx_arena_nf_buy', game: 'nexus-frontiers', id: id });
   clearTimeout(buyUpgrade.t); buyUpgrade.t = setTimeout(function () { if (S.ld.pending) { S.ld.pending = false; S.ld.note = 'The Arena did not answer — nothing was charged.'; if (S.mode === 'loadout') renderLoadout(); } }, 8000);
 }
-$('ldStart').onclick = function () { beginWorld(1, { resume: (S.nf.progress && S.nf.progress.cleared) | 0 }); };
+$('ldStart').onclick = function () {
+  if (S.role === 'player') { S.ld.picks = L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()); sendHello(); setMode('lobby'); renderLobby(); return; }
+  beginWorld(1, { resume: (S.nf.progress && S.nf.progress.cleared) | 0 });
+};
 $('ldFresh').onclick = function () { beginWorld(1, { resume: 0 }); };
-$('ldBack').onclick = function () { setMode('menu'); };
+$('ldBack').onclick = function () { if (S.role === 'player') { setMode('lobby'); renderLobby(); } else setMode('menu'); };
 
 // ── In-round field shop: spend X-Coin collected THIS run on game upgrades (uses a free slot) ──
 function openShop() {
-  if (S.mode !== 'play' || S.quizOpen || S.shopOpen) return;
+  if (S.mode !== 'play' || S.quizOpen || S.shopOpen || !S.p || S.p.down) return;
   if (!S.cfg.shop) { toast('The field shop is switched off for this round'); return; }
   S.shopOpen = true; renderShop(); $('shop').classList.add('on');
 }
@@ -917,11 +1113,11 @@ function renderShop() {
   $('shSum').innerHTML = 'Run X-Coin: <b style="color:#ffd740">' + S.xc + '</b> · Slots used: <b>' + S.eq.list.length + ' / ' + cap + '</b><br>Upgrades bought here come out of the X-Coin you collected this round (less to send home) and last until the round ends.';
   const ls = $('shList'); ls.innerHTML = ''; Object.keys(L.UPGRADES).forEach(function (k) { if (L.UPGRADES[k].kind === 'game') ls.appendChild(upRow(L.UPGRADES[k], 'shop')); });
 }
-function shopBuy(id) {
+function shopBuy(id) { // the leader validates every purchase (it holds each player's run X-Coin); a client asks and gets 'buyok' back
   const u = L.UPGRADES[id]; if (!u || u.kind !== 'game' || S.xc < u.price || S.eq.list.length >= L.slotsFor(evoLevel()) || (!u.trigger && has(id))) return;
-  S.xc -= u.price; S.eq.list.push(id); S.eq.bought.push(id); if (id === 'aegis') S.eq.aegisHits += 2;
-  if (id === 'capacitor') S.meter.setFill(Math.max(S.meter.fill, .4));
-  $('shNote').textContent = u.name + ' equipped.'; renderShop(); renderHud();
+  if (S.isLeader) { if (!doBuy(S.p, id)) return; S.mirror(); if (id === 'capacitor') S.meter.setFill(Math.max(S.meter.fill, .4)); $('shNote').textContent = u.name + ' equipped.'; }
+  else { netAct({ k: 'buy', item: id }); $('shNote').textContent = 'Buying ' + u.name + '…'; }
+  renderShop(); renderHud();
 }
 $('shopBtn').onclick = function () { openShop(); }; $('shClose').onclick = closeShop;
 
@@ -929,12 +1125,13 @@ $('shopBtn').onclick = function () { openShop(); }; $('shClose').onclick = close
 const keys = {};
 addEventListener('keydown', function (e) {
   const k = e.key.toLowerCase(); keys[k] = true;
+  if (S.role === 'host' || S.mode === 'lobby' || S.mode === 'blocked') return;
   if (S.mode === 'cut' && (k === 'enter' || k === ' ')) { cutAdvance(false); e.preventDefault(); return; }
   if (S.mode === 'cut' && k === 'escape') { cutAdvance(true); return; }
   if (S.shopOpen) { if (k === 'escape' || k === 'b') closeShop(); return; }
   if (S.quizOpen) { if (k >= '1' && k <= '4') pickOption(+k - 1); if (k === 'escape' && S.quizContext === 'field') leaveSprint(); return; }
   if (S.mode === 'play') { if (k === 'b') openShop(); if (k === 'q') openQuiz('field'); if (k === 'f') surge(); if (k === ' ') { dash(); e.preventDefault(); } }
-  if (S.mode === 'boss' && k >= '1' && k <= '3' && bossState.turn === 'player' && !S.quizOpen) chooseCard(['strike', 'surge', 'guard'][+k - 1]);
+  if (S.mode === 'boss' && k >= '1' && k <= '3' && bossState.turn === 'players' && !S.quizOpen) chooseCard(['strike', 'surge', 'guard'][+k - 1]);
 });
 addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', function () { for (const k in keys) keys[k] = false; });
@@ -992,7 +1189,7 @@ function pickOption(i) {
   for (let k = 0; k < els.length; k++) { const e = els[k]; if (e.dataset.id === o.id) e.classList.add(res.correct ? 'ok' : 'bad'); else { e.classList.add('dim'); if (!res.correct && e.textContent.slice(1) === res.answerText) { e.classList.remove('dim'); e.classList.add('ok'); } } }
   S.p.charge = S.quiz.charge;
   $('qMsg').className = res.correct ? 'good' : 'bad';
-  S.score += res.correct ? 20 : 0;
+  if (res.correct) { if (S.isLeader) S.score += 20; else netAct({ k: 'pts', n: 20 }); }
   if (S.sprint) {
     S.sprint.record(res.correct);
     $('qMsg').textContent = res.correct ? (res.charge ? 'Correct! +1 notch of ammo.' : 'Correct! Ammo is full.') : 'Not this time. The answer: ' + res.answerText;
@@ -1022,36 +1219,251 @@ function leaveSprint() {
 function closeQuiz() { S.quizOpen = false; $('quiz').classList.remove('on'); S.sprint = null; }
 $('qClose').onclick = function () { if (S.sprint) leaveSprint(); else closeQuiz(); };
 
-// ── Player actions ──
-function dash() {
-  const p = S.p; if (S.mode !== 'play' || S.quizOpen || p.dashCd > 0) return;
-  let dx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + joy.x, dy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + joy.y;
-  const m = Math.hypot(dx, dy); if (m < .1) { dx = Math.cos(p.face); dy = Math.sin(p.face); } else { dx /= m; dy /= m; }
-  p.dash = .17; p.inv = .22; p.dashCd = 1.1; p.dvx = dx; p.dvy = dy;
-}
-function surge() {
-  const p = S.p; if (S.mode !== 'play' || S.quizOpen) return;
-  if (!S.quiz.spend(1)) { toast('No charge — open a LINK quiz (Q)'); return; }
-  p.charge = S.quiz.charge; renderHud();
-  const amp = has('surgeamp'), R = amp ? 185 : 150, SD = amp ? 9 : 6, powerB = 1 + sx(stat('power')); S.rings.push({ x: p.x, y: p.y, r: 10, max: R, a: 1, c: '#ffd740' }); shake(5);
-  S.mats.forEach(function (mt) { if (!mt.dead && Math.hypot(mt.x - p.x, mt.y - p.y) < R) damageMat(mt, SD); });
-  S.enemies.forEach(function (e) {
-    if (e.dead) return; const d = Math.hypot(e.x - p.x, e.y - p.y);
-    if (e.type === 'sentry') { e.petals.forEach(function (pt) { if (pt.hp > 0 && Math.hypot(pt.px - p.x, pt.py - p.y) < R + 10) damagePetal(e, pt, SD * powerB); }); if (d < R + e.r) damageEnemy(e, SD * powerB * (e.petals.some(function (q) { return q.hp > 0; }) ? .5 : 1)); }
-    else if (d < R + e.r) damageEnemy(e, SD * powerB);
-  });
-}
-function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove('on'); }, 1600); }
-function banner(t) { const b = $('banner'); b.textContent = t; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
-function shake(n) { if (!REDUCED) S.shake = Math.max(S.shake, n); }
 
-// ── Enemy pathing: flow field (BFS) toward the player inside the active room, so lane walls never trap the swarm ──
-function buildFlow() {
-  const a = S.areas[S.areaIdx]; if (!a) { S.flow = null; return; }
-  const r = S.map.rooms[a.idx], ptx = Math.floor(S.p.x / T), pty = Math.floor(S.p.y / T);
-  if (S.flow && S.flow.room === r.id && S.flow.tx === ptx && S.flow.ty === pty) return;
+// ─── src/b_net.js ───
+
+// ══════════════════════════ CO-OP NETWORKING ══════════════════════════
+// One squad = one team channel. One of its players is the LEADER (lowest id among those present): the leader runs the shared sim and
+// broadcasts snapshots; every other player moves their own Evo locally and sends it to the leader. Hosts watch from the observer view.
+// Transport: Supabase Realtime broadcast (anon key, no schema change). 'bc' (BroadcastChannel) is used for local testing.
+const NET = { hub: null, sess: null, team: null, teamKey: '', teamName: '', members: {}, startReq: false, snapSeq: 0, lastSnapAt: 0, lastSnap: null, lastEv: 0, posAt: 0, snapAt: 0, beaconAt: 0, helloAt: 0, roundId: '', roundSec: 600, status: 'local', sessHellos: {}, formed: false, joinAt: 0, locked: {}, rejoinAt: 0 };
+const SPRINT_PROTECT_MAX = 80;
+function coopActive() { return !!(S.coop && NET.hub); }
+function myInfo() { return { id: S.me, name: S.player.brand || 'Evo', studio: L.studioKey(S.player.studioId), lvl: evoLevel(), tier: iconTier(), stats: (S.exo && S.exo.stats) || {} }; }
+function iconTier() { const lvl = evoLevel(); return lvl <= 2 ? 1 : lvl <= 4 ? 2 : lvl <= 6 ? 3 : lvl <= 9 ? 4 : 5; }
+function coopInit() {
+  const c = S.coop, tr = TEST && qs.get('net') === 'bc' ? 'bc' : (c.transport || (c.net && c.net.url ? 'ws' : 'bc'));
+  NET.hub = NFNet.connect({ url: c.net && c.net.url, key: c.net && c.net.key, transport: tr, onStatus: function (s) { NET.status = s; renderNetStatus(); } });
+  NET.sess = NET.hub.channel('s-' + c.scope).on(onSessMsg);
+  NET.roundSec = c.rules.roundSec;
+  if (S.role === 'host') { obsInit(); return; }
+  S.team = { members: {} };
+  if (c.squad) joinTeam(L.slug(c.squad) || 'squad', c.squad); else { NET.formDeadline = performance.now() + 1500; }
+  sendSessHello(); setInterval(coopTick, 250);
+}
+function sendSessHello() { if (!NET.sess) return; const i = myInfo(); NET.sess.send('hello', { id: i.id, name: i.name, studio: i.studio, squad: S.coop.squad || '', team: NET.teamKey, st: S.mode === 'play' || S.mode === 'boss' ? 'play' : 'lobby' }, false); }
+function renderNetStatus() { const e = $('lbNet'); if (e) e.textContent = NET.status === 'online' ? 'LIVE LINK ● ONLINE' : NET.status === 'connecting' ? 'LIVE LINK … CONNECTING' : NET.status === 'offline' ? 'LIVE LINK ✕ RECONNECTING' : 'LOCAL'; }
+
+// ── session channel: squad discovery, host commands ──
+function onSessMsg(e, p) {
+  if (e === 'hello' && p && p.id) {
+    NET.sessHellos[p.id] = { id: p.id, name: p.name, studioId: p.studio, squad: p.squad || '', team: p.team || '', st: p.st, seen: performance.now() };
+  } else if (e === 'beacon' && S.role === 'host' && p && p.team) { obsBeacon(p); }
+  else if (e === 'timer' && S.team && p && (p.team === '*' || p.team === NET.teamKey)) { handleTimer(p.d | 0); }
+  else if (e === 'startall' && S.team && NET.teamKey) { NET.startReq = true; }
+}
+function formSquads() { // open (non-X-Live) squads: deterministic from everybody's hello, locked once a round started
+  if (NET.formed || S.role === 'host') return;
+  const now = performance.now(); NET.sessHellos[S.me] = Object.assign(NET.sessHellos[S.me] || {}, { id: S.me, name: S.player.brand, studioId: L.studioKey(S.player.studioId), squad: S.coop.squad || '', seen: now });
+  const list = Object.keys(NET.sessHellos).map(function (k) { return NET.sessHellos[k]; }).filter(function (h) { return now - h.seen < 6000; });
+  const locked = {}; list.forEach(function (h) { if (h.st === 'play' && h.team) locked[h.id] = h.team; });
+  const teams = L.assignTeams(list, locked, S.coop.rules), mine = teams.filter(function (t) { return t.members.indexOf(S.me) >= 0; })[0];
+  if (!mine) return;
+  if (mine.key !== NET.teamKey) joinTeam(mine.key, mine.name);
+}
+
+// ── team channel ──
+function joinTeam(key, name) {
+  if (NET.team) { NET.team.leave(); NET.team = null; }
+  NET.teamKey = key; NET.teamName = name; NET.members = {}; S.team = { key: key, name: name, members: NET.members }; NET.formed = !!S.coop.squad;
+  NET.team = NET.hub.channel('t-' + S.coop.scope + '-' + key).on(onTeamMsg);
+  S.nf.scope = S.coop.base + '_' + key; post({ type: 'pflx_arena_nf_scope', game: 'nexus-frontiers', scope: S.nf.scope }); // team checkpoint = per squad
+  sendHello(); if (S.mode === 'lobby') renderLobby();
+}
+function sendHello() {
+  if (!NET.team) return; const i = myInfo(), me = NET.members[S.me] || {};
+  NET.team.send('hello', { id: i.id, name: i.name, studio: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, rdy: S.ready ? 1 : 0, picks: S.ld.picks, md: S.mode === 'play' || S.mode === 'boss' ? 'p' : S.mode === 'end' ? 'e' : 'l', rs: NET.roundSec, rd: NET.roundId, nf: S.nf && S.nf.progress ? S.nf.progress.cleared | 0 : 0 }, false);
+  NET.members[S.me] = Object.assign(me, { id: i.id, name: i.name, studioId: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, ready: !!S.ready, picks: S.ld.picks.slice(), seen: performance.now(), online: true });
+}
+function onTeamMsg(e, p) {
+  if (!p) return; const now = performance.now();
+  if (p.to && p.to !== S.me) return;
+  switch (e) {
+    case 'hello': {
+      const m = NET.members[p.id] || (NET.members[p.id] = { id: p.id });
+      Object.assign(m, { name: p.name, studioId: p.studio, lvl: p.lvl, tier: p.tier, stats: p.stats, ready: !!p.rdy, picks: p.picks || [], seen: now, online: true, md: p.md });
+      const P = S.players && S.players[p.id]; if (P) { P.lastSeen = now; }
+      if (p.rs && p.id === leaderId()) NET.roundSec = p.rs;
+      // rejoin: a squad member who reloaded mid-round says "lobby" while the round is live → leader sends the start message again
+      if (S.isLeader && S.round && S.players[p.id] && p.md === 'l' && now - NET.rejoinAt > 1500) { NET.rejoinAt = now; sendStart(true, p.id); }
+      if (S.mode === 'lobby') renderLobby();
+      break;
+    }
+    case 'startreq': NET.startReq = true; break;
+    case 'start': if (!S.round || S.round.id !== p.id || p.rejoin) onStart(p); break;
+    case 'pos': if (S.isLeader && S.round) onPos(p); break;
+    case 'act': if (S.isLeader && S.round) handleAct(p.id, p); break;
+    case 'snap': if (!S.isLeader) onSnap(p); break;
+    case 'end': onEnd(p); break;
+    case 'msg': onDirect(p); break;
+  }
+}
+function leaderId() { // the squad's leader = lowest id among players who are present (or, mid-round, in the round)
+  const now = performance.now(); let best = null;
+  Object.keys(NET.members).forEach(function (id) { const m = NET.members[id]; if (!(now - m.seen < 4500)) return; if (S.round && !S.round.roster[id]) return; if (S.round && S.players[id] && S.players[id].down && !best) { /* downed players can still lead the network */ } if (best === null || id < best) best = id; });
+  return best;
+}
+function members() { const now = performance.now(); return Object.keys(NET.members).map(function (id) { const m = NET.members[id]; m.online = now - m.seen < 4500; return m; }); }
+function netAct(a) { // a player action that the leader must see
+  if (S.role === 'solo' || S.isLeader) { handleAct(S.me, a); return; }
+  if (NET.team) NET.team.send('act', Object.assign({ id: S.me }, a), true);
+}
+function netTo(pid, o) { if (NET.team) NET.team.send('msg', Object.assign({ to: pid }, o), true); }
+function onDirect(p) {
+  if (p.k === 'buyok') { if (p.id === 'capacitor' && S.meter) { S.meter.setFill(Math.max(S.meter.fill, .4)); S.quiz.setMeter(S.meter); } if (S.shopOpen) renderShop(); renderHud(); }
+}
+function handleAct(id, a) { // leader
+  const P = S.players[id]; if (!P) return;
+  P.lastSeen = performance.now();
+  switch (a.k) {
+    case 'dash': P.inv = Math.max(P.inv, .22); break;
+    case 'surge': doSurge(P); break;
+    case 'buy': doBuy(P, String(a.item || '')); break;
+    case 'bossmove': bossMove(P, String(a.card || ''), !!a.ok); break;
+    case 'pts': S.score += Math.max(0, Math.min(20, a.n | 0)); break;
+  }
+}
+function onPos(p) { // leader: another player's own movement
+  const P = S.players[p.id]; if (!P || P.id === S.me) return;
+  P.lastSeen = performance.now(); P.away = false;
+  if (!P.down && S.mode === 'play') { P.x = +p.x || P.x; P.y = +p.y || P.y; P.face = +p.f || 0; }
+  P.charge = p.ch | 0;
+  const sp = !!p.sp; if (sp && !(P.protect > 0)) P.protect = SPRINT_PROTECT_MAX; else if (!sp && P.protect > 0) { P.protect = 0; P.inv = Math.max(P.inv, 1.5); }
+}
+function handleTimer(d) { // host ±1 minute (leader only does the work; lobby too)
+  if (!S.isLeader && S.round) return;
+  if (S.clock) { S.clock.adjust(d); emit({ k: 'toast', t: (d > 0 ? '+1' : '−1') + ' MINUTE — host · ' + S.clock.fmt() + ' left' }); }
+  else { const lead = leaderId(); if (lead === S.me || !lead) { NET.roundSec = Math.max(60, Math.min(L.COOP.EXTEND_CEILING_SEC, NET.roundSec + (d > 0 ? 60 : -60))); } }
+  if (S.mode === 'lobby') renderLobby();
+}
+
+// ── lobby ──
+function coopTick() {
+  if (S.role === 'host' || !S.coop) return; const now = performance.now();
+  if (!NET.formed && NET.formDeadline && now > NET.formDeadline && !NET.team) { NET.formed = false; }
+  if (!NET.team || (!S.coop.squad && !S.round)) formSquads();
+  if (now - NET.helloAt > 1400) { NET.helloAt = now; sendHello(); sendSessHello(); }
+  if (S.mode === 'lobby') {
+    if (now - (NET.lobbyUi || 0) > 700) { NET.lobbyUi = now; renderLobby(); }
+    if (NET.startReq && leaderId() === S.me) { NET.startReq = false; tryLeaderStart(); }
+  }
+  if (S.round && S.isLeader && now - NET.beaconAt > 1000) { NET.beaconAt = now; sendBeacon(); }
+  else if (!S.round && now - NET.beaconAt > 1500 && NET.team) { NET.beaconAt = now; if (leaderId() === S.me) sendBeacon(); }
+  if (S.round && !S.isLeader && S.mode !== 'end' && NET.lastSnapAt && now - NET.lastSnapAt > 3500 && leaderId() === S.me) takeLead();
+}
+function lobbyCheck() { return L.lobbyCheck(members().map(function (m) { return { id: m.id, studioId: m.studioId, ready: m.ready, online: m.online }; }), S.coop.rules); }
+function renderLobby() {
+  if (!S.coop || S.mode !== 'lobby') return;
+  const ms = members().sort(function (a, b) { return a.id < b.id ? -1 : 1; }), chk = lobbyCheck(), lead = leaderId(), cl = (S.nf.progress && S.nf.progress.cleared) | 0, dif = L.DIFFS[S.cfg.diff];
+  $('lbTitle').textContent = (NET.teamName || 'FINDING YOUR SQUAD…').toUpperCase();
+  $('lbSub').innerHTML = escapeHtml(S.coop.title || 'X-Live session') + ' · <b>' + dif.label.toUpperCase() + '</b> · round time <b>' + Math.floor(NET.roundSec / 60) + ':' + String(NET.roundSec % 60).padStart(2, '0') + '</b> (host-set, max 10 min) · squad checkpoint: <b>' + (cl > 0 ? 'section ' + (cl + 1) + ' of 6' : 'start of server') + '</b>';
+  $('lbMembers').innerHTML = ms.map(function (m) {
+    const col = L.STUDIO_COLORS[L.studioKey(m.studioId)];
+    return '<div class="lbm' + (m.online ? '' : ' off') + '" style="border-color:' + col + '"><i style="background:' + col + '"></i><div class="tx"><b>' + escapeHtml(m.name || '…') + (m.id === S.me ? ' (you)' : '') + (m.id === lead ? ' ★' : '') + '</b><small>' + escapeHtml(String(L.studioKey(m.studioId)).toUpperCase()) + ' · EVO LV ' + (m.lvl || 1) + '</small></div><span class="mono ' + (m.ready ? 'rdy' : 'wait') + '">' + (!m.online ? 'OFFLINE' : m.ready ? 'READY' : 'NOT READY') + '</span></div>';
+  }).join('') || '<div class="ldsum">Looking for your squad…</div>';
+  const rule = S.coop.rules; $('lbRules').innerHTML = '2–4 players per squad, one per studio' + (rule.solo ? ' · <b>1-player squads allowed by your host for this cohort</b>' : '') + (rule.studioRule === 'relaxed' ? ' · same-studio teammates allowed' : '');
+  const need = chk.reasons.filter(function (r) { return r.indexOf('not ready') < 0; });
+  $('lbNote').textContent = S.round && !S.players[S.me] ? 'A round is in progress for this squad. You can join the next launch.' : (chk.ok ? ('Squad ready: ' + chk.active + ' player' + (chk.active > 1 ? 's' : '') + '. ' + (lead === S.me ? 'Press LAUNCH ROUND.' : 'Waiting for ' + ((NET.members[lead] || {}).name || 'the squad leader') + ' to launch (or press LAUNCH to ask).')) : need.join(' '));
+  $('lbReady').textContent = S.ready ? 'NOT READY' : 'READY'; $('lbReady').classList.toggle('gold', !S.ready);
+  const canStart = chk.ok && !!S.ready && !(S.round && !S.players[S.me]); $('lbStart').classList.toggle('off', !canStart);
+  renderNetStatus();
+}
+$('lbReady').onclick = function () { S.ready = !S.ready; sendHello(); renderLobby(); };
+$('lbLoadout').onclick = function () { openLoadout(); };
+$('lbStart').onclick = function () { const chk = lobbyCheck(); if (!chk.ok || !S.ready) return; if (leaderId() === S.me) { tryLeaderStart(); } else if (NET.team) NET.team.send('startreq', { id: S.me }, true); };
+$('lbExit').onclick = function () { exitToArena(); };
+function tryLeaderStart() {
+  const chk = lobbyCheck(); if (!chk.ok || S.round && S.mode !== 'lobby') return;
+  const ready = members().filter(function (m) { return m.online && m.ready; }).sort(function (a, b) { return a.id < b.id ? -1 : 1; }).slice(0, 4);
+  S.pendingRoster = ready;
+  sendStart(false);
+}
+function sendStart(rejoin, only) { // leader
+  let msg;
+  if (rejoin && S.round) msg = Object.assign({}, S.round.msg, { rejoin: true, to: only });
+  else {
+    const roster = S.pendingRoster.map(function (m) { return { id: m.id, name: m.name, studio: L.studioKey(m.studioId), lvl: m.lvl || 1, tier: m.tier || 1, stats: m.stats || {}, picks: m.picks || [] }; });
+    msg = { id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), seed: (Math.random() * 2e9) | 0 || 1, resume: (S.nf.progress && S.nf.progress.cleared) | 0, roster: roster, roundSec: NET.roundSec, diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, leader: S.me };
+  }
+  if (!NET.team) return;
+  NET.team.send('start', msg, true); setTimeout(function () { NET.team && NET.team.send('start', msg, true); }, 500); setTimeout(function () { NET.team && NET.team.send('start', msg, true); }, 1300);
+  if (!rejoin) onStart(msg);
+}
+function onStart(msg) {
+  if (msg.to && msg.to !== S.me) return;
+  const inRoster = msg.roster.some(function (r) { return r.id === S.me; });
+  if (S.round && S.round.id === msg.id && !msg.rejoin) return;
+  S.round = { id: msg.id, msg: msg, roster: {} }; msg.roster.forEach(function (r) { S.round.roster[r.id] = r; });
+  NET.roundId = msg.id; NET.lastSnapAt = performance.now();
+  S.cfg = Object.assign({}, S.cfg, { diff: msg.diff || S.cfg.diff, team: Math.max(1, Math.min(4, msg.roster.length)), meterTarget: msg.meter || S.cfg.meterTarget, shop: msg.shop !== false });
+  S.isLeader = msg.leader === S.me;
+  if (!inRoster) { S.players = {}; S.order = []; setMode('lobby'); renderLobby(); return; }
+  beginRound(msg);
+}
+
+// ─── src/c_sim.js ───
+
+// ══════════ PLAYERS — shared by solo, co-op leader and co-op clients ══════════
+function psx(P, k) { const s = P && P.stats; return s ? sx(Number(s[k]) || 0) : 0; } // bounded ≤12% stat swing
+function phas(P, id) { return !!(P && P.eq && P.eq.list.indexOf(id) >= 0); }
+function ptrig(P, id) { return !P || !P.eq ? 0 : P.eq.list.filter(function (x) { return x === id; }).length - (P.eq.spent[id] | 0); }
+function isAlive(P) { return !!P && !P.down && !P.away; }
+function isTarget(P) { return isAlive(P) && !(P.protect > 0); }
+function playerList() { return (S.order || []).map(function (id) { return S.players[id]; }).filter(Boolean); }
+function livePlayers() { return playerList().filter(isAlive); }
+function mkPlayer(id, info) {
+  info = info || {}; const st = L.studioKey(info.studio);
+  return { id: id, name: info.name || 'Evo', studio: st, color: L.STUDIO_COLORS[st], lvl: info.lvl || 1, tier: info.tier || 1, stats: info.stats || {}, picks: info.picks || [],
+    x: 0, y: 0, r: 11, vit: 100, maxVit: 100, vx: 0, vy: 0, face: 0, dash: 0, dashCd: 0, inv: 0, hit: 0, shotCd: 0, charge: 0, hurtCd: 0, dvx: 0, dvy: 0,
+    eq: null, boost: {}, novaCd: 0, xc: 0, orbs: 0, kills: 0, down: false, away: false, protect: 0, bvit: 100, lastSeen: performance.now(), tx: 0, ty: 0 };
+}
+function buildEq(P) {
+  const picks = L.validateLoadout(P.picks, null, P.lvl, true); // the cartridge of each player already validated against that player's own stock
+  P.eq = { inv: picks.slice(), list: picks.slice(), spent: {}, bought: [], aegisHits: 2 * picks.filter(function (x) { return x === 'aegis'; }).length, abilityLeft: L.reviveCharges(P.lvl), flash: 0 };
+}
+// one-shot visual/audio events: the leader plays them locally and ships them to everyone else inside the next snapshot
+function emit(ev) { if (S.isLeader && S.role !== 'solo' && S.evq.length < 60) S.evq.push(ev); playEv(ev); }
+function playEv(ev) {
+  if (ev.to && ev.to !== S.me) return;
+  switch (ev.k) {
+    case 'ring': S.rings.push({ x: ev.x, y: ev.y, r: ev.r0 || 8, max: ev.max, a: 1, c: ev.c }); break;
+    case 'fx': S.fx.push({ x: ev.x, y: ev.y, t: ev.t || .4, k: ev.f, text: ev.text }); break;
+    case 'toast': toast(ev.t); break;
+    case 'banner': banner(ev.t); break;
+    case 'shake': shake(ev.n); break;
+  }
+}
+function ring(x, y, max, c, r0) { emit({ k: 'ring', x: Math.round(x), y: Math.round(y), max: max, c: c, r0: r0 }); }
+function fxAt(x, y, f, t, text) { emit({ k: 'fx', x: Math.round(x), y: Math.round(y), f: f, t: t, text: text }); }
+
+// ══════════ WORLD ══════════
+function buildWorld(seed, resume) {
+  S.seed = seed >>> 0 || 1; S.map = L.buildWorldMap(S.seed); const m = S.map;
+  S.mats = L.placeMaterials(m, L.mulberry32((S.seed ^ 0x9e3779b9) >>> 0));
+  S.enemies = []; S.shots = []; S.orbs = []; S.coins = []; S.stars = []; S.fx = []; S.rings = []; S.evq = []; S.xc = 0; S.xcDropped = 0; S.awarded = false; S.ledger = new L.DropLedger(); S.flows = {};
+  S.areas = [0, 1, 2, 3, 4, 5].map(function (i) { const c = L.encounterFor(S.cfg.diff, i, S.cfg.team); return { idx: i, cfg: c, scale: L.stageScale(S.cfg.diff, i), enc: new L.Encounter(c, L.mulberry32((m.seed + i * 7919) >>> 0)), state: 'dormant', cd: 0 }; });
+  bossState.max = L.bossHp(60, S.cfg.diff, S.cfg.team);
+  S.areaIdx = -1; S.crossed = {}; S.seenCut = {}; S.score = 0; S.kills = 0; S.bossDone = false; S.portal = null; S.ended = false; S.t = 0; S.timeSec = 0; S.secCleared = 0; S.lastSaved = -1; S.runLive = true; S.consumedSent = false; S.portalT = 0; S.nid = 1; S.obj = { t: 'Move into the first section', s: 'WASD / arrows' };
+  const k = Math.max(0, Math.min(6, resume | 0));
+  if (k > 0) { // team checkpoint: earlier sections stay cleared, gates open, start at the next section
+    for (let i = 0; i < k && i < 6; i++) { S.areas[i].state = 'cleared'; m.gateOpen[i] = true; S.crossed[i] = true; S.seenCut['combat-0' + (i + 1)] = true; S.seenCut['transition-0' + (i + 1)] = true; }
+    S.seenCut.intro = true; S.areaIdx = Math.min(5, k - 1); S.secCleared = k; S.lastSaved = k;
+  }
+  return k;
+}
+function spawnPoint(k, slot, n) { // players start side by side
+  const m = S.map; let x = m.start.x, y = m.start.y;
+  if (k > 0) { const r = m.rooms[k]; x = (r.x + 3) * T + 16; y = (r.y + r.rowL + 1) * T + 16; }
+  const off = (slot - (n - 1) / 2) * 26; return { x: x, y: y + off };
+}
+
+// ══════════ PATHING: one flow field per target player (BFS inside the active room) ══════════
+function flowFor(P) {
+  const a = S.areas[S.areaIdx]; if (!a) return null;
+  const r = S.map.rooms[a.idx], ptx = Math.floor(P.x / T), pty = Math.floor(P.y / T), f = S.flows[P.id];
+  if (f && f.room === r.id && f.tx === ptx && f.ty === pty) return f;
   const w = r.w, h = r.h, d = new Uint16Array(w * h).fill(65535);
-  if (ptx < r.x || ptx >= r.x + w || pty < r.y || pty >= r.y + h || L.isSolidTile(S.map, ptx, pty)) { S.flow = { room: r.id, tx: ptx, ty: pty, d: d, r: r, ok: false }; return; }
+  if (ptx < r.x || ptx >= r.x + w || pty < r.y || pty >= r.y + h || L.isSolidTile(S.map, ptx, pty)) return (S.flows[P.id] = { room: r.id, tx: ptx, ty: pty, d: d, r: r, ok: false });
   const q = [ptx - r.x + (pty - r.y) * w]; d[q[0]] = 0;
   for (let qi = 0; qi < q.length; qi++) {
     const c = q[qi], cx = c % w, cy = (c / w) | 0;
@@ -1061,16 +1473,16 @@ function buildFlow() {
       d[nx + ny * w] = d[c] + 1; q.push(nx + ny * w);
     });
   }
-  S.flow = { room: r.id, tx: ptx, ty: pty, d: d, r: r, ok: true };
+  return (S.flows[P.id] = { room: r.id, tx: ptx, ty: pty, d: d, r: r, ok: true });
 }
 function wideClear(e, p) {
   const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d * e.r * .9, ny = dx / d * e.r * .9;
   return L.lineClear(S.map, e.x, e.y, p.x, p.y) && L.lineClear(S.map, e.x + nx, e.y + ny, p.x + nx, p.y + ny) && L.lineClear(S.map, e.x - nx, e.y - ny, p.x - nx, p.y - ny);
 }
-function chaseVec(e) {
-  const p = S.p, dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
-  if (wideClear(e, p) || !S.flow || !S.flow.ok) return [dx / d, dy / d];
-  const f = S.flow, r = f.r, etx = Math.floor(e.x / T) - r.x, ety = Math.floor(e.y / T) - r.y;
+function chaseVec(e, p) {
+  const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, f = flowFor(p);
+  if (wideClear(e, p) || !f || !f.ok) return [dx / d, dy / d];
+  const r = f.r, etx = Math.floor(e.x / T) - r.x, ety = Math.floor(e.y / T) - r.y;
   if (etx < 0 || ety < 0 || etx >= r.w || ety >= r.h) return [dx / d, dy / d];
   let best = f.d[etx + ety * r.w], bx = 0, by = 0;
   for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
@@ -1079,243 +1491,204 @@ function chaseVec(e) {
     const v = f.d[nx + ny * r.w]; if (v < best) { best = v; bx = ox; by = oy; }
   }
   if (!bx && !by) return [dx / d, dy / d];
-  const tx = (r.x + etx + bx) * T + T / 2 - e.x, ty = (r.y + ety + by) * T + T / 2 - e.y, m = Math.hypot(tx, ty) || 1; return [tx / m, ty / m];
+  const tx = (r.x + etx + bx) * T + T / 2 - e.x, ty = (r.y + ety + by) * T + T / 2 - e.y, mm = Math.hypot(tx, ty) || 1; return [tx / mm, ty / mm];
+}
+function nearestTarget(x, y, maxD) {
+  let best = null, bd = maxD || 1e9;
+  playerList().forEach(function (P) { if (!isTarget(P)) return; const d = Math.hypot(P.x - x, P.y - y); if (d < bd) { bd = d; best = P; } });
+  return best;
 }
 
-// ── Enemies ──
+// ══════════ ENEMIES ══════════
 const DEF = {
   scout: { hp: 2, r: 11, spd: 105, dmg: 6, score: 10, drop: .35 },
   interceptor: { hp: 6, r: 13, spd: 82, dmg: 14, score: 30, drop: .6 },
   sentry: { hp: 24, r: 22, spd: 0, dmg: 18, score: 120, drop: 1 }
 };
 function pickSpawnCell(room) {
-  const p = S.p; const cells = room.cells.filter(function (c) { return Math.hypot(c.tx * T + 16 - p.x, c.ty * T + 16 - p.y) > T * 8; });
-  const list = cells.length ? cells : room.cells; return list[Math.floor(S.rng() * list.length)];
+  const ps = livePlayers(); const far = function (c) { return ps.every(function (P) { return Math.hypot(c.tx * T + 16 - P.x, c.ty * T + 16 - P.y) > T * 8; }); };
+  const cells = room.cells.filter(far); const list = cells.length ? cells : room.cells; return list[Math.floor(S.rng() * list.length)];
 }
 function placeEnemy(type, room) {
   const c = pickSpawnCell(room); if (!c) return null;
-  const d = DEF[type], ar = S.areas[S.areaIdx], hp = L.scaledHp(d.hp, ar ? ar.scale : 1, S.cfg.team); // tougher energy bars every stage / difficulty / team size
+  const d = DEF[type], ar = S.areas[S.areaIdx], hp = L.scaledHp(d.hp, ar ? ar.scale : 1, S.cfg.team); // tougher energy bars every stage / difficulty / squad size
   const e = { id: S.nid++, type: type, x: c.tx * T + 16, y: c.ty * T + 16, r: d.r, hp: hp, max: hp, spawnT: .8, cd: 1.2 + S.rng() * 1.5, state: 'move', st: 0, dead: false, hurt: 0, tx: 0, ty: 0, vx: 0, vy: 0, touchCd: 0 };
   if (type === 'sentry') {
     e.x = room.px.x + room.px.w / 2; e.y = room.px.y + room.px.h / 2; e.cd = 2.4; e.beam = null;
     e.petals = [0, 1].map(function (i) { const ph = L.scaledHp(8, ar ? ar.scale : 1, S.cfg.team); return { a: i * Math.PI, hp: ph, max: ph, px: 0, py: 0 }; });
-    // keep the core off any wall block
     let tries = 0; while (L.boxSolid(S.map, e.x, e.y, e.r + 6) && tries++ < 60) { const cc = room.cells[Math.floor(S.rng() * room.cells.length)]; e.x = cc.tx * T + 16; e.y = cc.ty * T + 16; }
   }
   S.enemies.push(e); return e;
 }
-function damageEnemy(e, amt) {
-  if (e.dead || e.spawnT > 0) return; e.hp -= amt; e.hurt = .12; S.fx.push({ x: e.x, y: e.y, t: .25, k: 'spark' });
-  if (e.hp <= 0) killEnemy(e);
+function damageEnemy(e, amt, by) {
+  if (e.dead || e.spawnT > 0) return; e.hp -= amt; e.hurt = .12; fxAt(e.x, e.y, 'spark', .25);
+  if (e.hp <= 0) killEnemy(e, by);
 }
-function damagePetal(e, pt, amt) { if (pt.hp <= 0) return; pt.hp -= amt; S.fx.push({ x: pt.px, y: pt.py, t: .25, k: 'spark' }); if (pt.hp <= 0) { S.fx.push({ x: pt.px, y: pt.py, t: .5, k: 'burst' }); toast('Shield node broken!'); } }
+function damagePetal(e, pt, amt) { if (pt.hp <= 0) return; pt.hp -= amt; fxAt(pt.px, pt.py, 'spark', .25); if (pt.hp <= 0) { fxAt(pt.px, pt.py, 'burst', .5); emit({ k: 'toast', t: 'Shield node broken!' }); } }
 function dropCoins(kind, x, y, key) {
   if (!S.ledger.create(key)) return; // one roll per source, ever
-  const n = L.coinDrop(kind, S.rng, S.xcDropped); S.xcDropped += n;
+  const n = L.coinDrop(kind, S.rng, Math.floor(S.xcDropped / Math.max(1, S.cfg.team))); S.xcDropped += n; // each squad member has their own share of the cap
   for (let i = 0; i < n; i++) S.coins.push({ id: key + 'c' + i, x: x + (i - (n - 1) / 2) * 14, y: y + 4, life: 30, vy: -60 });
 }
 function damageMat(mt, amt) {
-  if (mt.dead) return; mt.hp -= amt; mt.hurt = .12; S.fx.push({ x: mt.x, y: mt.y, t: .2, k: 'spark' });
-  if (mt.hp <= 0) { mt.dead = true; S.fx.push({ x: mt.x, y: mt.y, t: .5, k: 'burst' }); dropCoins('material', mt.x, mt.y, 'mat' + mt.id); }
+  if (mt.dead) return; mt.hp -= amt; mt.hurt = .12; fxAt(mt.x, mt.y, 'spark', .2);
+  if (mt.hp <= 0) { mt.dead = true; fxAt(mt.x, mt.y, 'burst', .5); dropCoins('material', mt.x, mt.y, 'mat' + mt.id); }
 }
-function killEnemy(e) {
+function killEnemy(e, by) {
   if (e.dead) return; e.dead = true; e.hp = 0;
   const a = S.areas[S.areaIdx]; if (a) a.enc.onDefeat(e.type);
-  S.kills++; S.score += DEF[e.type].score; S.fx.push({ x: e.x, y: e.y, t: .5, k: 'burst' }); dropCoins(e.type, e.x, e.y, 'xe' + e.id);
-  if (S.ledger.create('b' + e.id)) { const bt = L.boosterDrop(e.type, S.rng, has('seeker')); if (bt) S.stars.push({ id: 'b' + e.id, type: bt, x: e.x, y: e.y - 6, life: 14 }); }
+  const KP = S.players[by]; if (KP) KP.kills++;
+  S.kills++; S.score += DEF[e.type].score; fxAt(e.x, e.y, 'burst', .5); dropCoins(e.type, e.x, e.y, 'xe' + e.id);
+  if (S.ledger.create('b' + e.id)) { const anySeeker = playerList().some(function (P) { return phas(P, 'seeker'); }); const bt = L.boosterDrop(e.type, S.rng, anySeeker); if (bt) S.stars.push({ id: 'b' + e.id, type: bt, x: e.x, y: e.y - 6, life: 14 }); }
   if (S.ledger.create('e' + e.id) && S.rng() < DEF[e.type].drop) {
     const n = e.type === 'sentry' ? 3 : 1;
     for (let i = 0; i < n; i++) S.orbs.push({ id: 'o' + e.id + '_' + i, x: e.x + (i - (n - 1) / 2) * 16, y: e.y + (i ? 6 : 0), life: 15 });
   }
-  renderHud();
 }
 
-// ── Area / encounter flow ──
-function roomOfPlayer() { return L.roomIndexAt(S.map, Math.floor(S.p.x / T), Math.floor(S.p.y / T)); }
+// ══════════ AREA / ENCOUNTER FLOW (leader) ══════════
+function roomOf(P) { return L.roomIndexAt(S.map, Math.floor(P.x / T), Math.floor(P.y / T)); }
 function startArea(i) {
   const a = S.areas[i]; a.state = 'active'; a.cd = 1.2; S.areaIdx = i;
-  banner('SECTION ' + (i + 1) + ' SEALED');
+  emit({ k: 'banner', t: 'SECTION ' + (i + 1) + ' SEALED' });
 }
-function resetArea(i) { const a = S.areas[i]; S.enemies = []; a.enc = new L.Encounter(a.cfg, L.mulberry32((S.map.seed + i * 7919 + Math.floor(S.t)) >>> 0)); a.cd = 1.5; }
-function openGate(i) { S.map.gateOpen[i] = true; banner('GATE ' + (i + 1) + ' OPEN'); S.fx.push({ x: S.map.gates[i].col * T + 16, y: S.map.gates[i].row * T + 48, t: .8, k: 'burst' }); }
-
+function openGate(i) { S.map.gateOpen[i] = true; emit({ k: 'banner', t: 'GATE ' + (i + 1) + ' OPEN' }); fxAt(S.map.gates[i].col * T + 16, S.map.gates[i].row * T + 48, 'burst', .8); }
+function sceneStart(id, lines, done) { // solo keeps the full cut-scene; co-op never freezes a squad for a picture
+  if (S.seenCut[id]) { done && done(); return; }
+  if (S.role === 'solo') { playCut(id, lines, done); return; }
+  S.seenCut[id] = true; emit({ k: 'banner', t: lines[0] }); emit({ k: 'toast', t: lines[1] }); done && done();
+}
 function updateAreas(dt) {
-  const ri = roomOfPlayer(), p = S.p;
-  // entering a room (past its door) begins its encounter once
-  if (ri >= 0 && ri <= 5 && S.areas[ri].state === 'dormant') {
-    const r = S.map.rooms[ri]; if (p.x > r.px.x + T * 3 && S.mode === 'play') { S.areas[ri].state = 'intro'; playCut('combat-0' + (ri + 1), LINES.combat(ri + 1), function () { startArea(ri); }); }
-  }
-  if (ri === 6 && !S.bossDone && S.mode === 'play' && Math.hypot(p.x - S.map.bossNode.x, p.y - S.map.bossNode.y) < 44) enterBoss();
-  // crossing an opened gate for the first time plays the transition plate
-  S.map.gates.forEach(function (g, i) { if (S.map.gateOpen[i] && !S.crossed[i] && p.x > (g.col + 1) * T + 16 && S.mode === 'play') { for (let j = 0; j <= i; j++) S.crossed[j] = true; playCut('transition-0' + (i + 1), LINES.transition(i + 1), null); } });
+  const ps = livePlayers();
+  ps.forEach(function (P) { // entering a room (past its door) begins its encounter once
+    const ri = roomOf(P);
+    if (ri >= 0 && ri <= 5 && S.areas[ri].state === 'dormant' && S.mode === 'play') {
+      const r = S.map.rooms[ri]; if (P.x > r.px.x + T * 3) { S.areas[ri].state = 'intro'; sceneStart('combat-0' + (ri + 1), LINES.combat(ri + 1), function () { startArea(ri); }); }
+    }
+    if (ri === 6 && !S.bossDone && S.mode === 'play' && Math.hypot(P.x - S.map.bossNode.x, P.y - S.map.bossNode.y) < 44) enterBoss();
+  });
+  S.map.gates.forEach(function (g, i) { if (S.map.gateOpen[i] && !S.crossed[i] && ps.some(function (P) { return P.x > (g.col + 1) * T + 16; }) && S.mode === 'play') { for (let j = 0; j <= i; j++) S.crossed[j] = true; sceneStart('transition-0' + (i + 1), LINES.transition(i + 1), null); } });
   const a = S.areas[S.areaIdx]; if (!a || a.state !== 'active') return;
   const room = S.map.rooms[a.idx], enc = a.enc;
   if (enc.pending > 0) {
     a.sp = (a.sp || 0) - dt; const alive = S.enemies.filter(function (e) { return !e.dead; }).length;
-    if (a.sp <= 0 && alive < L.activeCap(S.cfg.team)) { // active cap grows with team size
+    if (a.sp <= 0 && alive < L.activeCap(S.cfg.team)) { // active cap grows with squad size
       const t = enc.requestSpawn(); const e = t && placeEnemy(t, room);
-      if (e) { enc.confirmSpawn(); a.sp = enc.pendingKind === 'sentry' ? 0 : .55; if (t === 'interceptor') toast('Interceptor incoming!'); } else a.sp = .3; // failed spawn does not consume the bag
+      if (e) { enc.confirmSpawn(); a.sp = enc.pendingKind === 'sentry' ? (t === 'sentry' ? 2.2 : 1.1) : .55; if (t === 'interceptor') emit({ k: 'toast', t: 'Interceptor incoming!' }); } else a.sp = .3; // failed spawn does not consume the bag
     }
   } else {
     const k = enc.readyKind();
-    if (k) { a.cd -= dt; if (a.cd <= 0) { enc.begin(k); a.sp = 0; a.cd = 1.8; banner(k === 'sentry' ? 'SENTRY ALERT' : 'WAVE ' + enc.wavesIssued + ' / ' + a.cfg.waves); } }
-    else if (enc.cleared()) { a.state = 'cleared'; S.score += 100; openGate(a.idx); S.secCleared = Math.max(S.secCleared, a.idx + 1); saveProgress(false); renderHud(); }
+    if (k) { a.cd -= dt; if (a.cd <= 0) { enc.begin(k); a.sp = 0; a.cd = 1.8; emit({ k: 'banner', t: k === 'sentry' ? 'SENTRY + SCOUTS' : 'WAVE ' + enc.wavesIssued + ' / ' + a.cfg.waves }); } }
+    else if (enc.cleared()) { a.state = 'cleared'; S.score += 100; openGate(a.idx); S.secCleared = Math.max(S.secCleared, a.idx + 1); saveProgress(false); }
   }
 }
 
-// ── Boss: turn-based Elite (prototype cards/values) ──
-const bossState = { hp: 60, max: 60, vit: 100, maxVit: 100, turn: 'player', guard: false, intent: null, round: 0, phase: 1, busy: false, log: '' };
-const ELITE = { pulse: { name: 'PULSE', hits: [14] }, barrage: { name: 'BARRAGE', hits: [7, 7] }, cross: { name: 'CROSS', hits: [20] } };
-function pickIntent() { const seq = bossState.phase === 1 ? ['pulse', 'barrage'] : ['pulse', 'barrage', 'cross']; bossState.intent = seq[bossState.round % seq.length]; bossState.round++; }
-function enterBoss() {
-  if (S.mode === 'boss') return;
-  playCut('boss', LINES.boss, function () { startBoss(); });
-}
-function startBoss() {
-  Object.assign(bossState, { hp: bossState.max, vit: bossState.maxVit, turn: 'player', guard: false, round: 0, phase: 1, busy: false, log: 'Elite Archive blocks the exit.' });
-  S.quizOpen && closeQuiz(); S.p.charge = S.quiz.charge; pickIntent(); setMode('boss'); renderBoss();
-}
-function renderBoss() {
-  const b = bossState; $('bossF').style.width = Math.max(0, b.hp / b.max * 100) + '%';
-  $('bVitF').style.width = Math.max(0, b.vit / b.maxVit * 100) + '%'; $('bVit').textContent = Math.max(0, Math.round(b.vit));
-  $('bGuard').textContent = b.guard ? 'GUARD READY' : '';
-  const ip = $('bPips'), c = S.quiz.charge; ip.innerHTML = ''; for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'pip' + (i < c ? ' on' : ''); ip.appendChild(d); }
-  const it = ELITE[b.intent]; $('intent').textContent = 'NEXT: ' + it.name + ' — ' + it.hits.reduce(function (a, x) { return a + x; }, 0) + ' dmg' + (it.hits.length > 1 ? ' (' + it.hits.length + ' hits)' : '') + (b.phase === 2 ? ' · PHASE 2' : '');
-  $('bossLog').textContent = b.log;
-  $('queue').innerHTML = '<div class="qt mono ' + (b.turn === 'player' ? 'act' : '') + '">YOUR EVO</div><div class="qt mono ' + (b.turn === 'boss' ? 'act' : '') + '">ELITE</div>';
-  const cards = $('cards'); cards.innerHTML = '';
-  [['strike', '1', 'Quick attack. Power 8. Reliable.'], ['surge', '2', 'Heavy attack. Power 16. Costs 2 charge, can miss more.'], ['guard', '3', 'Brace: cut the next Archive attack by 60%.']].forEach(function (c) {
-    const mv = L.BOSS_MOVES[c[0]], d = document.createElement('div');
-    d.className = 'card' + ((b.turn !== 'player' || b.busy || mv.cost > S.quiz.charge) ? ' off' : '');
-    d.innerHTML = '<div class="t mono">' + mv.name.toUpperCase() + ' [' + c[1] + ']</div><div class="d">' + c[2] + '</div><div class="c mono">' + (mv.cost ? 'COST ' + mv.cost + ' CHARGE · ' : '') + 'QUIZ FIRST</div>';
-    d.onclick = function () { chooseCard(c[0]); }; cards.appendChild(d);
-  });
-}
-function chooseCard(id) {
-  const b = bossState, mv = L.BOSS_MOVES[id]; if (b.turn !== 'player' || b.busy || S.quizOpen) return;
-  if (mv.cost > S.quiz.charge) return;
-  b.busy = true; b.log = mv.name.toUpperCase() + ' selected — answer the LINK to activate it.'; renderBoss();
-  openQuiz('boss', function (res) {
-    const out = (mv.kind === 'defense')
-      ? { learning: res.correct ? 'correct' : 'wrong', result: res.correct ? 'guard' : 'inactive', damage: 0 }
-      : L.resolveAttack({ move: mv, quizCorrect: res.correct, rng: S.rng, powerBonus: sx(stat('power')), luck: sx(stat('luck')) });
-    if (res.correct && mv.cost) S.quiz.spend(mv.cost);
-    let msg;
-    if (!res.correct) msg = 'Learning missed — ' + mv.name + ' does not activate. Turn ends.';
-    else if (mv.kind === 'defense') { b.guard = true; msg = 'Correct! Guard is up for the next Archive attack.'; }
-    else if (out.result === 'miss') msg = 'Correct answer — but the attack MISSES.';
-    else if (out.result === 'block') { b.hp -= out.damage; msg = 'Correct! The Elite BLOCKS — ' + out.damage + ' damage.'; }
-    else if (out.result === 'crit') { b.hp -= out.damage; msg = 'Correct! CRITICAL HIT — ' + out.damage + ' damage!'; shake(8); }
-    else { b.hp -= out.damage; msg = 'Correct! Direct hit — ' + out.damage + ' damage.'; shake(4); }
-    if (res.correct) S.score += out.damage * 2;
-    b.log = msg; if (b.hp <= b.max / 2 && b.phase === 1 && b.hp > 0) { b.phase = 2; b.log += ' The Elite shifts into PHASE 2!'; }
-    S.p.charge = S.quiz.charge; renderBoss();
-    if (b.hp <= 0) { setTimeout(bossWin, 900); return; }
-    b.turn = 'boss'; renderBoss(); setTimeout(bossAct, 1300);
-  });
-}
-function bossAct() {
-  const b = bossState; if (S.mode !== 'boss') return;
-  const mv = ELITE[b.intent]; let log = 'ELITE uses ' + mv.name + '! ';
-  mv.hits.forEach(function (raw) {
-    if (S.eq.aegisHits > 0) { if (S.eq.aegisHits % 2 === 0) S.eq.spent.aegis = (S.eq.spent.aegis | 0) + 1; S.eq.aegisHits--; log += '[absorbed] '; return; }
-    const d = L.resolveIncoming({ raw: raw, guarded: b.guard, guardStat: sx(stat('guard')), mitigate: L.BOSS_MOVES.guard.mitigate }); b.vit -= d; log += '-' + d + ' ';
-  });
-  if (b.guard) log += '(guarded)'; b.guard = false; shake(6);
-  b.log = log; renderBoss();
-  if (b.vit <= 0) {
-    const r = tryRevive();
-    if (!r) { b.log = 'Your Evo is down. No revive left — the round ends.'; renderBoss(); setTimeout(roundOver, 1600); return; }
-    b.vit = Math.max(1, Math.round(b.maxVit * r.frac)); b.log = r.label + ' revives your Evo — vitality ' + b.vit + '!'; renderBoss();
+// ══════════ DAMAGE / REVIVE (per player; leader only) ══════════
+function hurtPlayer(P, d, src) {
+  if (!P || P.inv > 0 || P.hurtCd > 0 || S.ended || P.down || P.protect > 0 || P.away) return;
+  if (P.eq && P.eq.aegisHits > 0) { // Aegis Shell: absorbs hits (a unit is spent when it first activates)
+    if (P.eq.aegisHits % 2 === 0) P.eq.spent.aegis = (P.eq.spent.aegis | 0) + 1;
+    P.eq.aegisHits--; P.hurtCd = .5; ring(P.x, P.y, 40, '#7fd8ff', 10); emit({ k: 'toast', to: P.id, t: 'Aegis Shell absorbed the hit' }); return;
   }
-  setTimeout(function () { b.turn = 'player'; b.busy = false; pickIntent(); renderBoss(); }, 1100);
+  d = L.resolveIncoming({ raw: d, guarded: false, guardStat: psx(P, 'guard') }); P.vit -= d; P.hurtCd = .5; P.hit = .2; emit({ k: 'shake', to: P.id, n: 4 });
+  if (P.vit <= 0) { evoDown(P); return; }
+  if (P.vit < P.maxVit * .3 && ptrig(P, 'repair') > 0) { P.eq.spent.repair = (P.eq.spent.repair | 0) + 1; P.vit = Math.min(P.maxVit, P.vit + 50); ring(P.x, P.y, 46, '#7dffb4', 8); emit({ k: 'toast', to: P.id, t: 'Repair Pack: +50 vitality' }); }
 }
-function bossWin() {
-  S.bossDone = true; S.score += 500; S.map.gateOpen.fill(true); S.map.gates.forEach(function (g, i) { S.crossed[i] = true; }); setMode('play');
-  S.enemies = []; S.portal = { x: S.map.bossNode.x, y: S.map.bossNode.y }; S.p.x = S.portal.x - 110; S.p.y = S.portal.y; banner('ELITE DEFEATED'); toast('The exit portal is open.'); renderHud();
+// The Evo is down. Only a revive can bring it back: the free Evo-level ability first, then a ChronoRespawn from the loadout. Otherwise it is out for the round.
+function tryRevive(P) {
+  const src = L.reviveSource(P.eq.abilityLeft, ptrig(P, 'chronorespawn'));
+  if (src === 'ability') { P.eq.abilityLeft--; return { src: src, frac: .5, label: 'EVO LEVEL ABILITY' }; }
+  if (src === 'item') { P.eq.spent.chronorespawn = (P.eq.spent.chronorespawn | 0) + 1; return { src: src, frac: .6, label: 'CHRONORESPAWN' }; }
+  return null;
 }
-// Team progress: posted to the Arena (which merges it into the shared team record). Items used up leave the player's stock only when a round really started.
-function saveProgress(final) {
-  if (!S.runLive && !final) return;
-  if (!final && S.secCleared <= S.lastSaved) return;
-  S.lastSaved = Math.max(S.lastSaved, S.secCleared);
-  const consumed = (final && !S.consumedSent) ? L.consumedItems(S.eq.inv, S.eq.spent) : null;
-  if (final) { S.consumedSent = true; S.runLive = false; }
-  const msg = { type: 'pflx_arena_game_save', game: 'nexus-frontiers', scope: S.nf && S.nf.scope, diff: S.cfg.diff, team: S.cfg.team, cleared: S.secCleared, bossDone: !!S.bossDone, score: S.score, final: !!final, consumed: consumed };
-  if (S.nf && S.nf.standalone) { if (consumed) Object.keys(consumed).forEach(function (k) { S.nf.owned[k] = Math.max(0, ownedN(k) - consumed[k]); }); S.nf.progress = { cleared: S.bossDone ? 0 : Math.max((S.nf.progress && S.nf.progress.cleared) | 0, S.secCleared) }; }
-  else post(msg);
-  window.__lastSave = msg;
+function evoDown(P) {
+  const r = tryRevive(P);
+  if (!r) { P.down = true; P.vit = 0; P.protect = 0; fxAt(P.x, P.y, 'burst', .6); emit({ k: 'banner', t: P.name.toUpperCase() + ' IS DOWN' }); emit({ k: 'toast', to: P.id, t: 'No revive left — you are out for this round. Your squad can still win it.' }); checkAllDown(); return false; }
+  P.vit = Math.max(1, Math.round(P.maxVit * r.frac)); P.inv = 2.5; P.hurtCd = 1;
+  fxAt(P.x, P.y, 'burst', .6); ring(P.x, P.y, 110, '#7dffb4', 10);
+  emit({ k: 'banner', t: P.name.toUpperCase() + ' REVIVED' }); emit({ k: 'toast', to: P.id, t: r.label + ' — vitality ' + P.vit });
+  return true;
 }
-function roundOver() {
-  if (S.ended) return; S.ended = true; S.timeSec = Math.round((performance.now() - S.startedAt) / 1000); S.quizOpen && closeQuiz(); closeShop();
-  const q = S.quiz.stats; $('endT').textContent = 'ROUND OVER'; $('endS').textContent = 'Your Evo went down with no revive left. Sections cleared are saved for the team — pick up from the checkpoint next round. X-Coin collected is still proposed to the Arena (host-approved).';
-  const mm = Math.floor(S.timeSec / 60), ss = String(S.timeSec % 60).padStart(2, '0');
-  $('endStats').innerHTML = [[S.score, 'SCORE'], [mm + ':' + ss, 'TIME'], [S.secCleared + ' / 6', 'SECTIONS CLEARED'], [q.correct + '/' + q.answered, 'LINK ANSWERS'], [S.xc, 'X-COIN EARNED'], [S.kills, 'ARCHIVES DEFEATED']].map(function (a) { return '<div><b>' + a[0] + '</b><span class="mono">' + a[1] + '</span></div>'; }).join('');
-  saveProgress(true); setMode('end');
+function checkAllDown() { if (!S.ended && playerList().length && playerList().every(function (P) { return P.down || P.away; }) && playerList().some(function (P) { return P.down; })) roundOver('down'); }
+
+// ══════════ PLAYER ACTIONS ══════════
+// Dash is decided on the player's own device (movement is client-side); the leader only needs to know about the invulnerability window.
+function dash() {
+  const p = S.p; if (!p || S.mode !== 'play' || S.quizOpen || p.dashCd > 0 || p.down) return;
+  let dx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + joy.x, dy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + joy.y;
+  const m = Math.hypot(dx, dy); if (m < .1) { dx = Math.cos(p.face); dy = Math.sin(p.face); } else { dx /= m; dy /= m; }
+  p.dash = .17; p.inv = .22; p.dashCd = 1.1; p.dvx = dx; p.dvy = dy;
+  netAct({ k: 'dash' });
 }
-function finish() {
-  if (S.ended) return; S.ended = true; S.timeSec = Math.round((performance.now() - S.startedAt) / 1000);
-  const q = S.quiz.stats; $('endT').textContent = 'SERVER 01 CLEARED'; $('endS').textContent = 'Studio Defense Grid is secure. X-Coin collected is proposed to the Arena (host-approved). Orbs and charge were this run only.';
-  const mm = Math.floor(S.timeSec / 60), ss = String(S.timeSec % 60).padStart(2, '0');
-  $('endStats').innerHTML = [[S.score, 'SCORE'], [mm + ':' + ss, 'TIME'], [S.kills, 'ARCHIVES DEFEATED'], [q.correct + '/' + q.answered, 'LINK ANSWERS'], [S.xc, 'X-COIN EARNED'], [S.orbCount, 'ORBS'], [q.answered ? Math.round(q.correct / q.answered * 100) + '%' : '—', 'ACCURACY']].map(function (a) { return '<div><b>' + a[0] + '</b><span class="mono">' + a[1] + '</span></div>'; }).join('');
-  saveProgress(true); setMode('end');
+function surge() {
+  const p = S.p; if (!p || S.mode !== 'play' || S.quizOpen || p.down) return;
+  if (!S.quiz.spend(1)) { toast('No charge — open a LINK quiz (Q)'); return; }
+  p.charge = S.quiz.charge; renderHud();
+  if (S.isLeader) doSurge(p); else netAct({ k: 'surge' });
+}
+function doSurge(P) { // leader: SURGE ring around the player's reported position
+  if (!P || P.down) return;
+  const amp = phas(P, 'surgeamp'), R = amp ? 185 : 150, SD = amp ? 9 : 6, powerB = 1 + psx(P, 'power'); ring(P.x, P.y, R, '#ffd740', 10); emit({ k: 'shake', n: 5 });
+  S.mats.forEach(function (mt) { if (!mt.dead && Math.hypot(mt.x - P.x, mt.y - P.y) < R) damageMat(mt, SD); });
+  S.enemies.forEach(function (e) {
+    if (e.dead) return; const d = Math.hypot(e.x - P.x, e.y - P.y);
+    if (e.type === 'sentry') { e.petals.forEach(function (pt) { if (pt.hp > 0 && Math.hypot(pt.px - P.x, pt.py - P.y) < R + 10) damagePetal(e, pt, SD * powerB); }); if (d < R + e.r) damageEnemy(e, SD * powerB * (e.petals.some(function (q) { return q.hp > 0; }) ? .5 : 1), P.id); }
+    else if (d < R + e.r) damageEnemy(e, SD * powerB, P.id);
+  });
+}
+// In-round shop: the leader holds each player's run X-Coin and equipment, so every purchase is validated there.
+function doBuy(P, id) {
+  const u = L.UPGRADES[id]; if (!P || !P.eq || !u || u.kind !== 'game' || P.xc < u.price || P.eq.list.length >= L.slotsFor(P.lvl) || (!u.trigger && phas(P, id))) return false;
+  P.xc -= u.price; P.eq.list.push(id); P.eq.bought.push(id); if (id === 'aegis') P.eq.aegisHits += 2;
+  emit({ k: 'toast', to: P.id, t: u.name + ' equipped.' }); if (P.id !== S.me) netTo(P.id, { k: 'buyok', id: id });
+  return true;
 }
 
-// ── HUD ──
-function renderHud() {
-  const p = S.p; if (!p) return;
-  $('vitF').style.width = Math.max(0, p.vit / p.maxVit * 100) + '%';
-  const mt = S.meter; if (mt) { $('ammoF').style.width = (mt.fill * 100) + '%'; $('ammoTxt').textContent = Math.round(mt.fill * mt.target) + '/' + mt.target; }
-  if (S.eq) {
-    const cap = L.slotsFor(evoLevel()), inv = $('inv'); inv.innerHTML = '';
-    const seen = {}; for (let i = 0; i < cap; i++) { const id = S.eq.list[i], d = document.createElement('div'); d.className = 'slot'; if (id) { const u = L.UPGRADES[id]; seen[id] = (seen[id] | 0) + 1; const done = u.trigger && seen[id] <= (S.eq.spent[id] | 0); d.className += ' full' + (done ? ' spent' : ''); d.textContent = u.icon; d.title = u.name; } inv.appendChild(d); }
-    $('slotTxt').textContent = S.eq.list.length + '/' + cap + (S.eq.abilityLeft ? ' · REVIVE ×' + S.eq.abilityLeft : '');
-    const bx = $('boosts'); bx.innerHTML = Object.keys(S.boost).filter(function (k) { return S.boost[k] > 0; }).map(function (k) { const B = L.BOOSTERS[k]; return '<div class="bst mono" style="color:' + B.color + '">' + B.icon + ' ' + B.name + '<span class="tb"><i style="width:' + (S.boost[k] / B.dur * 100) + '%;background:' + B.color + '"></i></span></div>'; }).join('');
-  }
-  const ip = $('pips'); const c = S.quiz.charge; if (ip.children.length !== 5) { ip.innerHTML = ''; for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'pip'; ip.appendChild(d); } }
-  for (let i = 0; i < 5; i++) ip.children[i].className = 'pip' + (i < c ? ' on' : '');
-  $('scoreV').textContent = S.score; $('xcV').textContent = S.xc; $('orbV').textContent = S.orbCount;
-  $('linkBtn').classList.toggle('pulse', c === 0 && S.enemies.some(function (e) { return !e.dead; }));
-  const a = S.areas[S.areaIdx], o = $('obj'); let t = 'Enter the first section', sub = '';
-  if (S.bossDone) { t = 'Reach the exit portal'; }
-  else if (a && a.state === 'active') { const e = a.enc, left = S.enemies.filter(function (x) { return !x.dead; }).length + e.pending; t = 'SECTION ' + (a.idx + 1) + ' / 7 — Defeat all Archives'; sub = 'Waves left: ' + e.remainingWaves() + ' · Enemies: ' + left + ' · ' + L.DIFFS[S.cfg.diff].label.toUpperCase() + ' ×' + S.cfg.team; }
-  else if (a && a.state === 'cleared') { t = 'Gate ' + (a.idx + 1) + ' open — move on'; sub = a.idx === 5 ? 'The main hub awaits' : 'Section ' + (a.idx + 2) + ' ahead'; }
-  else if (S.areaIdx < 0) { t = 'Move into the first section'; sub = 'WASD / arrows'; }
-  o.firstChild.nodeValue = t; o.lastChild.textContent = sub;
-}
-
-// ── Main update ──
-function update(dt) {
-  S.t += dt; const p = S.p, m = S.map;
-  p.dashCd = Math.max(0, p.dashCd - dt); p.inv = Math.max(0, p.inv - dt); p.hurtCd = Math.max(0, p.hurtCd - dt); p.hit = Math.max(0, p.hit - dt);
+// ══════════ MOVEMENT (own Evo; runs on the player's own device, both as leader and as client) ══════════
+function localMove(dt) {
+  const p = S.p, m = S.map; if (!p || !m || p.down || S.quizOpen || S.shopOpen) return;
   let ax = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + joy.x, ay = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + joy.y;
   const mag = Math.hypot(ax, ay); if (mag > 1) { ax /= mag; ay /= mag; }
-  const spd = 190 * (1 + sx(stat('speed')));
+  const spd = 190 * (1 + psx(p, 'speed'));
   if (p.dash > 0) { p.dash -= dt; L.moveBody(m, p, p.dvx * 560 * dt, p.dvy * 560 * dt); }
   else { L.moveBody(m, p, ax * spd * dt, ay * spd * dt); if (mag > .1) p.face = Math.atan2(ay, ax); }
-  // auto-aim spark at nearest visible target
-  p.shotCd -= dt;
-  if (p.shotCd <= 0) {
-    let best = null, bd = 300;
-    S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd && L.lineClear(m, p.x, p.y, e.x, e.y)) { bd = d; best = e; } });
-    if (!best) S.mats.forEach(function (mt) { if (mt.dead) return; const d = Math.hypot(mt.x - p.x, mt.y - p.y); if (d < 230 && d < bd + 300 && L.lineClear(m, p.x, p.y, mt.x, mt.y) && (!best || d < bd)) { bd = d; best = mt; } });
-    if (best) {
-      const an = Math.atan2(best.y - p.y, best.x - p.x), mk = function (a, dmg, rad) { S.shots.push({ x: p.x, y: p.y, vx: Math.cos(a) * 540, vy: Math.sin(a) * 540, life: .7, dmg: dmg, rad: rad }); };
-      if (S.boost.triple > 0) { mk(an - .2, 1, 0); mk(an + .2, 1, 0); mk(an, 2.5, 7); } // 3 projectiles, the 3rd one larger
-      else mk(an, 1, 0);
-      p.shotCd = has('rapid') ? .30 : .42; p.face = an;
-    } else p.shotCd = .1;
-  }
-  // temporary boosters
-  Object.keys(S.boost).forEach(function (k) { if (S.boost[k] > 0) S.boost[k] = Math.max(0, S.boost[k] - dt); });
-  if (S.boost.nova > 0) { S.novaCd -= dt; if (S.novaCd <= 0) { S.novaCd = .7; for (let q = 0; q < 12; q++) { const a2 = q / 12 * Math.PI * 2 + S.t; S.shots.push({ x: p.x, y: p.y, vx: Math.cos(a2) * 420, vy: Math.sin(a2) * 420, life: .55, dmg: 1, rad: 0 }); } S.rings.push({ x: p.x, y: p.y, r: 8, max: 46, a: .8, c: '#ffd740' }); } }
-  if (S.boost.star > 0) { p.inv = Math.max(p.inv, .12); S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; e.starCd = Math.max(0, (e.starCd || 0) - dt); if (e.starCd <= 0 && Math.hypot(e.x - p.x, e.y - p.y) < p.r + e.r + 8) { e.starCd = .25; damageEnemy(e, 3); } }); }
-  const magR = has('magnet') ? 2.5 : 1;
-  S.stars.forEach(function (st) { st.life -= dt; const d0 = Math.hypot(st.x - p.x, st.y - p.y); if (d0 < 70 * magR && d0 > 1) { st.x += (p.x - st.x) / d0 * 200 * dt; st.y += (p.y - st.y) / d0 * 200 * dt; } if (d0 < 24 && S.ledger.claim(st.id)) { st.life = -1; const B = L.BOOSTERS[st.type]; S.boost[st.type] = B.dur; S.rings.push({ x: st.x, y: st.y, r: 6, max: 50, a: 1, c: B.color }); toast(B.name + '! ' + B.desc); renderHud(); } });
+}
+
+// ══════════ MAIN SIMULATION (leader; in solo the only player) ══════════
+function simUpdate(dt) {
+  S.t += dt; const m = S.map, now = performance.now();
+  const plist = playerList();
+  plist.forEach(function (P) {
+    P.dashCd = Math.max(0, P.dashCd - dt); P.inv = Math.max(0, P.inv - dt); P.hurtCd = Math.max(0, P.hurtCd - dt); P.hit = Math.max(0, P.hit - dt);
+    if (P.protect > 0) { P.protect -= dt; if (P.protect <= 0) { P.protect = 0; P.inv = Math.max(P.inv, 1.2); } }
+    if (P.id !== S.me) { const was = P.away; P.away = (now - P.lastSeen) > 6000; if (was && !P.away) emit({ k: 'toast', t: P.name + ' is back' }); if (!was && P.away) emit({ k: 'toast', t: P.name + ' lost connection' }); }
+  });
+  localMove(dt);
+  // each live Evo: auto-aim spark at the nearest visible target + boosters
+  plist.forEach(function (P) {
+    if (!isAlive(P) || P.protect > 0) return;
+    P.shotCd -= dt;
+    if (P.shotCd <= 0) {
+      let best = null, bd = 300;
+      S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < bd && L.lineClear(m, P.x, P.y, e.x, e.y)) { bd = d; best = e; } });
+      if (!best) S.mats.forEach(function (mt) { if (mt.dead) return; const d = Math.hypot(mt.x - P.x, mt.y - P.y); if (d < 230 && d < bd + 300 && L.lineClear(m, P.x, P.y, mt.x, mt.y) && (!best || d < bd)) { bd = d; best = mt; } });
+      if (best) {
+        const an = Math.atan2(best.y - P.y, best.x - P.x), mk = function (a, dmg, rad) { S.shots.push({ x: P.x, y: P.y, vx: Math.cos(a) * 540, vy: Math.sin(a) * 540, life: .7, dmg: dmg, rad: rad, by: P.id }); };
+        if (P.boost.triple > 0) { mk(an - .2, 1, 0); mk(an + .2, 1, 0); mk(an, 2.5, 7); } // 3 projectiles, the 3rd one larger
+        else mk(an, 1, 0);
+        P.shotCd = phas(P, 'rapid') ? .30 : .42; if (P.id === S.me) P.face = an; else P.aim = an;
+      } else P.shotCd = .1;
+    }
+    Object.keys(P.boost).forEach(function (k) { if (P.boost[k] > 0) P.boost[k] = Math.max(0, P.boost[k] - dt); });
+    if (P.boost.nova > 0) { P.novaCd -= dt; if (P.novaCd <= 0) { P.novaCd = .7; for (let q = 0; q < 12; q++) { const a2 = q / 12 * Math.PI * 2 + S.t; S.shots.push({ x: P.x, y: P.y, vx: Math.cos(a2) * 420, vy: Math.sin(a2) * 420, life: .55, dmg: 1, rad: 0, by: P.id }); } ring(P.x, P.y, 46, '#ffd740', 8); } }
+    if (P.boost.star > 0) { P.inv = Math.max(P.inv, .12); S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; e.starCd = Math.max(0, (e.starCd || 0) - dt); if (e.starCd <= 0 && Math.hypot(e.x - P.x, e.y - P.y) < P.r + e.r + 8) { e.starCd = .25; damageEnemy(e, 3, P.id); } }); }
+  });
+  // pickups: the nearest live Evo pulls and collects
+  const pullTo = function (o, base) { let bp = null, bd = 1e9; plist.forEach(function (P) { if (!isAlive(P)) return; const d = Math.hypot(o.x - P.x, o.y - P.y); if (d < bd) { bd = d; bp = P; } }); if (!bp) return null; const r = base * (phas(bp, 'magnet') ? 2.5 : 1); if (bd < r && bd > 1) { o.x += (bp.x - o.x) / bd * 220 * dt; o.y += (bp.y - o.y) / bd * 220 * dt; } return { P: bp, d: bd }; };
+  S.stars.forEach(function (st) { st.life -= dt; const h = pullTo(st, 70); if (h && h.d < 24 && S.ledger.claim(st.id)) { st.life = -1; const B = L.BOOSTERS[st.type]; h.P.boost[st.type] = B.dur; ring(st.x, st.y, 50, B.color, 6); emit({ k: 'toast', to: h.P.id, t: B.name + '! ' + B.desc }); } });
   S.stars = S.stars.filter(function (st) { return st.life > 0; });
-  const powerB = 1 + sx(stat('power'));
   S.shots.forEach(function (s) {
-    const step = 1 / 60; let n = Math.ceil(Math.hypot(s.vx, s.vy) * dt / 8) || 1;
+    const owner = S.players[s.by], powerB = 1 + psx(owner, 'power'); let n = Math.ceil(Math.hypot(s.vx, s.vy) * dt / 8) || 1;
     for (let i = 0; i < n && !s.dead; i++) {
       s.x += s.vx * dt / n; s.y += s.vy * dt / n;
       if (L.isSolidTile(m, Math.floor(s.x / T), Math.floor(s.y / T))) { s.dead = true; break; }
@@ -1324,87 +1697,357 @@ function update(dt) {
       for (let k = 0; k < S.enemies.length && !s.dead; k++) {
         const e = S.enemies[k]; if (e.dead || e.spawnT > 0) continue;
         if (e.type === 'sentry') for (let q = 0; q < e.petals.length; q++) { const pt = e.petals[q]; if (pt.hp > 0 && Math.hypot(pt.px - s.x, pt.py - s.y) < 11 + sr) { damagePetal(e, pt, sd * powerB); s.dead = true; break; } }
-        if (!s.dead && Math.hypot(e.x - s.x, e.y - s.y) < e.r + 4 + sr) { damageEnemy(e, sd * powerB); s.dead = true; }
+        if (!s.dead && Math.hypot(e.x - s.x, e.y - s.y) < e.r + 4 + sr) { damageEnemy(e, sd * powerB, s.by); s.dead = true; }
       }
     }
     s.life -= dt; if (s.life <= 0) s.dead = true;
   });
   S.shots = S.shots.filter(function (s) { return !s.dead; });
-  // enemies
-  buildFlow();
+  // enemies: each one hunts the nearest Evo that is not protected (a Link-sprinting Evo is untargetable)
   S.enemies.forEach(function (e) {
     if (e.dead) return; e.hurt = Math.max(0, e.hurt - dt); e.touchCd = Math.max(0, e.touchCd - dt);
     if (e.spawnT > 0) { e.spawnT -= dt; return; }
+    const tp = nearestTarget(e.x, e.y); const p = tp || { x: e.x, y: e.y, r: 11 };
     const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
-    if (e.type === 'scout') {
-      const cv2 = chaseVec(e); L.moveBody(m, e, cv2[0] * DEF.scout.spd * dt, cv2[1] * DEF.scout.spd * dt);
-    } else if (e.type === 'interceptor') {
-      if (e.state === 'move') { const cv3 = chaseVec(e); L.moveBody(m, e, cv3[0] * DEF.interceptor.spd * dt, cv3[1] * DEF.interceptor.spd * dt); e.cd -= dt; if (e.cd <= 0 && d < 380 && L.lineClear(m, e.x, e.y, p.x, p.y)) { e.state = 'wind'; e.st = .75; e.tx = dx / d; e.ty = dy / d; } }
+    if (e.type === 'sentry') {
+      e.petals.forEach(function (pt) { pt.a += dt * 1.1; pt.px = e.x + Math.cos(pt.a) * 40; pt.py = e.y + Math.sin(pt.a) * 40; });
+      if (e.state === 'move') { e.cd -= dt; if (e.cd <= 0 && tp && L.lineClear(m, e.x, e.y, p.x, p.y)) { e.state = 'wind'; e.st = 1.0; e.tx = Math.atan2(dy, dx); } }
+      else if (e.state === 'wind') { e.st -= dt; if (e.st <= 0) { e.state = 'beam'; e.st = .28; emit({ k: 'shake', n: 3 }); } }
+      else if (e.state === 'beam') { e.st -= dt; const bx = Math.cos(e.tx), by = Math.sin(e.tx); playerList().forEach(function (P) { if (!isTarget(P)) return; const rx = P.x - e.x, ry = P.y - e.y, along = rx * bx + ry * by, perp = Math.abs(rx * by - ry * bx); if (along > 0 && along < 520 && perp < 16 + P.r) hurtPlayer(P, DEF.sentry.dmg, 'beam'); }); if (e.st <= 0) { e.state = 'move'; e.cd = 2.8; } }
+      return;
+    }
+    if (!tp) return; // nobody to hunt
+    if (e.type === 'scout') { const c2 = chaseVec(e, p); L.moveBody(m, e, c2[0] * DEF.scout.spd * dt, c2[1] * DEF.scout.spd * dt); }
+    else if (e.type === 'interceptor') {
+      if (e.state === 'move') { const c3 = chaseVec(e, p); L.moveBody(m, e, c3[0] * DEF.interceptor.spd * dt, c3[1] * DEF.interceptor.spd * dt); e.cd -= dt; if (e.cd <= 0 && d < 380 && L.lineClear(m, e.x, e.y, p.x, p.y)) { e.state = 'wind'; e.st = .75; e.tx = dx / d; e.ty = dy / d; } }
       else if (e.state === 'wind') { e.st -= dt; if (e.st <= 0) { e.state = 'dash'; e.st = .38; } }
       else if (e.state === 'dash') { e.st -= dt; const r = L.moveBody(m, e, e.tx * 470 * dt, e.ty * 470 * dt); if (e.st <= 0 || r.hitX || r.hitY) { e.state = 'move'; e.cd = 3 + S.rng() * 1.5; } }
-    } else if (e.type === 'sentry') {
-      e.petals.forEach(function (pt) { pt.a += dt * 1.1; pt.px = e.x + Math.cos(pt.a) * 40; pt.py = e.y + Math.sin(pt.a) * 40; });
-      if (e.state === 'move') { e.cd -= dt; if (e.cd <= 0 && L.lineClear(m, e.x, e.y, p.x, p.y)) { e.state = 'wind'; e.st = 1.0; e.tx = Math.atan2(dy, dx); } }
-      else if (e.state === 'wind') { e.st -= dt; if (e.st <= 0) { e.state = 'beam'; e.st = .28; shake(3); } }
-      else if (e.state === 'beam') { e.st -= dt; const bx = Math.cos(e.tx), by = Math.sin(e.tx), rx = p.x - e.x, ry = p.y - e.y, along = rx * bx + ry * by, perp = Math.abs(rx * by - ry * bx); if (along > 0 && along < 520 && perp < 16 + p.r) hurtPlayer(DEF.sentry.dmg, 'beam'); if (e.st <= 0) { e.state = 'move'; e.cd = 2.8; } }
     }
-    // contact damage (interceptor only while dashing; scouts by touch)
-    if (Math.hypot(p.x - e.x, p.y - e.y) < p.r + e.r - 2) {
-      if (e.type === 'scout' && e.touchCd <= 0) { hurtPlayer(DEF.scout.dmg, 'touch'); e.touchCd = .8; }
-      if (e.type === 'interceptor' && e.state === 'dash' && e.touchCd <= 0) { hurtPlayer(DEF.interceptor.dmg, 'dash'); e.touchCd = 1; }
-    }
-    // soft separation
-    S.enemies.forEach(function (o) { if (o === e || o.dead || o.type === 'sentry' || e.type === 'sentry') return; const ox = e.x - o.x, oy = e.y - o.y, od = Math.hypot(ox, oy); if (od > 0 && od < e.r + o.r) L.moveBody(m, e, ox / od * 40 * dt, oy / od * 40 * dt); });
+    // contact damage (interceptor only while dashing; scouts by touch) — against any Evo it touches
+    playerList().forEach(function (P) {
+      if (!isTarget(P) || Math.hypot(P.x - e.x, P.y - e.y) >= P.r + e.r - 2) return;
+      if (e.type === 'scout' && e.touchCd <= 0) { hurtPlayer(P, DEF.scout.dmg, 'touch'); e.touchCd = .8; }
+      if (e.type === 'interceptor' && e.state === 'dash' && e.touchCd <= 0) { hurtPlayer(P, DEF.interceptor.dmg, 'dash'); e.touchCd = 1; }
+    });
+    S.enemies.forEach(function (o) { if (o === e || o.dead || o.type === 'sentry') return; const ox = e.x - o.x, oy = e.y - o.y, od = Math.hypot(ox, oy); if (od > 0 && od < e.r + o.r) L.moveBody(m, e, ox / od * 40 * dt, oy / od * 40 * dt); }); // soft separation
   });
   S.enemies = S.enemies.filter(function (e) { return !e.dead; });
-  // orbs (temporary pickups; run-only heal, never XP/X-Coin)
-  S.orbs.forEach(function (o) {
-    o.life -= dt; if (magnetPull(o, dt, 60) < 22 && S.ledger.claim(o.id)) { o.life = -1; S.orbCount++; p.vit = Math.min(p.maxVit, p.vit + 8); S.rings.push({ x: o.x, y: o.y, r: 6, max: 34, a: 1, c: '#7fd8ff' }); renderHud(); }
-  });
+  S.orbs.forEach(function (o) { o.life -= dt; const h = pullTo(o, 60); if (h && h.d < 22 && S.ledger.claim(o.id)) { o.life = -1; h.P.orbs++; h.P.vit = Math.min(h.P.maxVit, h.P.vit + 8); ring(o.x, o.y, 34, '#7fd8ff', 6); } });
   S.orbs = S.orbs.filter(function (o) { return o.life > 0; });
   S.coins.forEach(function (c) {
     c.life -= dt; if (c.vy) { c.y += c.vy * dt; c.vy += 240 * dt; if (c.vy > 0) c.vy = 0; }
-    const d = magnetPull(c, dt, 90); // gentle magnet (Coin Magnet upgrade widens it)
-    if (d < 20 && S.ledger.claim(c.id)) { c.life = -1; S.xc++; S.fx.push({ x: c.x, y: c.y - 8, t: .8, k: 'txt', text: '+1 X' }); renderHud(); }
+    const h = pullTo(c, 90); if (h && h.d < 20 && S.ledger.claim(c.id)) { c.life = -1; h.P.xc++; fxAt(c.x, c.y - 8, 'txt', .8, '+1 X'); }
   });
   S.coins = S.coins.filter(function (c) { return c.life > 0; });
   S.mats.forEach(function (mt) { mt.hurt = Math.max(0, (mt.hurt || 0) - dt); });
-  S.fx.forEach(function (f) { f.t -= dt; }); S.fx = S.fx.filter(function (f) { return f.t > 0; });
-  S.rings.forEach(function (r) { r.r += (r.max - r.r) * Math.min(1, dt * 9); r.a -= dt * 2.4; }); S.rings = S.rings.filter(function (r) { return r.a > 0; });
   updateAreas(dt);
-  if (S.portal && Math.hypot(p.x - S.portal.x, p.y - S.portal.y) < 36) finish();
-  S.shake = Math.max(0, S.shake - dt * 22);
-  hudTick = (hudTick || 0) + dt; if (hudTick > .2) { hudTick = 0; renderHud(); }
-}
-function magnetPull(o, dt, base) { const p = S.p, d = Math.hypot(o.x - p.x, o.y - p.y), r = base * (has('magnet') ? 2.5 : 1); if (d < r && d > 1) { o.x += (p.x - o.x) / d * 220 * dt; o.y += (p.y - o.y) / d * 220 * dt; } return d; }
-let hudTick = 0;
-function hurtPlayer(d, src) {
-  const p = S.p; if (p.inv > 0 || p.hurtCd > 0 || S.ended) return;
-  if (S.eq.aegisHits > 0) { // Aegis Shell: absorbs hits (a unit is spent when it first activates)
-    if (S.eq.aegisHits % 2 === 0) S.eq.spent.aegis = (S.eq.spent.aegis | 0) + 1;
-    S.eq.aegisHits--; p.hurtCd = .5; S.rings.push({ x: p.x, y: p.y, r: 10, max: 40, a: 1, c: '#7fd8ff' }); toast('Aegis Shell absorbed the hit'); renderHud(); return;
+  // exit portal: everyone alive reaching it (or 8 s after the first) closes the server
+  if (S.portal && S.mode === 'play') {
+    const inside = livePlayers().filter(function (P) { return Math.hypot(P.x - S.portal.x, P.y - S.portal.y) < 36; }), all = livePlayers();
+    if (inside.length) { S.portalT += dt; if (inside.length === all.length || S.portalT > 8 || all.length === 1) finish(); } else S.portalT = 0;
   }
-  d = L.resolveIncoming({ raw: d, guarded: false, guardStat: sx(stat('guard')) }); p.vit -= d; p.hurtCd = .5; p.hit = .2; shake(4);
-  if (p.vit <= 0) { evoDown(); renderHud(); return; }
-  if (p.vit < p.maxVit * .3 && trigLeft('repair') > 0) { S.eq.spent.repair = (S.eq.spent.repair | 0) + 1; p.vit = Math.min(p.maxVit, p.vit + 50); S.rings.push({ x: p.x, y: p.y, r: 8, max: 46, a: 1, c: '#7dffb4' }); toast('Repair Pack: +50 vitality'); }
-  renderHud();
+  S.obj = objectiveText();
+  S.mirror();
 }
-// The Evo is down. Only a revive can bring it back: the free Evo-level ability first, then a ChronoRespawn from the loadout. Otherwise the round ends.
-function tryRevive() {
-  const src = L.reviveSource(S.eq.abilityLeft, trigLeft('chronorespawn'));
-  if (src === 'ability') { S.eq.abilityLeft--; return { src: src, frac: .5, label: 'EVO LEVEL ABILITY' }; }
-  if (src === 'item') { S.eq.spent.chronorespawn = (S.eq.spent.chronorespawn | 0) + 1; return { src: src, frac: .6, label: 'CHRONORESPAWN' }; }
-  return null;
+function objectiveText() {
+  const a = S.areas[S.areaIdx]; let t = 'Enter the first section', sub = '';
+  if (S.bossDone) t = 'Reach the exit portal';
+  else if (a && a.state === 'active') { const e = a.enc, left = S.enemies.filter(function (x) { return !x.dead; }).length + e.pending; t = 'SECTION ' + (a.idx + 1) + ' / 7 — Defeat all Archives'; sub = 'Waves left: ' + e.remainingWaves() + ' · Enemies: ' + left + ' · ' + L.DIFFS[S.cfg.diff].label.toUpperCase() + ' ×' + S.cfg.team; }
+  else if (a && a.state === 'cleared') { t = 'Gate ' + (a.idx + 1) + ' open — move on'; sub = a.idx === 5 ? 'The main hub awaits' : 'Section ' + (a.idx + 2) + ' ahead'; }
+  else if (S.areaIdx < 0) { t = 'Move into the first section'; sub = 'WASD / arrows'; }
+  return { t: t, s: sub };
 }
-function evoDown() {
-  const r = tryRevive(), p = S.p;
-  if (!r) { roundOver(); return; }
-  p.vit = Math.max(1, Math.round(p.maxVit * r.frac)); p.inv = 2.5; p.hurtCd = 1;
-  S.fx.push({ x: p.x, y: p.y, t: .6, k: 'burst' }); S.rings.push({ x: p.x, y: p.y, r: 10, max: 110, a: 1, c: '#7dffb4' });
-  banner('EVO REVIVED'); toast(r.label + ' — vitality ' + p.vit);
+S.mirror = function () { const p = S.p; if (p) { S.xc = p.xc; S.orbCount = p.orbs; S.eq = p.eq; S.boost = p.boost; } };
+
+// ─── src/d_boss.js ───
+
+// ══════════ BOSS: turn-based Elite (prototype cards/values). Squad version: everyone picks a move + answers, then the Elite hits every Evo. ══════════
+const bossState = { hp: 60, max: 60, turn: 'players', intent: null, round: 0, phase: 1, log: '', acted: [], guard: {}, dl: 40, wait: 0, acts: {}, rev: 0 };
+const ELITE = { pulse: { name: 'PULSE', hits: [14] }, barrage: { name: 'BARRAGE', hits: [7, 7] }, cross: { name: 'CROSS', hits: [20] } };
+const BOSS_TURN_SEC = 40;
+function pickIntent() { const seq = bossState.phase === 1 ? ['pulse', 'barrage'] : ['pulse', 'barrage', 'cross']; bossState.intent = seq[bossState.round % seq.length]; bossState.round++; }
+function bossTouch() { bossState.rev++; }
+function enterBoss() { // leader
+  if (S.mode === 'boss' || !S.isLeader) return;
+  sceneStart('boss', LINES.boss, function () { startBoss(); });
+}
+function startBoss() { // leader
+  Object.assign(bossState, { hp: bossState.max, turn: 'players', round: 0, phase: 1, log: 'Elite Archive blocks the exit.', acted: [], acts: {}, guard: {}, dl: BOSS_TURN_SEC, wait: 0 });
+  playerList().forEach(function (P) { P.bvit = P.maxVit; P.protect = 0; });
+  pickIntent(); bossTouch(); S.mode = 'boss'; onModeChange();
+}
+function bossAlive() { return playerList().filter(function (P) { return isAlive(P); }); }
+function bossTick(dt) { // leader
+  const b = bossState;
+  if (b.turn === 'players') {
+    b.dl = Math.max(0, b.dl - dt);
+    const alive = bossAlive();
+    if (b.dl <= 0 || (alive.length && alive.every(function (P) { return b.acts[P.id]; }))) bossResolve();
+  } else if (b.turn === 'resolving') { b.wait -= dt; if (b.wait <= 0) { if (b.hp <= 0) bossWin(); else bossStrike(); } }
+  else if (b.turn === 'striking') { b.wait -= dt; if (b.wait <= 0 && !S.ended) { b.turn = 'players'; b.acts = {}; b.acted = []; b.dl = BOSS_TURN_SEC; pickIntent(); bossTouch(); } }
+}
+function bossMove(P, card, correct) { // leader: one squad member's chosen move + whether their LINK answer was right
+  const b = bossState; if (b.turn !== 'players' || !isAlive(P) || b.acts[P.id] || !L.BOSS_MOVES[card]) return;
+  b.acts[P.id] = { card: card, correct: !!correct }; b.acted = Object.keys(b.acts); bossTouch();
+}
+function bossResolve() { // leader
+  const b = bossState, lines = []; let dmg = 0;
+  bossAlive().forEach(function (P) {
+    const a = b.acts[P.id]; if (!a) { lines.push(P.name + ' passes.'); return; }
+    const mv = L.BOSS_MOVES[a.card];
+    if (!a.correct) { lines.push(P.name + ': learning missed — ' + mv.name + ' fails.'); return; }
+    if (mv.kind === 'defense') { b.guard[P.id] = true; lines.push(P.name + ': guard up.'); return; }
+    const out = L.resolveAttack({ move: mv, quizCorrect: true, rng: S.rng, powerBonus: psx(P, 'power'), luck: psx(P, 'luck') });
+    if (out.result === 'miss') { lines.push(P.name + ': ' + mv.name + ' MISSES.'); return; }
+    dmg += out.damage; b.hp -= out.damage; S.score += out.damage * 2;
+    lines.push(P.name + ': ' + (out.result === 'crit' ? 'CRITICAL ' : out.result === 'block' ? 'blocked ' : '') + out.damage + ' dmg');
+  });
+  if (dmg >= 12) emit({ k: 'shake', n: 8 }); else if (dmg > 0) emit({ k: 'shake', n: 4 });
+  b.log = lines.join(' · '); if (b.hp <= b.max / 2 && b.phase === 1 && b.hp > 0) { b.phase = 2; b.log += ' · The Elite shifts into PHASE 2!'; }
+  b.turn = 'resolving'; b.wait = 1.3; bossTouch();
+}
+function bossStrike() { // leader: the Elite's move hits every Evo, each with its own defence
+  const b = bossState, mv = ELITE[b.intent], lines = ['ELITE uses ' + mv.name + '!'];
+  bossAlive().forEach(function (P) {
+    let out = P.name + ' ';
+    mv.hits.forEach(function (raw) {
+      if (P.bvit <= 0) return;
+      if (P.eq.aegisHits > 0) { if (P.eq.aegisHits % 2 === 0) P.eq.spent.aegis = (P.eq.spent.aegis | 0) + 1; P.eq.aegisHits--; out += '[absorbed] '; return; }
+      const d = L.resolveIncoming({ raw: raw, guarded: !!b.guard[P.id], guardStat: psx(P, 'guard'), mitigate: L.BOSS_MOVES.guard.mitigate }); P.bvit -= d; out += '-' + d + ' ';
+    });
+    if (b.guard[P.id]) out += '(guarded)';
+    if (P.bvit <= 0) {
+      const r = tryRevive(P);
+      if (r) { P.bvit = Math.max(1, Math.round(P.maxVit * r.frac)); out += '· ' + r.label + '!'; }
+      else { P.down = true; P.vit = 0; out += '· DOWN'; }
+    }
+    lines.push(out);
+  });
+  b.guard = {}; emit({ k: 'shake', n: 6 }); b.log = lines.join(' · ');
+  b.turn = 'striking'; b.wait = 1.1; bossTouch();
+  checkAllDown();
+}
+function bossWin() { // leader
+  S.bossDone = true; S.score += 500; S.map.gateOpen.fill(true); S.map.gates.forEach(function (g, i) { S.crossed[i] = true; });
+  S.enemies = []; S.portal = { x: S.map.bossNode.x, y: S.map.bossNode.y }; S.portalT = 0;
+  const ps = playerList(); ps.forEach(function (P, i) { P.x = S.portal.x - 110; P.y = S.portal.y + (i - (ps.length - 1) / 2) * 26; P.tx = P.x; P.ty = P.y; P.teleport = (P.teleport | 0) + 1; });
+  S.mode = 'play'; onModeChange(); emit({ k: 'banner', t: 'ELITE DEFEATED' }); emit({ k: 'toast', t: 'The exit portal is open.' }); saveProgress(false);
 }
 
-// ── Render ──
+// ── client side of the boss screen ──
+function renderBoss() {
+  const b = bossState, me = S.p; if (!me) return;
+  $('bossF').style.width = Math.max(0, b.hp / b.max * 100) + '%';
+  $('bVitF').style.width = Math.max(0, me.bvit / me.maxVit * 100) + '%'; $('bVit').textContent = Math.max(0, Math.round(me.bvit));
+  const acted = b.acted.indexOf(S.me) >= 0, myTurn = b.turn === 'players' && !acted && !me.down;
+  $('bGuard').textContent = b.guard && b.guard[S.me] ? 'GUARD READY' : '';
+  const ip = $('bPips'), c = S.quiz.charge; ip.innerHTML = ''; for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'pip' + (i < c ? ' on' : ''); ip.appendChild(d); }
+  const it = ELITE[b.intent]; $('intent').textContent = 'NEXT: ' + it.name + ' — ' + it.hits.reduce(function (a, x) { return a + x; }, 0) + ' dmg' + (it.hits.length > 1 ? ' (' + it.hits.length + ' hits)' : '') + ' on EVERY Evo' + (b.phase === 2 ? ' · PHASE 2' : '');
+  $('bossLog').textContent = b.log;
+  const pl = playerList();
+  $('queue').innerHTML = pl.map(function (P) { const done = b.acted.indexOf(P.id) >= 0; return '<div class="qt mono ' + (b.turn === 'players' && !done && !P.down ? 'act' : '') + '" style="' + (P.down ? 'opacity:.35;' : '') + 'border-color:' + P.color + '">' + escapeHtml(P.name.slice(0, 10).toUpperCase()) + (P.down ? ' ✕' : done ? ' ✓' : '') + ' ' + Math.max(0, Math.round(P.bvit)) + '</div>'; }).join('') + '<div class="qt mono ' + (b.turn !== 'players' ? 'act' : '') + '">ELITE</div>' + (b.turn === 'players' ? '<div class="qt mono">' + Math.ceil(b.dl) + 's</div>' : '');
+  const cards = $('cards'); cards.innerHTML = '';
+  [['strike', '1', 'Quick attack. Power 8. Reliable.'], ['surge', '2', 'Heavy attack. Power 16. Costs 2 charge, can miss more.'], ['guard', '3', 'Brace: cut the next Archive attack by 60%.']].forEach(function (c2) {
+    const mv = L.BOSS_MOVES[c2[0]], d = document.createElement('div');
+    d.className = 'card' + ((!myTurn || S.bossBusy || mv.cost > S.quiz.charge) ? ' off' : '');
+    d.innerHTML = '<div class="t mono">' + mv.name.toUpperCase() + ' [' + c2[1] + ']</div><div class="d">' + c2[2] + '</div><div class="c mono">' + (mv.cost ? 'COST ' + mv.cost + ' CHARGE · ' : '') + 'QUIZ FIRST</div>';
+    d.onclick = function () { chooseCard(c2[0]); }; cards.appendChild(d);
+  });
+  if (acted && b.turn === 'players') { const w = document.createElement('div'); w.className = 'qt mono'; w.style.alignSelf = 'center'; w.textContent = 'MOVE LOCKED IN — WAITING FOR YOUR SQUAD'; cards.appendChild(w); }
+  if (me.down) { cards.innerHTML = '<div class="qt mono">YOUR EVO IS DOWN — SPECTATING</div>'; }
+}
+function chooseCard(id) { // any squad member
+  const b = bossState, mv = L.BOSS_MOVES[id], me = S.p; if (!mv || !me || S.mode !== 'boss' || b.turn !== 'players' || S.bossBusy || S.quizOpen || b.acted.indexOf(S.me) >= 0 || me.down) return;
+  if (mv.cost > S.quiz.charge) return;
+  S.bossBusy = true; S.bossLocal = mv.name.toUpperCase() + ' selected — answer the LINK to lock it in.'; $('bossLog').textContent = S.bossLocal;
+  openQuiz('boss', function (res) {
+    if (res.correct && mv.cost) S.quiz.spend(mv.cost);
+    me.charge = S.quiz.charge;
+    S.score += res.correct ? 0 : 0; S.bossBusy = false;
+    if (S.isLeader) bossMove(me, id, res.correct); else netAct({ k: 'bossmove', card: id, ok: res.correct ? 1 : 0 });
+    renderBoss();
+  });
+}
+
+// ─── src/e_view.js ───
+
+// ══════════════════════════ ROUND START / END ══════════════════════════
+function soloLike() { return livePlayers().length <= 1; } // a quiz/shop only freezes the room when nobody else is playing
+function beginRound(msg) {
+  const n = msg.roster.length; S.round = S.round || { id: msg.id, msg: msg, roster: {} }; msg.roster.forEach(function (r) { S.round.roster[r.id] = r; });
+  S.players = {}; S.order = msg.roster.map(function (r) { return r.id; }).sort();
+  const k = buildWorld(msg.seed, msg.resume);
+  S.rng = L.mulberry32(((msg.seed >>> 0) ^ 0xA5A5A5) >>> 0);
+  S.order.forEach(function (id, i) { const r = S.round.roster[id], P = mkPlayer(id, r); buildEq(P); const sp = spawnPoint(k, i, n); P.x = sp.x; P.y = sp.y; P.tx = P.x; P.ty = P.y; S.players[id] = P; });
+  S.p = S.players[S.me]; S.mirror();
+  S.meter = new L.Meter(S.cfg.meterTarget); if (phas(S.p, 'capacitor')) S.meter.setFill(.4);
+  setTicks('ammoU', S.meter.target); setTicks('qAmmoU', S.meter.target);
+  S.quiz = new L.QuizDeck((S.deck && S.deck.cards) || [], L.mulberry32((Date.now() ^ 0x1234567) & 0xffffff)); S.quiz.setMeter(S.meter);
+  S.quizOpen = false; S.sprint = null; S.shopOpen = false; $('shop').classList.remove('on'); $('quiz').classList.remove('on');
+  S.clock = msg.roundSec ? new L.RoundClock(msg.roundSec) : null; if (S.clock) S.clock.start();
+  S.startedAt = performance.now(); S.cam.x = S.p.x - VW / 2; S.cam.y = S.p.y - VH / 2; S.endShown = false; S.ready = false; S.bossBusy = false;
+  Object.assign(bossState, { hp: bossState.max, turn: 'players', round: 0, phase: 1, log: '', acted: [], acts: {}, guard: {}, rev: 0 }); NET.lastSnap = null; NET.lastSnapAt = performance.now(); NET.lastEv = 0;
+  S.mode = 'play'; onModeChange(); renderHud();
+  sceneStart('intro', LINES.intro, null);
+  if (k > 0) toast('Squad checkpoint: continuing from section ' + (k + 1));
+  if (S.clock && S.role !== 'solo') toast('Round time ' + S.clock.fmt() + ' — the host can add or remove minutes');
+}
+// solo / dev entry (no co-op context) and the test hooks: a one-player round, identical to the v0.2 flow
+function beginWorld(n, opt) {
+  opt = opt || {}; S.role = S.role === 'host' ? 'host' : (S.coop ? S.role : 'solo'); S.isLeader = true;
+  const seed = (TEST && qs.get('seed')) ? (qs.get('seed') | 0) : ((Math.random() * 1e9) | 0 || 1);
+  const me = { id: S.me, name: S.player.brand, studio: L.studioKey(S.player.studioId), lvl: evoLevel(), tier: iconTier(), stats: (S.exo && S.exo.stats) || {}, picks: L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()) };
+  const msg = { id: 'solo' + Date.now(), seed: seed, resume: Math.max(0, Math.min(6, opt.resume | 0)), roster: [me], roundSec: opt.roundSec || (S.coop ? S.coop.rules.roundSec : 0), diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, leader: S.me };
+  S.round = { id: msg.id, msg: msg, roster: { [S.me]: me } };
+  beginRound(msg);
+}
+function onModeChange() { // keep every screen in step with the (team-wide) mode
+  if (S.mode === 'boss') { S.quizOpen && closeQuiz(); closeShop(); S.p && (S.p.charge = S.quiz.charge); setMode('boss'); renderBoss(); }
+  else if (S.mode === 'play') setMode('play');
+  if (S.isLeader && NET.team) NET.snapAt = 0;
+}
+
+// ══════════════════════════ SNAPSHOTS ══════════════════════════
+const ETYPES = ['scout', 'interceptor', 'sentry'], ESTATES = ['move', 'wind', 'dash', 'beam'];
+const r1 = function (v) { return Math.round(v * 10) / 10; }, r0 = Math.round;
+function encodeSnap() {
+  const pl = playerList(), a = S.areas[S.areaIdx], en = a && a.state === 'active' ? a.enc : null;
+  const sn = {
+    n: ++NET.snapSeq, md: S.mode === 'boss' ? 'b' : S.mode === 'end' ? 'e' : 'p', sd: S.seed, rd: S.round.id,
+    ck: S.clock ? [r1(S.clock.left), S.clock.limit, S.clock.running ? 1 : 0] : 0, sc: S.score, sec: S.secCleared, bd: S.bossDone ? 1 : 0, ai: S.areaIdx, ob: [S.obj.t, S.obj.s],
+    g: S.map.gateOpen.map(function (x) { return x ? 1 : 0; }).join(''), po: S.portal ? [r0(S.portal.x), r0(S.portal.y)] : 0, xd: S.xcDropped,
+    P: pl.map(function (P) { return { i: P.id, x: r0(P.x), y: r0(P.y), v: r0(P.vit), m: P.maxVit, a: Math.round(P.face * 100) / 100, f: (P.inv > 0 ? 1 : 0) | (P.hit > 0 ? 2 : 0) | (P.down ? 4 : 0) | (P.away ? 8 : 0) | (P.protect > 0 ? 16 : 0), xc: P.xc, o: P.orbs, k: P.kills, bv: r0(P.bvit), tp: P.teleport | 0, bo: P.boost, eq: P.eq ? { l: P.eq.list, s: P.eq.spent, a: P.eq.abilityLeft, h: P.eq.aegisHits } : 0 }; }),
+    E: S.enemies.map(function (e) { const x = [e.id, ETYPES.indexOf(e.type), r0(e.x), r0(e.y), r1(e.hp), e.max, ESTATES.indexOf(e.state), e.spawnT > 0 ? 1 : 0, Math.round(e.tx * 100) / 100, Math.round(e.ty * 100) / 100]; if (e.petals) x.push(e.petals.map(function (q) { return [Math.round(q.a * 100) / 100, r1(q.hp), q.max]; })); return x; }),
+    Sh: S.shots.map(function (s) { return [r0(s.x), r0(s.y), r0(s.vx), r0(s.vy), s.rad || 0]; }),
+    O: S.orbs.map(function (o) { return [o.id, r0(o.x), r0(o.y), r1(o.life)]; }), C: S.coins.map(function (c) { return [c.id, r0(c.x), r0(c.y), r1(c.life)]; }), St: S.stars.map(function (s) { return [s.id, s.type, r0(s.x), r0(s.y), r1(s.life)]; }),
+    M: S.mats.map(function (m) { return m.dead ? -1 : m.hp; }), ev: S.evq.splice(0, S.evq.length),
+    en: en ? [en.wavesIssued, en.pending, en.pendingKind || '', en.sentryDue ? 1 : 0, en.alive, en.escortLeft | 0, en.sentriesSpawnedThisWave ? 1 : 0, en.sentriesSpawned, en.sentriesDefeated, en.kills] : 0
+  };
+  if (S.mode === 'boss') sn.bs = { hp: r1(bossState.hp), max: bossState.max, t: bossState.turn, i: bossState.intent, ph: bossState.phase, lg: bossState.log, ac: bossState.acted, gd: bossState.guard, dl: r1(bossState.dl), rv: bossState.rev };
+  return sn;
+}
+function sendSnap() { if (!NET.team || !S.round) return; const sn = encodeSnap(); NET.team.send('snap', sn, false); }
+let evCounter = 0;
+function onSnap(sn) {
+  if (!S.round || sn.rd !== S.round.id || S.isLeader) return; NET.lastSnapAt = performance.now(); NET.lastSnap = sn;
+  if (S.mode === 'end') return;
+  const mode = sn.md === 'b' ? 'boss' : 'play';
+  S.seed = sn.sd; S.score = sn.sc; S.secCleared = sn.sec; S.bossDone = !!sn.bd; S.areaIdx = sn.ai; S.obj = { t: sn.ob[0], s: sn.ob[1] }; S.xcDropped = sn.xd;
+  if (sn.ck && S.clock) { S.clock.left = sn.ck[0]; S.clock.limit = sn.ck[1]; S.clock.running = !!sn.ck[2]; S.clock.over = sn.ck[0] <= 0; }
+  for (let i = 0; i < sn.g.length; i++) S.map.gateOpen[i] = sn.g[i] === '1';
+  S.portal = sn.po ? { x: sn.po[0], y: sn.po[1] } : null;
+  const now = performance.now();
+  sn.P.forEach(function (d) {
+    let P = S.players[d.i]; if (!P) { const r = S.round.roster[d.i]; if (!r) return; P = mkPlayer(d.i, r); P.eq = { inv: [], list: [], spent: {}, bought: [], aegisHits: 0, abilityLeft: 0 }; S.players[d.i] = P; S.order = Object.keys(S.players).sort(); }
+    const prevHp = P.vit; P.vit = d.v; P.maxVit = d.m; P.down = !!(d.f & 4); P.away = !!(d.f & 8); P.protect = d.f & 16 ? 1 : 0; P.xc = d.xc; P.orbs = d.o; P.kills = d.k; P.bvit = d.bv; P.boost = d.bo || {}; P.lastSeen = now;
+    if (d.f & 2 && !(P.hit > 0)) P.hit = .2; if (d.f & 1) P.inv = Math.max(P.inv, .1);
+    if (d.eq) { P.eq = P.eq || { inv: [], spent: {} }; P.eq.list = d.eq.l; P.eq.spent = d.eq.s; P.eq.abilityLeft = d.eq.a; P.eq.aegisHits = d.eq.h; }
+    if (P.id === S.me) { if ((d.tp | 0) !== (P.tpSeen | 0)) { P.x = d.x; P.y = d.y; P.tpSeen = d.tp | 0; S.cam.x = P.x - VW / 2; S.cam.y = P.y - VH / 2; } if (P.down) { P.x = d.x; P.y = d.y; } }
+    else { P.tx = d.x; P.ty = d.y; P.face = d.a; if ((d.tp | 0) !== (P.tpSeen | 0)) { P.x = d.x; P.y = d.y; P.tpSeen = d.tp | 0; } }
+  });
+  S.mirror();
+  // entities (reconcile by id so they glide instead of jumping)
+  const old = {}; S.enemies.forEach(function (e) { old[e.id] = e; });
+  S.enemies = sn.E.map(function (a) {
+    const type = ETYPES[a[1]]; let e = old[a[0]];
+    if (!e) { e = { id: a[0], type: type, x: a[2], y: a[3], r: DEF[type].r, hurt: 0, dead: false, petals: type === 'sentry' ? [{ a: 0, hp: 1, max: 1, px: 0, py: 0 }, { a: 3.14, hp: 1, max: 1, px: 0, py: 0 }] : null }; }
+    else if (a[4] < e.hp) e.hurt = .12;
+    e.gx = a[2]; e.gy = a[3]; e.hp = a[4]; e.max = a[5]; e.state = ESTATES[a[6]]; e.spawnT = a[7]; e.tx = a[8]; e.ty = a[9];
+    if (e.petals && a[10]) a[10].forEach(function (q, i) { e.petals[i].a = q[0]; e.petals[i].hp = q[1]; e.petals[i].max = q[2]; });
+    return e;
+  });
+  S.shots = sn.Sh.map(function (a) { return { x: a[0], y: a[1], vx: a[2], vy: a[3], rad: a[4] }; });
+  S.orbs = sn.O.map(function (a) { return { id: a[0], x: a[1], y: a[2], life: a[3] }; }); S.coins = sn.C.map(function (a) { return { id: a[0], x: a[1], y: a[2], life: a[3] }; });
+  S.stars = sn.St.map(function (a) { return { id: a[0], type: a[1], x: a[2], y: a[3], life: a[4] }; });
+  sn.M.forEach(function (hp, i) { const m = S.mats[i]; if (!m) return; if (hp < 0) m.dead = true; else { if (hp < m.hp) m.hurt = .12; m.hp = hp; } });
+  (sn.ev || []).forEach(function (ev) { playEv(ev); });
+  if (sn.bs) { const b = sn.bs; Object.assign(bossState, { hp: b.hp, max: b.max, turn: b.t, intent: b.i, phase: b.ph, log: b.lg, acted: b.ac, guard: b.gd, dl: b.dl }); if (b.rv !== bossState.rev) { bossState.rev = b.rv; if (S.mode === 'boss') renderBoss(); } }
+  if (mode !== S.mode) { S.mode = mode; onModeChange(); }
+  NET.lastEn = sn.en;
+}
+// the leader dropped out: the lowest remaining id takes over from the last snapshot (best effort — the Archives stay where they were)
+function takeLead() {
+  const sn = NET.lastSnap; if (!sn || S.isLeader || S.ended) return;
+  S.isLeader = true; NET.lastSnapAt = performance.now(); NET.members[S.me].seen = performance.now();
+  S.enemies.forEach(function (e) { e.x = e.gx != null ? e.gx : e.x; e.y = e.gy != null ? e.gy : e.y; e.cd = 1.2; e.dead = false; e.touchCd = 0; e.vx = 0; e.vy = 0; if (e.spawnT == null) e.spawnT = 0; });
+  S.shots = []; S.areas.forEach(function (a, i) { if (i < S.secCleared) a.state = 'cleared'; });
+  const a = S.areas[S.areaIdx]; if (a && sn.en) { const en = a.enc, x = sn.en; a.state = 'active'; a.cd = 1; Object.assign(en, { wavesIssued: x[0], pending: x[1], pendingKind: x[2] || null, sentryDue: !!x[3], alive: x[4], escortLeft: x[5], sentriesSpawnedThisWave: !!x[6], sentriesSpawned: x[7], sentriesDefeated: x[8], kills: x[9] }); }
+  Object.keys(S.players).forEach(function (id) { const P = S.players[id]; P.lastSeen = performance.now(); if (P.eq) { P.eq.flash = 0; } });
+  S.round.msg.leader = S.me; emit({ k: 'banner', t: 'NEW SQUAD LEADER: ' + S.player.brand.toUpperCase() }); toast('The previous leader dropped out — you are now running the round');
+}
+function sendBeacon() {
+  if (!NET.sess || !NET.teamKey) return;
+  const pl = playerList();
+  NET.sess.send('beacon', { team: NET.teamKey, name: NET.teamName, st: S.mode === 'end' ? 'end' : S.round ? 'play' : 'lobby', mem: S.round ? pl.map(function (P) { return { id: P.id, name: P.name, studio: P.studio }; }) : members().filter(function (m) { return m.online; }).map(function (m) { return { id: m.id, name: m.name, studio: L.studioKey(m.studioId) }; }), sec: S.secCleared | 0, left: S.clock ? r1(S.clock.left) : 0, lim: S.clock ? S.clock.limit : NET.roundSec, rs: S.round ? 1 : 0, sc: S.score | 0, rd: S.round ? S.round.id : '', lead: S.me }, false);
+}
+
+// ══════════════════════════ ENDING A ROUND ══════════════════════════
+function endRound(kind) { // leader
+  if (S.ended) return; S.ended = true;
+  const stats = playerList().map(function (P) { return { i: P.id, n: P.name, s: P.studio, xc: P.xc, k: P.kills, d: P.down ? 1 : 0 }; });
+  const msg = { id: S.round.id, kind: kind, sc: S.score, sec: S.secCleared, bd: S.bossDone ? 1 : 0, t: Math.round(S.t), stats: stats };
+  if (NET.team) { NET.team.send('end', msg, true); setTimeout(function () { NET.team && NET.team.send('end', msg, true); }, 500); setTimeout(function () { NET.team && NET.team.send('end', msg, true); }, 1500); }
+  S.ended = false; onEnd(msg);
+}
+function roundOver(reason) { endRound(reason === 'time' ? 'time' : 'down'); }
+function timeUp() { endRound('time'); }
+function finish() { endRound('clear'); }
+function onEnd(msg) {
+  if (S.endShown || (S.round && msg.id && msg.id !== S.round.id)) return; S.endShown = true; S.ended = true; S.mode = 'end';
+  S.timeSec = msg.t | 0; S.score = msg.sc; S.secCleared = Math.max(S.secCleared, msg.sec | 0); if (msg.bd) S.bossDone = true;
+  const mine = msg.stats.filter(function (x) { return x.i === S.me; })[0]; if (mine) { S.xc = mine.xc; if (S.p) S.p.xc = mine.xc; }
+  S.quizOpen && closeQuiz(); closeShop();
+  const q = S.quiz.stats, mm = Math.floor(S.timeSec / 60), ss = String(S.timeSec % 60).padStart(2, '0');
+  $('endT').textContent = msg.kind === 'clear' ? 'SERVER 01 CLEARED' : msg.kind === 'time' ? 'TIME UP' : 'ROUND OVER';
+  $('endS').textContent = (msg.kind === 'clear' ? 'Studio Defense Grid is secure.' : msg.kind === 'time' ? 'The round clock ran out.' : 'Every Evo in the squad went down with no revive left.') + ' Sections cleared are saved for your squad — the next launch continues from the checkpoint. X-Coin collected is proposed to the Arena (host-approved).';
+  const cells = [[S.score, 'SQUAD SCORE'], [mm + ':' + ss, 'TIME'], [S.secCleared + ' / 6', 'SECTIONS CLEARED'], [q.correct + '/' + q.answered, 'YOUR LINK ANSWERS'], [S.xc, 'YOUR X-COIN']];
+  $('endStats').innerHTML = cells.map(function (a) { return '<div><b>' + a[0] + '</b><span class="mono">' + a[1] + '</span></div>'; }).join('') + (msg.stats.length > 1 ? '<div style="grid-column:1/-1;text-align:left;font-size:.8em">' + msg.stats.map(function (x) { return '<span style="color:' + L.STUDIO_COLORS[x.s] + '">●</span> ' + escapeHtml(x.n) + ' — ' + x.k + ' defeated · ' + x.xc + ' X-Coin' + (x.d ? ' · down' : ''); }).join('<br>') + '</div>' : '');
+  const coop = S.role !== 'solo'; $('endAgain').style.display = coop ? 'none' : ''; $('endNext').style.display = coop ? '' : 'none';
+  saveProgress(true); setMode('end');
+}
+// Team progress: posted to the Arena (which merges it into the shared squad record). Items used up leave the player's stock only when a round really started.
+function saveProgress(final) {
+  if (!S.runLive && !final) return;
+  if (!final && S.secCleared <= S.lastSaved) return;
+  S.lastSaved = Math.max(S.lastSaved, S.secCleared);
+  const consumed = (final && !S.consumedSent && S.eq) ? L.consumedItems(S.eq.inv, S.eq.spent) : null;
+  if (final) { S.consumedSent = true; S.runLive = false; }
+  const msg = { type: 'pflx_arena_game_save', game: 'nexus-frontiers', scope: S.nf && S.nf.scope, diff: S.cfg.diff, team: S.cfg.team, cleared: S.secCleared, bossDone: !!S.bossDone, score: S.score, final: !!final, consumed: consumed };
+  if (final && S.nf && !S.nf.standalone) S.nf.progress = { cleared: S.bossDone ? 0 : Math.max((S.nf.progress && S.nf.progress.cleared) | 0, S.secCleared) }; // the Arena merges it too; this keeps the next launch in step before its reply
+  if (S.nf && S.nf.standalone) { if (consumed) Object.keys(consumed).forEach(function (k) { S.nf.owned[k] = Math.max(0, ownedN(k) - consumed[k]); }); S.nf.progress = { cleared: S.bossDone ? 0 : Math.max((S.nf.progress && S.nf.progress.cleared) | 0, S.secCleared) }; }
+  else post(msg);
+  window.__lastSave = msg;
+}
+
+// ══════════════════════════ HUD ══════════════════════════
+function renderHud() {
+  const p = S.p; if (!p) return;
+  $('vitF').style.width = Math.max(0, p.vit / p.maxVit * 100) + '%';
+  const mt = S.meter; if (mt) { $('ammoF').style.width = (mt.fill * 100) + '%'; $('ammoTxt').textContent = Math.round(mt.fill * mt.target) + '/' + mt.target; }
+  if (S.eq) {
+    const cap = L.slotsFor(evoLevel()), inv = $('inv'); inv.innerHTML = '';
+    const seen = {}; for (let i = 0; i < cap; i++) { const id = S.eq.list[i], d = document.createElement('div'); d.className = 'slot'; if (id) { const u = L.UPGRADES[id]; seen[id] = (seen[id] | 0) + 1; const done = u.trigger && seen[id] <= (S.eq.spent[id] | 0); d.className += ' full' + (done ? ' spent' : ''); d.textContent = u.icon; d.title = u.name; } inv.appendChild(d); }
+    $('slotTxt').textContent = S.eq.list.length + '/' + cap + (S.eq.abilityLeft ? ' · REVIVE ×' + S.eq.abilityLeft : '');
+    const bx = $('boosts'); bx.innerHTML = Object.keys(S.boost || {}).filter(function (k) { return S.boost[k] > 0; }).map(function (k) { const B = L.BOOSTERS[k]; return '<div class="bst mono" style="color:' + B.color + '">' + B.icon + ' ' + B.name + '<span class="tb"><i style="width:' + (S.boost[k] / B.dur * 100) + '%;background:' + B.color + '"></i></span></div>'; }).join('');
+  }
+  const ip = $('pips'); const c = S.quiz.charge; if (ip.children.length !== 5) { ip.innerHTML = ''; for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'pip'; ip.appendChild(d); } }
+  for (let i = 0; i < 5; i++) ip.children[i].className = 'pip' + (i < c ? ' on' : '');
+  $('scoreV').textContent = S.score; $('xcV').textContent = S.xc; $('orbV').textContent = S.orbCount;
+  $('linkBtn').classList.toggle('pulse', c === 0 && S.enemies.some(function (e) { return !e.dead; }));
+  const o = $('obj'); o.firstChild.nodeValue = S.obj.t; o.lastChild.textContent = S.obj.s;
+  const ck = $('clock'); if (S.clock) { ck.style.display = ''; ck.textContent = '⏱ ' + S.clock.fmt(); ck.classList.toggle('low', S.clock.left < 60); } else ck.style.display = 'none';
+  const sq = $('squad'); const pl = playerList();
+  if (pl.length > 1) { sq.innerHTML = pl.filter(function (P) { return P.id !== S.me; }).map(function (P) { return '<div class="sqm" style="border-color:' + P.color + '"><i style="background:' + P.color + '"></i><span>' + escapeHtml(P.name.slice(0, 12)) + '</span><div class="bar"><i style="width:' + Math.max(0, P.vit / P.maxVit * 100) + '%"></i></div><small class="mono">' + (P.down ? 'DOWN' : P.away ? 'OFFLINE' : P.protect > 0 ? 'LINKING' : '') + '</small></div>'; }).join(''); } else sq.innerHTML = '';
+}
+
+// ══════════════════════════ RENDER ══════════════════════════
+function iconFor(P) { // Evo portrait for a squad member (studio + tier from the shared manifest)
+  if (P.id === S.me) return evoIcon();
+  const k = P.studio + ':' + P.tier; if (S.iconCache[k] !== undefined) return S.iconCache[k] ? img('/' + S.iconCache[k]) : null;
+  S.iconCache[k] = null; withManifest(function (m) { const c = (m.cards || []).filter(function (x) { return x.studio === P.studio && x.tier === P.tier; })[0]; if (c) { S.iconCache[k] = c.files['128']; img('/' + c.files['128']); } });
+  return null;
+}
+function withManifest(fn) { if (S.manifest) return fn(S.manifest); (S.manifestQ = S.manifestQ || []).push(fn); if (S.manifestLoading) return; S.manifestLoading = true; fetch(EVO + 'manifest.json').then(function (r) { return r.json(); }).then(function (m) { S.manifest = m; (S.manifestQ || []).forEach(function (f) { f(m); }); S.manifestQ = []; }).catch(function () {}); }
 function drawIcon(i, x, y, size) { if (ready(i)) ctx.drawImage(i, x - size / 2, y - size / 2, size, size); else { ctx.fillStyle = '#7fd8ff'; ctx.beginPath(); ctx.arc(x, y, size * .35, 0, 7); ctx.fill(); } }
 function evoIcon() { return S.iconCard ? img('/' + S.iconCard.files['128']) : null; }
 function bar(x, y, w, v, max, col) { ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(x - w / 2 - 1, y - 1, w + 2, 6); ctx.fillStyle = col || '#00e676'; ctx.fillRect(x - w / 2, y, w * Math.max(0, v / max), 4); }
@@ -1413,20 +2056,44 @@ function cover(im, x, y, w, h, alpha) {
   if (ir > r) { sw = sh * r; sx0 = (im.naturalWidth - sw) / 2; } else { sh = sw / r; sy0 = (im.naturalHeight - sh) / 2; }
   ctx.globalAlpha = alpha; ctx.drawImage(im, sx0, sy0, sw, sh, x, y, w, h); ctx.globalAlpha = 1;
 }
+function roomLess(tx, ty) { return L.roomIndexAt(S.map, tx, ty) < 0; }
+function camTarget() { const p = S.p; if (p && !p.down) return p; const alive = livePlayers().filter(function (P) { return P.id !== S.me; })[0]; return alive || p; }
+function drawEvo(P, t) {
+  const me = P.id === S.me;
+  ctx.globalAlpha = (P.inv > 0 && Math.floor(S.t * 20) % 2 ? .4 : 1) * (P.down ? .35 : 1) * (P.away ? .5 : 1); ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(P.x, P.y + 12, 13, 5, 0, 0, 7); ctx.fill();
+  const star = P.boost && P.boost.star > 0;
+  ctx.strokeStyle = P.hit > 0 ? '#ff4d6d' : star ? 'hsl(' + (S.t * 360 % 360) + ',100%,70%)' : (S.role === 'solo' ? 'rgba(0,229,255,.9)' : P.color); ctx.lineWidth = star ? 4 : me ? 3 : 2; ctx.beginPath(); ctx.arc(P.x, P.y, 17, 0, 7); ctx.stroke();
+  if (P.eq && P.eq.aegisHits > 0) { ctx.strokeStyle = 'rgba(127,216,255,.8)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(P.x, P.y, 23, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
+  if (P.protect > 0) { ctx.strokeStyle = '#ffd740'; ctx.setLineDash([3, 5]); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(P.x, P.y, 28, 0, 7); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#ffd740'; ctx.font = '800 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('LINK', P.x, P.y - 32); }
+  drawIcon(iconFor(P), P.x, P.y - 2, 36);
+  if (!me && S.role !== 'solo') { ctx.fillStyle = P.color; ctx.font = '800 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(P.name.slice(0, 12), P.x, P.y - 26); bar(P.x, P.y + 20, 26, P.vit, P.maxVit, P.color); }
+  ctx.globalAlpha = 1;
+}
 function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#02040a'; ctx.fillRect(0, 0, VW, VH);
   if (S.mode === 'boss') return renderBossScene();
   if (!S.map || !S.p) { cover(img(ASSET + 'web/void.jpg'), 0, 0, VW, VH, .6); return; }
-  const p = S.p, m = S.map;
-  // camera
-  const tx = p.x - VW / 2, ty = p.y - VH / 2; S.cam.x += (tx - S.cam.x) * .12; S.cam.y += (ty - S.cam.y) * .12;
+  const m = S.map, ct = camTarget();
+  const tx = ct.x - VW / 2, ty = ct.y - VH / 2; S.cam.x += (tx - S.cam.x) * .12; S.cam.y += (ty - S.cam.y) * .12;
   cover(img(ASSET + 'web/void.jpg'), -((S.cam.x * .08) % 80), -((S.cam.y * .08) % 40), VW + 160, VH + 80, .85);
   const shx = S.shake ? (Math.random() - .5) * S.shake : 0, shy = S.shake ? (Math.random() - .5) * S.shake : 0;
   ctx.translate(-Math.round(S.cam.x) + shx, -Math.round(S.cam.y) + shy);
-  const x0 = Math.max(0, Math.floor(S.cam.x / T)), x1 = Math.min(m.W - 1, Math.ceil((S.cam.x + VW) / T)), y0 = Math.max(0, Math.floor(S.cam.y / T)), y1 = Math.min(m.H - 1, Math.ceil((S.cam.y + VH) / T));
-  // room plates under the floor
+  drawWorld(S.cam.x, S.cam.y, VW, VH);
+  S.stars.forEach(function (st) { const B = L.BOOSTERS[st.type], f = st.life < 4 && Math.floor(S.t * 8) % 2 ? .4 : 1; ctx.globalAlpha = f; ctx.shadowColor = B.color; ctx.shadowBlur = 14; ctx.fillStyle = B.color; ctx.beginPath(); ctx.arc(st.x, st.y + Math.sin(S.t * 5 + st.x) * 2, 11, 0, 7); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = '#021'; ctx.font = '800 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(st.type === 'triple' ? '3' : st.type === 'nova' ? 'N' : '★', st.x, st.y + 4); ctx.globalAlpha = 1; });
+  S.coins.forEach(function (c) { const ci = img(ASSET + 'sprites/xcoin-64.png'), f = c.life < 4 && Math.floor(S.t * 8) % 2 ? .4 : 1, w = Math.max(.25, Math.abs(Math.cos(S.t * 4 + c.x * .05))) * 20; ctx.globalAlpha = f; ctx.shadowColor = '#ffd740'; ctx.shadowBlur = 8; if (ready(ci)) ctx.drawImage(ci, c.x - w / 2, c.y - 10, w, 20); else { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(c.x, c.y, 7, 0, 7); ctx.fill(); } ctx.shadowBlur = 0; ctx.globalAlpha = 1; });
+  drawEnemies(S.enemies, S.t);
+  S.shots.forEach(function (s) { ctx.fillStyle = s.rad ? '#ffe9a0' : '#9ff'; ctx.shadowColor = s.rad ? '#fc0' : '#0ff'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(s.x, s.y, 4 + (s.rad || 0), 0, 7); ctx.fill(); ctx.shadowBlur = 0; });
+  playerList().forEach(function (P) { if (P.id !== S.me) drawEvo(P); }); if (S.p) drawEvo(S.p);
+  S.rings.forEach(function (r) { ctx.strokeStyle = r.c; ctx.globalAlpha = Math.max(0, r.a); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; });
+  S.fx.forEach(function (f) { const a = Math.min(1, f.t * 3); ctx.globalAlpha = a; if (f.k === 'txt') { ctx.fillStyle = '#ffd740'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(f.text, f.x, f.y - (0.8 - f.t) * 30); } else if (f.k === 'burst') { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(f.x, f.y, Math.max(1, 10 + (.5 - f.t) * 40), 0, 7); ctx.fill(); } else { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(f.x, f.y, 5, 0, 7); ctx.fill(); } ctx.globalAlpha = 1; });
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (S.p && S.p.down && S.mode === 'play') { ctx.fillStyle = 'rgba(255,60,90,.9)'; ctx.font = '800 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('YOUR EVO IS DOWN — WATCHING YOUR SQUAD', VW / 2, VH - 70); }
+}
+// world drawing shared by the player view and the host's observation view (x0/y0 = top-left in world px, w/h = visible world px)
+function drawWorld(cx, cy, w, h) {
+  const m = S.map, x0 = Math.max(0, Math.floor(cx / T)), x1 = Math.min(m.W - 1, Math.ceil((cx + w) / T)), y0 = Math.max(0, Math.floor(cy / T)), y1 = Math.min(m.H - 1, Math.ceil((cy + h) / T));
   m.rooms.forEach(function (r, i) {
-    if (r.px.x > S.cam.x + VW || r.px.x + r.px.w < S.cam.x || r.px.y > S.cam.y + VH || r.px.y + r.px.h < S.cam.y) return;
+    if (r.px.x > cx + w || r.px.x + r.px.w < cx || r.px.y > cy + h || r.px.y + r.px.h < cy) return;
     const plate = img(ASSET + 'web/w01/' + (i < 6 ? 'combat-0' + (i + 1) : 'boss') + '.jpg'); cover(plate, r.px.x, r.px.y, r.px.w, r.px.h, .55);
     ctx.fillStyle = 'rgba(2,6,18,.5)'; ctx.fillRect(r.px.x, r.px.y, r.px.w, r.px.h);
   });
@@ -1434,7 +2101,6 @@ function render() {
   for (let gx = x0; gx <= x1 + 1; gx++) { ctx.moveTo(gx * T + .5, y0 * T); ctx.lineTo(gx * T + .5, (y1 + 1) * T); }
   for (let gy = y0; gy <= y1 + 1; gy++) { ctx.moveTo(x0 * T, gy * T + .5); ctx.lineTo((x1 + 1) * T, gy * T + .5); }
   ctx.stroke();
-  // corridors + walls
   for (let ty2 = y0; ty2 <= y1; ty2++) for (let tx2 = x0; tx2 <= x1; tx2++) {
     const v = m.grid[ty2 * m.W + tx2], X = tx2 * T, Y = ty2 * T;
     if (v === 1) {
@@ -1445,7 +2111,6 @@ function render() {
       if (open(tx2 + 1, ty2)) ctx.fillRect(X + T - 2, Y, 2, T); if (open(tx2 - 1, ty2)) ctx.fillRect(X, Y, 2, T);
     } else if (roomLess(tx2, ty2)) { ctx.fillStyle = 'rgba(8,14,36,.92)'; ctx.fillRect(X, Y, T, T); ctx.fillStyle = 'rgba(0,229,255,.08)'; ctx.fillRect(X, Y + T / 2 - 1, T, 2); }
   }
-  // gates
   m.gates.forEach(function (g, i) {
     const open = m.gateOpen[i], x = g.col * T, y = g.row * T;
     ctx.save(); ctx.globalAlpha = open ? .15 : .95; const ff = img(ASSET + 'props/gate-forcefield-128.png');
@@ -1453,21 +2118,15 @@ function render() {
     if (!open) { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(x + T / 2 - 1, y, 2, T * 3); if (ready(ff)) ctx.drawImage(ff, x - 24, y - 6, 80, T * 3 + 12); }
     ctx.restore();
   });
-  // portal & boss node
   if (S.portal) { const pi = img(ASSET + 'sprites/circuit-portal-open-256.png'); if (ready(pi)) ctx.drawImage(pi, S.portal.x - 60, S.portal.y - 60, 120, 120); else { ctx.strokeStyle = '#7dffb4'; ctx.beginPath(); ctx.arc(S.portal.x, S.portal.y, 40, 0, 7); ctx.stroke(); } }
   else if (!S.bossDone) { const n = m.bossNode, pulse = 1 + Math.sin(S.t * 3) * .06; ctx.strokeStyle = 'rgba(255,60,110,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 40 * pulse, 0, 7); ctx.stroke(); drawIcon(img(ARCH + 'elite-128.png'), n.x, n.y, 72); ctx.fillStyle = '#fff'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ELITE — step in to challenge', n.x, n.y + 58); }
-  // breakable materials
-  S.mats.forEach(function (mt) { if (mt.dead || mt.x < S.cam.x - 40 || mt.x > S.cam.x + VW + 40 || mt.y < S.cam.y - 40 || mt.y > S.cam.y + VH + 40) return; const mi = img(ASSET + 'props/resource-' + mt.kind + '-64.png'); ctx.globalAlpha = mt.hurt > 0 ? .6 : 1; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(mt.x, mt.y + 11, 13, 5, 0, 0, 7); ctx.fill(); if (ready(mi)) ctx.drawImage(mi, mt.x - 17, mt.y - 17, 34, 34); else { ctx.fillStyle = '#9ad'; ctx.fillRect(mt.x - 10, mt.y - 10, 20, 20); } ctx.globalAlpha = 1; if (mt.hp < mt.max) bar(mt.x, mt.y - 24, 24, mt.hp, mt.max, '#ffd740'); });
-  // orbs
+  S.mats.forEach(function (mt) { if (mt.dead || mt.x < cx - 40 || mt.x > cx + w + 40 || mt.y < cy - 40 || mt.y > cy + h + 40) return; const mi = img(ASSET + 'props/resource-' + mt.kind + '-64.png'); ctx.globalAlpha = mt.hurt > 0 ? .6 : 1; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(mt.x, mt.y + 11, 13, 5, 0, 0, 7); ctx.fill(); if (ready(mi)) ctx.drawImage(mi, mt.x - 17, mt.y - 17, 34, 34); else { ctx.fillStyle = '#9ad'; ctx.fillRect(mt.x - 10, mt.y - 10, 20, 20); } ctx.globalAlpha = 1; if (mt.hp < mt.max) bar(mt.x, mt.y - 24, 24, mt.hp, mt.max, '#ffd740'); });
   S.orbs.forEach(function (o) { const oi = img(ASSET + 'sprites/orb-energy-64.png'); const f = o.life < 3 && Math.floor(S.t * 8) % 2 ? .4 : 1; ctx.globalAlpha = f; if (ready(oi)) ctx.drawImage(oi, o.x - 12, o.y - 12 + Math.sin(S.t * 5 + o.x) * 2, 24, 24); else { ctx.fillStyle = '#7fd8ff'; ctx.beginPath(); ctx.arc(o.x, o.y, 7, 0, 7); ctx.fill(); } ctx.globalAlpha = 1; });
-  // boosters
-  S.stars.forEach(function (st) { const B = L.BOOSTERS[st.type], f = st.life < 4 && Math.floor(S.t * 8) % 2 ? .4 : 1; ctx.globalAlpha = f; ctx.shadowColor = B.color; ctx.shadowBlur = 14; ctx.fillStyle = B.color; ctx.beginPath(); ctx.arc(st.x, st.y + Math.sin(S.t * 5 + st.x) * 2, 11, 0, 7); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = '#021'; ctx.font = '800 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(st.type === 'triple' ? '3' : st.type === 'nova' ? 'N' : '★', st.x, st.y + 4); ctx.globalAlpha = 1; });
-  // X-Coin pickups
-  S.coins.forEach(function (c) { const ci = img(ASSET + 'sprites/xcoin-64.png'), f = c.life < 4 && Math.floor(S.t * 8) % 2 ? .4 : 1, w = Math.max(.25, Math.abs(Math.cos(S.t * 4 + c.x * .05))) * 20; ctx.globalAlpha = f; ctx.shadowColor = '#ffd740'; ctx.shadowBlur = 8; if (ready(ci)) ctx.drawImage(ci, c.x - w / 2, c.y - 10, w, 20); else { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(c.x, c.y, 7, 0, 7); ctx.fill(); } ctx.shadowBlur = 0; ctx.globalAlpha = 1; });
-  // enemies
-  S.enemies.forEach(function (e) {
+}
+function drawEnemies(list, t) {
+  list.forEach(function (e) {
     if (e.spawnT > 0) { ctx.strokeStyle = 'rgba(255,80,120,' + (.9 - e.spawnT * .6) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, Math.max(1, 6 + (0.8 - e.spawnT) * 26), 0, 7); ctx.stroke(); if (e.type === 'interceptor') { ctx.fillStyle = '#ff6b8a'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', e.x, e.y - 18); } return; }
-    if (e.type === 'interceptor' && e.state === 'wind') { ctx.strokeStyle = 'rgba(255,80,120,.8)'; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + e.tx * 260, e.y + e.ty * 260); ctx.stroke(); ctx.setLineDash([]); }
+    if (e.type === 'interceptor' && e.state === 'wind') { ctx.strokeStyle = 'rgba(255,80,120,.8)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + e.tx * 260, e.y + e.ty * 260); ctx.stroke(); ctx.setLineDash([]); }
     if (e.type === 'sentry') {
       if (e.state === 'wind' || e.state === 'beam') { ctx.strokeStyle = e.state === 'beam' ? 'rgba(255,230,120,.95)' : 'rgba(255,80,120,.6)'; ctx.lineWidth = e.state === 'beam' ? 16 : 2; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + Math.cos(e.tx) * 520, e.y + Math.sin(e.tx) * 520); ctx.stroke(); }
       e.petals.forEach(function (pt) { if (pt.hp > 0) { ctx.fillStyle = 'rgba(120,200,255,.9)'; ctx.beginPath(); ctx.arc(pt.px, pt.py, 10, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); bar(pt.px, pt.py - 17, 22, pt.hp, pt.max, '#7fd8ff'); } });
@@ -1476,50 +2135,253 @@ function render() {
     ctx.globalAlpha = e.hurt > 0 ? .55 : 1; drawIcon(img(ARCH + e.type + '-64.png'), e.x, e.y, sz); ctx.globalAlpha = 1;
     bar(e.x, e.y - sz / 2 - 6, e.type === 'sentry' ? 44 : 26, e.hp, e.max, e.type === 'sentry' ? '#ff9f0a' : '#ff4d6d');
   });
-  // shots
-  S.shots.forEach(function (s) { ctx.fillStyle = s.rad ? '#ffe9a0' : '#9ff'; ctx.shadowColor = s.rad ? '#fc0' : '#0ff'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(s.x, s.y, 4 + (s.rad || 0), 0, 7); ctx.fill(); ctx.shadowBlur = 0; });
-  // player
-  ctx.globalAlpha = p.inv > 0 && Math.floor(S.t * 20) % 2 ? .4 : 1; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 13, 5, 0, 0, 7); ctx.fill();
-  ctx.strokeStyle = p.hit > 0 ? '#ff4d6d' : S.boost.star > 0 ? 'hsl(' + (S.t * 360 % 360) + ',100%,70%)' : 'rgba(0,229,255,.9)'; ctx.lineWidth = S.boost.star > 0 ? 4 : 2; ctx.beginPath(); ctx.arc(p.x, p.y, 17, 0, 7); ctx.stroke();
-  if (S.eq && S.eq.aegisHits > 0) { ctx.strokeStyle = 'rgba(127,216,255,.8)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(p.x, p.y, 23, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
-  drawIcon(evoIcon(), p.x, p.y - 2, 36); ctx.globalAlpha = 1;
-  // fx
-  S.rings.forEach(function (r) { ctx.strokeStyle = r.c; ctx.globalAlpha = Math.max(0, r.a); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; });
-  S.fx.forEach(function (f) { const a = Math.min(1, f.t * 3); ctx.globalAlpha = a; if (f.k === 'txt') { ctx.fillStyle = '#ffd740'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(f.text, f.x, f.y - (0.8 - f.t) * 30); } else if (f.k === 'burst') { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(f.x, f.y, Math.max(1, 10 + (.5 - f.t) * 40), 0, 7); ctx.fill(); } else { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(f.x, f.y, 5, 0, 7); ctx.fill(); } ctx.globalAlpha = 1; });
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
-function roomLess(tx, ty) { return L.roomIndexAt(S.map, tx, ty) < 0; }
 function renderBossScene() {
   const t = S.t; cover(img(ASSET + 'web/w01/boss.jpg'), 0, 0, VW, VH, .9);
   const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, 'rgba(2,4,12,.35)'); g.addColorStop(1, 'rgba(2,4,12,.8)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
-  const bob = Math.sin(t * 2) * 6, hit = bossState.turn === 'boss' && bossState.busy ? 0 : 0;
-  ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(740, 380, 120, 20, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(220, 400, 90, 16, 0, 0, 7); ctx.fill();
+  const bob = Math.sin(t * 2) * 6;
+  ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(740, 380, 120, 20, 0, 0, 7); ctx.fill();
   drawIcon(img(ARCH + 'elite-256.png'), 740, 250 + bob, 300);
-  drawIcon(S.iconCard ? img('/' + S.iconCard.files['256']) : null, 220, 300 - bob * .6, 220);
+  const pl = playerList(), n = pl.length || 1;
+  pl.forEach(function (P, i) { // the squad lines up on the left; the Elite hits all of them
+    const x = n === 1 ? 220 : 120 + (i % 2) * 150, y = n === 1 ? 300 : 210 + Math.floor(i / 2) * 150 + (i % 2) * 30;
+    ctx.globalAlpha = P.down ? .3 : 1; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(x, y + 60, 50, 10, 0, 0, 7); ctx.fill();
+    drawIcon(P.id === S.me ? (S.iconCard ? img('/' + S.iconCard.files['256']) : null) : iconFor(P), x, y - bob * .6, n === 1 ? 220 : 120);
+    if (n > 1) { ctx.fillStyle = P.color; ctx.font = '800 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(P.name.slice(0, 12), x, y + 78); bar(x, y + 84, 70, P.bvit, P.maxVit, P.color); if (bossState.guard && bossState.guard[P.id]) { ctx.strokeStyle = '#7dffb4'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 62, 0, 7); ctx.stroke(); } }
+    ctx.globalAlpha = 1;
+  });
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
-let last = 0;
-function frame(ts) {
-  const raw = (ts - last) / 1000 || 0, dt = Math.min(.05, raw); last = ts;
-  if (S.mode === 'play' && S.quizOpen && S.sprint && !S.sprint.over) { S.sprint.tick(Math.min(raw, .5)); renderSprintHud(); if (S.sprint.over && !answered) endSprint(); }
-  if (S.mode === 'play' && !S.quizOpen && !S.shopOpen) update(dt); else if (S.mode === 'boss' || S.mode === 'cut' || S.mode === 'menu') S.t += dt;
-  if (S.mode === 'play' || S.mode === 'boss' || S.mode === 'cut' || S.mode === 'end') render(); else { ctx.fillStyle = '#02040a'; ctx.fillRect(0, 0, VW, VH); cover(img(ASSET + 'web/void.jpg'), 0, 0, VW, VH, .5); }
-  requestAnimationFrame(frame);
+
+// ══════════════════════════ FRAME LOOP ══════════════════════════
+function ageFx(dt) {
+  S.fx.forEach(function (f) { f.t -= dt; }); S.fx = S.fx.filter(function (f) { return f.t > 0; });
+  S.rings.forEach(function (r) { r.r += (r.max - r.r) * Math.min(1, dt * 9); r.a -= dt * 2.4; }); S.rings = S.rings.filter(function (r) { return r.a > 0; });
+  S.shake = Math.max(0, S.shake - dt * 22);
 }
-requestAnimationFrame(frame);
+function clientUpdate(dt) { // everybody who is not the leader: own movement + smooth the leader's world
+  S.t += dt; const p = S.p; if (!p) return;
+  p.dashCd = Math.max(0, p.dashCd - dt); p.inv = Math.max(0, p.inv - dt); p.hit = Math.max(0, p.hit - dt);
+  localMove(dt);
+  const k = 1 - Math.exp(-dt * 16);
+  playerList().forEach(function (P) { if (P.id === S.me) return; P.x += (P.tx - P.x) * k; P.y += (P.ty - P.y) * k; });
+  S.enemies.forEach(function (e) { if (e.gx != null) { e.x += (e.gx - e.x) * k; e.y += (e.gy - e.y) * k; } e.hurt = Math.max(0, e.hurt - dt); if (e.petals) e.petals.forEach(function (pt) { pt.a += dt * 1.1; pt.px = e.x + Math.cos(pt.a) * 40; pt.py = e.y + Math.sin(pt.a) * 40; }); });
+  S.shots.forEach(function (s) { s.x += s.vx * dt; s.y += s.vy * dt; });
+  S.mats.forEach(function (mt) { mt.hurt = Math.max(0, (mt.hurt || 0) - dt); });
+  if (S.clock && S.clock.running) S.clock.left = Math.max(0, S.clock.left - dt); // smooth between snapshots; the leader's value wins
+  playerList().forEach(function (P) { if (P.hit > 0) P.hit = Math.max(0, P.hit - dt); if (P.inv > 0 && P.id !== S.me) P.inv = Math.max(0, P.inv - dt); });
+  S.mirror(); hudTick = (hudTick || 0) + dt; if (hudTick > .2) { hudTick = 0; renderHud(); }
+}
+let hudTick = 0, last = 0;
+function step(ts, draw) {
+  const raw = (ts - last) / 1000 || 0, dt = Math.min(.05, raw); last = ts;
+  if (S.role === 'host') { if (draw) obsFrame(dt, raw); return; }
+  if ((S.mode === 'play' || S.mode === 'boss') && S.quizOpen && S.sprint && !S.sprint.over) { S.sprint.tick(Math.min(raw, .5)); renderSprintHud(); if (S.sprint.over && !answered) endSprint(); }
+  if (S.round && !S.ended && (S.mode === 'play' || S.mode === 'boss')) {
+    const now = performance.now();
+    if (S.isLeader) {
+      if (S.clock) { S.clock.tick(dt); if (S.clock.over) timeUp(); }
+      const frozen = (S.quizOpen || S.shopOpen) && soloLike();
+      if (!S.ended) { if (S.mode === 'play') { if (!frozen) simUpdate(dt); } else if (S.mode === 'boss') bossTick(dt); }
+      ageFx(dt); S.t += S.mode === 'boss' ? dt : 0;
+      hudTick += dt; if (hudTick > .2) { hudTick = 0; renderHud(); if (S.mode === 'boss') renderBoss(); }
+      if (NET.team && now - NET.snapAt > 80) { NET.snapAt = now; sendSnap(); }
+    } else { clientUpdate(dt); ageFx(dt); if (S.mode === 'boss') { S.t += dt; } }
+    if (NET.team && !S.isLeader && now - NET.posAt > 80) { NET.posAt = now; const p = S.p; NET.team.send('pos', { id: S.me, x: r0(p.x), y: r0(p.y), f: Math.round(p.face * 100) / 100, ch: S.quiz.charge, sp: S.quizOpen && S.sprint ? 1 : 0 }, false); }
+    if (S.isLeader && S.role !== 'solo' && S.p) { S.p.charge = S.quiz.charge; S.p.protect = (S.quizOpen && S.sprint && !S.sprint.over) ? Math.max(S.p.protect, 1) : (S.p.protect > 1 ? 0 : S.p.protect); }
+  } else if (S.mode === 'menu' || S.mode === 'cut' || S.mode === 'lobby') S.t += dt;
+  if (!draw) return;
+  if (S.mode === 'play' || S.mode === 'boss' || S.mode === 'cut' || S.mode === 'end') render(); else { ctx.fillStyle = '#02040a'; ctx.fillRect(0, 0, VW, VH); cover(img(ASSET + 'web/void.jpg'), 0, 0, VW, VH, .5); }
+}
+
+// Frame driver. requestAnimationFrame stops in a hidden / unfocused tab, and the squad LEADER runs the shared sim for everyone, so a
+// worker timer keeps the sim (not the drawing) going at ~20 Hz whenever rAF has gone quiet.
+let lastRaf = 0;
+function frame(ts) { lastRaf = performance.now(); step(ts, true); requestAnimationFrame(frame); }
+(function () {
+  function bg() { if (performance.now() - lastRaf > 150) step(performance.now(), false); }
+  try { const w = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(1)},50)'], { type: 'text/javascript' }))); w.onmessage = bg; }
+  catch (e) { setInterval(bg, 100); }
+})();
+
+// ─── src/f_observer.js ───
+
+// ══════════════════════════ HOST OBSERVATION ══════════════════════════
+// The host does not play. They see (1) a higher-viewpoint "tactical" camera on one squad that ROTATES through every squad, and
+// (2) a DASHBOARD of every squad: the map grid with coloured circular tokens. Hosts also run the round clock (+1 / −1 minute).
+const OB = { teams: {}, view: 'rotate', focus: '', rotAt: 0, rotSec: 12, page: 0, scope: 'focus', hits: [], pinned: false, minis: {}, camX: 0, camY: 0, zoom: .5 };
+function obsInit() {
+  S.mode = 'observer'; setMode('observer'); S.map = null;
+  $('obsRot').onclick = function () { OB.view = 'rotate'; OB.pinned = false; obsUi(); }; $('obsDash').onclick = function () { OB.view = 'dash'; obsUi(); };
+  $('obsPrev').onclick = function () { obsStepFocus(-1, true); }; $('obsNext').onclick = function () { obsStepFocus(1, true); };
+  $('obsScope').onclick = function () { OB.scope = OB.scope === 'focus' ? 'all' : 'focus'; obsUi(); };
+  $('obsM1').onclick = function () { obsTimer(-60); }; $('obsP1').onclick = function () { obsTimer(60); };
+  $('obsStart').onclick = function () { NET.sess.send('startall', {}, true); toast('Asked every ready squad to launch'); };
+  $('obsExit').onclick = exitToArena;
+  cv.addEventListener('click', function (e) { const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * VW, y = (e.clientY - r.top) / r.height * VH; for (let i = OB.hits.length - 1; i >= 0; i--) { const h = OB.hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) { h.fn(); return; } } });
+  obsUi();
+}
+function obsTimer(d) {
+  const keys2 = OB.scope === 'all' || OB.view === 'dash' && OB.scope === 'all' ? ['*'] : [OB.focus]; if (!keys2[0]) return;
+  NET.sess.send('timer', { team: keys2[0], d: d }, true); toast((d > 0 ? '+1' : '−1') + ' minute sent to ' + (keys2[0] === '*' ? 'all squads' : (OB.teams[OB.focus] || {}).name));
+}
+function obsTeamList() { return Object.keys(OB.teams).map(function (k) { return OB.teams[k]; }).filter(function (t) { return performance.now() - t.seen < 8000 || t.snap && performance.now() - t.snapAt < 8000; }).sort(function (a, b) { return a.name < b.name ? -1 : 1; }); }
+function obsStepFocus(dir, pin) { const l = obsTeamList(); if (!l.length) return; let i = l.findIndex(function (t) { return t.key === OB.focus; }); i = (i + dir + l.length) % l.length; OB.focus = l[i].key; OB.rotAt = performance.now(); if (pin) { OB.pinned = true; OB.view = 'focus'; } obsUi(); }
+function obsUi() {
+  $('obsRot').classList.toggle('gold', OB.view === 'rotate'); $('obsDash').classList.toggle('gold', OB.view === 'dash');
+  $('obsScope').textContent = 'CLOCK: ' + (OB.scope === 'all' ? 'ALL SQUADS' : 'THIS SQUAD'); $('obsPinned').textContent = OB.view === 'focus' ? 'PINNED' : OB.view === 'rotate' ? 'ROTATING ' + OB.rotSec + 's' : 'DASHBOARD';
+  const l = obsTeamList(); $('obsTitle').textContent = 'OBSERVING · ' + (S.coop && S.coop.title ? S.coop.title : 'X-LIVE SESSION') + ' · ' + l.length + ' SQUAD' + (l.length === 1 ? '' : 'S');
+}
+function obsBeacon(p) {
+  if (!p || !p.team) return; const now = performance.now();
+  const t = OB.teams[p.team] || (OB.teams[p.team] = { key: p.team, name: p.name, mem: [], st: 'lobby', sec: 0, left: 0, lim: 600, sc: 0, seen: now, snap: null, smooth: { P: {}, E: {} } });
+  Object.assign(t, { name: p.name, mem: p.mem || [], st: p.st, sec: p.sec, left: p.left, lim: p.lim, sc: p.sc, seen: now, rd: p.rd });
+  if (p.st === 'play' && p.rd && t.joinedRd !== p.rd) { // join this squad's channel for full snapshots
+    if (t.chan) { t.chan.leave(); t.chan = null; }
+    t.joinedRd = p.rd; t.snap = null; t.map = null; t.chan = NET.hub.channel('t-' + S.coop.scope + '-' + t.key).on(function (e, d) { if (e === 'snap') obsSnap(t, d); else if (e === 'end') { t.ended = d; t.st = 'end'; } });
+  }
+  if (!OB.focus) OB.focus = t.key;
+}
+function obsSnap(t, sn) {
+  if (sn.rd !== t.rd) return; t.snap = sn; t.snapAt = performance.now();
+  if (!t.map || t.map.seed !== sn.sd) { t.map = L.buildWorldMap(sn.sd); t.mats = L.placeMaterials(t.map, L.mulberry32((sn.sd ^ 0x9e3779b9) >>> 0)); t.smooth = { P: {}, E: {} }; }
+  for (let i = 0; i < sn.g.length; i++) t.map.gateOpen[i] = sn.g[i] === '1';
+  sn.M.forEach(function (hp, i) { const m = t.mats[i]; if (!m) return; if (hp < 0) m.dead = true; else m.hp = hp; });
+  const k = 1;
+  sn.P.forEach(function (d) { const s = t.smooth.P[d.i] || (t.smooth.P[d.i] = { x: d.x, y: d.y }); s.tx = d.x; s.ty = d.y; });
+  const live = {}; sn.E.forEach(function (a) { live[a[0]] = 1; const s = t.smooth.E[a[0]] || (t.smooth.E[a[0]] = { x: a[2], y: a[3] }); s.tx = a[2]; s.ty = a[3]; });
+  Object.keys(t.smooth.E).forEach(function (id) { if (!live[id]) delete t.smooth.E[id]; });
+}
+function obsFrame(dt, raw) {
+  const now = performance.now(), list = obsTeamList(); S.t += dt;
+  list.forEach(function (t) { const k = 1 - Math.exp(-dt * 14); Object.keys(t.smooth.P).forEach(function (id) { const s = t.smooth.P[id]; s.x += (s.tx - s.x) * k; s.y += (s.ty - s.y) * k; }); Object.keys(t.smooth.E).forEach(function (id) { const s = t.smooth.E[id]; s.x += (s.tx - s.x) * k; s.y += (s.ty - s.y) * k; }); });
+  if (!OB.focus || !OB.teams[OB.focus]) { if (list[0]) OB.focus = list[0].key; }
+  if (OB.view === 'rotate' && list.length > 1 && now - OB.rotAt > OB.rotSec * 1000) { OB.rotAt = now; const playing = list.filter(function (t) { return t.snap; }); const pool = playing.length ? playing : list; const i = pool.findIndex(function (t) { return t.key === OB.focus; }); OB.focus = pool[(i + 1) % pool.length].key; }
+  OB.hits = []; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#02040a'; ctx.fillRect(0, 0, VW, VH);
+  if (!list.length) { ctx.fillStyle = '#7fd8ff'; ctx.font = '700 18px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Waiting for squads to open their lobby…', VW / 2, VH / 2); ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#9bb8d6'; ctx.fillText('Players launch Nexus Frontiers from this X-Live session; each squad appears here as it forms.', VW / 2, VH / 2 + 24); return; }
+  if (OB.view === 'dash') drawDashboard(list); else drawTactical(OB.teams[OB.focus] || list[0], list);
+  if ((performance.now() | 0) % 1000 < 60) obsUi();
+}
+function ctoken(x, y, r, color, label, o) { // the coloured circular token
+  o = o || {}; ctx.globalAlpha = o.a == null ? 1 : o.a; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  ctx.strokeStyle = o.ring || 'rgba(255,255,255,.9)'; ctx.lineWidth = o.lw || Math.max(1, r * .18); ctx.stroke();
+  if (label && r >= 6) { ctx.fillStyle = '#02101c'; ctx.font = '800 ' + Math.round(r * 1.1) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + 1); ctx.textBaseline = 'alphabetic'; }
+  ctx.globalAlpha = 1;
+}
+function withTeam(t, fn) { // lend the shared world drawing code this squad's map
+  const keep = { map: S.map, mats: S.mats, portal: S.portal, orbs: S.orbs, bossDone: S.bossDone }, sn = t.snap;
+  S.map = t.map; S.mats = t.mats; S.portal = sn.po ? { x: sn.po[0], y: sn.po[1] } : null; S.orbs = sn.O.map(function (a) { return { id: a[0], x: a[1], y: a[2], life: a[3] }; }); S.bossDone = !!sn.bd;
+  try { fn(sn); } finally { Object.assign(S, { map: keep.map, mats: keep.mats, portal: keep.portal, orbs: keep.orbs, bossDone: keep.bossDone }); }
+}
+function memberName(t, id) { const m = (t.mem || []).filter(function (x) { return x.id === id; })[0]; return m ? m.name : ''; }
+function drawTactical(t, list) {
+  if (!t.snap || !t.map) { ctx.fillStyle = '#9bb8d6'; ctx.font = '700 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText((t.name || 'SQUAD').toUpperCase() + ' — ' + (t.st === 'lobby' ? 'in the lobby (' + (t.mem || []).length + ' players)' : 'connecting…'), VW / 2, VH / 2); drawTeamChips(list, 64); return; }
+  withTeam(t, function (sn) {
+    const ps = sn.P.filter(function (d) { return !(d.f & 4); }); const pts = (ps.length ? ps : sn.P).map(function (d) { const s = t.smooth.P[d.i] || d; return s; });
+    const cx = pts.reduce(function (a, p) { return a + (p.x); }, 0) / (pts.length || 1), cy = pts.reduce(function (a, p) { return a + (p.y); }, 0) / (pts.length || 1);
+    // zoom out far enough to hold the whole squad, never closer than 0.5 (≈ 2× the player view)
+    let spanX = 0, spanY = 0; pts.forEach(function (p) { spanX = Math.max(spanX, Math.abs(p.x - cx)); spanY = Math.max(spanY, Math.abs(p.y - cy)); });
+    const z = Math.max(.28, Math.min(.5, Math.min(VW * .42 / Math.max(1, spanX), VH * .38 / Math.max(1, spanY), .5)));
+    OB.zoom += (z - OB.zoom) * .08; OB.camX += (cx - OB.camX) * .1; OB.camY += (cy - OB.camY) * .1;
+    const vw = VW / OB.zoom, vh = VH / OB.zoom, x0 = OB.camX - vw / 2, y0 = OB.camY - vh / 2;
+    ctx.save(); ctx.scale(OB.zoom, OB.zoom); ctx.translate(-x0, -y0);
+    drawWorld(x0, y0, vw, vh);
+    sn.C.forEach(function (c) { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(c[1], c[2], 6, 0, 7); ctx.fill(); });
+    const E = sn.E.map(function (a) { const s = t.smooth.E[a[0]] || { x: a[2], y: a[3] }; const type = ETYPES[a[1]]; const e = { id: a[0], type: type, x: s.x, y: s.y, hp: a[4], max: a[5], spawnT: a[7], state: ESTATES[a[6]], tx: a[8], ty: a[9], hurt: 0, r: DEF[type].r, petals: null }; if (type === 'sentry') { const q = a[10] || []; e.petals = q.map(function (z2) { return { hp: z2[1], max: z2[2], px: s.x + Math.cos(z2[0]) * 40, py: s.y + Math.sin(z2[0]) * 40 }; }); } return e; });
+    drawEnemies(E, S.t);
+    sn.Sh.forEach(function (s2) { ctx.fillStyle = '#9ff'; ctx.beginPath(); ctx.arc(s2[0], s2[1], 5, 0, 7); ctx.fill(); });
+    sn.P.forEach(function (d) { // Evos as coloured circular tokens (studio colour) with a name tag
+      const s = t.smooth.P[d.i] || d, mem = (t.mem || []).filter(function (x) { return x.id === d.i; })[0], st = mem ? mem.studio : 'unknown', col = L.STUDIO_COLORS[st] || '#7fd8ff', nm = (mem ? mem.name : d.i) || '?';
+      ctx.globalAlpha = d.f & 4 ? .3 : 1; ctoken(s.x, s.y, 17, col, nm.slice(0, 1).toUpperCase(), { ring: d.f & 16 ? '#ffd740' : '#fff', lw: 4 });
+      ctx.fillStyle = col; ctx.font = '800 15px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(nm.slice(0, 12), s.x, s.y - 26); bar(s.x, s.y + 24, 40, d.v, d.m, col); ctx.globalAlpha = 1;
+    });
+    ctx.restore();
+    // heads-up strip
+    ctx.fillStyle = 'rgba(4,8,22,.82)'; ctx.fillRect(0, 56, VW, 40); ctx.strokeStyle = 'rgba(0,229,255,.4)'; ctx.strokeRect(.5, 56.5, VW - 1, 39);
+    ctx.fillStyle = '#fff'; ctx.font = '800 16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText((t.name || '').toUpperCase(), 14, 81);
+    ctx.fillStyle = '#9bb8d6'; ctx.font = '600 13px sans-serif'; ctx.fillText(sn.ob[0] + (sn.md === 'b' ? ' · ELITE FIGHT' : ''), 14 + Math.min(260, ctx.measureText((t.name || '').toUpperCase()).width * 1.5 + 14), 81);
+    const left = sn.ck ? sn.ck[0] : 0; ctx.textAlign = 'right'; ctx.fillStyle = left < 60 ? '#ff7b92' : '#ffd740'; ctx.font = '800 22px monospace'; ctx.fillText(sn.ck ? Math.floor(left / 60) + ':' + String(Math.ceil(left % 60) % 60).padStart(2, '0') : '—', VW - 14, 83);
+    ctx.fillStyle = '#9bb8d6'; ctx.font = '700 12px sans-serif'; ctx.fillText('SCORE ' + sn.sc + ' · SECTIONS ' + sn.sec + '/6', VW - 100, 80);
+    drawTeamChips(list, VH - 44);
+  });
+}
+function drawTeamChips(list, y) { // quick pick of any squad
+  let x = 10; list.forEach(function (t) {
+    const w = Math.max(120, ctx.measureText(t.name).width + 30), on = t.key === OB.focus; ctx.fillStyle = on ? 'rgba(255,215,64,.18)' : 'rgba(4,8,22,.8)'; ctx.fillRect(x, y, w, 32); ctx.strokeStyle = on ? '#ffd740' : 'rgba(255,255,255,.2)'; ctx.strokeRect(x + .5, y + .5, w - 1, 31);
+    ctx.fillStyle = on ? '#ffd740' : '#cfe'; ctx.font = '800 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(t.name.slice(0, 18), x + 8, y + 14); ctx.fillStyle = '#9bb8d6'; ctx.font = '600 10px sans-serif'; ctx.fillText((t.st === 'play' ? 'SEC ' + t.sec + '/6 · ' + fmtT(t.left) : t.st === 'end' ? 'FINISHED' : 'LOBBY · ' + (t.mem || []).length), x + 8, y + 27);
+    (function (tt, xx, ww) { OB.hits.push({ x: xx, y: y, w: ww, h: 32, fn: function () { OB.focus = tt.key; OB.pinned = true; OB.view = 'focus'; OB.rotAt = performance.now(); obsUi(); } }); })(t, x, w);
+    x += w + 8;
+  });
+}
+function fmtT(s) { s = Math.max(0, Math.ceil(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+// ── dashboard: one strip per squad — map grid + coloured circular tokens ──
+function miniFor(t, w, hMax) { // w×hMax box: the map is fitted inside it (uniform scale) so tokens line up exactly
+  const m = t.map, s = Math.min(w / m.W, hMax / m.H), key = t.map.seed + ':' + Math.round(s * 1000); if (OB.minis[key]) return OB.minis[key];
+  const c = document.createElement('canvas'); c.width = Math.ceil(m.W * s); c.height = Math.ceil(m.H * s); c._s = s; const g = c.getContext('2d');
+  g.fillStyle = '#04060f'; g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = 'rgba(0,229,255,.09)'; g.lineWidth = 1; g.beginPath(); for (let x = 0; x <= m.W; x += 4) { g.moveTo(x * s, 0); g.lineTo(x * s, c.height); } for (let y = 0; y <= m.H; y += 4) { g.moveTo(0, y * s); g.lineTo(c.width, y * s); } g.stroke(); // the map grid
+  g.fillStyle = '#0b1636'; for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) { if (m.grid[y * m.W + x] !== 1) g.fillRect(x * s, y * s, Math.ceil(s), Math.ceil(s)); }
+  g.strokeStyle = 'rgba(0,229,255,.6)'; g.lineWidth = 1; m.rooms.forEach(function (r) { g.strokeRect(r.x * s + .5, r.y * s + .5, r.w * s, r.h * s); });
+  OB.minis[key] = c; return c;
+}
+function drawDashboard(list) {
+  const top = 62, rowH = 94, per = 5, pages = Math.max(1, Math.ceil(list.length / per)); OB.page = Math.min(OB.page, pages - 1);
+  const shown = list.slice(OB.page * per, OB.page * per + per);
+  shown.forEach(function (t, i) {
+    const y = top + i * rowH, h = rowH - 6; ctx.fillStyle = 'rgba(4,8,22,.9)'; ctx.fillRect(8, y, VW - 16, h); ctx.strokeStyle = t.key === OB.focus ? '#ffd740' : 'rgba(0,229,255,.3)'; ctx.strokeRect(8.5, y + .5, VW - 17, h - 1);
+    ctx.fillStyle = '#fff'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(t.name.toUpperCase().slice(0, 20), 16, y + 18);
+    const left = t.snap && t.snap.ck ? t.snap.ck[0] : t.left, st = t.st;
+    ctx.fillStyle = left < 60 && st === 'play' ? '#ff7b92' : '#ffd740'; ctx.font = '800 20px monospace'; ctx.fillText(st === 'lobby' ? 'LOBBY' : st === 'end' ? 'DONE' : fmtT(left), 16, y + 44);
+    ctx.fillStyle = '#9bb8d6'; ctx.font = '600 11px sans-serif'; ctx.fillText('SECTION ' + Math.min(6, (t.snap ? t.snap.sec : t.sec) + 1) + ' / 6 · SCORE ' + (t.snap ? t.snap.sc : t.sc), 16, y + 62);
+    // clock buttons (this squad only)
+    [['−1', -60, 16], ['+1', 60, 62]].forEach(function (b) { ctx.fillStyle = 'rgba(0,229,255,.12)'; ctx.fillRect(b[2], y + 68, 40, 18); ctx.strokeStyle = 'rgba(0,229,255,.55)'; ctx.strokeRect(b[2] + .5, y + 68.5, 40, 18); ctx.fillStyle = '#e6f7ff'; ctx.font = '800 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(b[0] + ' MIN', b[2] + 20, y + 80); (function (tt, d, xx) { OB.hits.push({ x: xx, y: y + 68, w: 40, h: 18, fn: function () { NET.sess.send('timer', { team: tt.key, d: d }, true); toast((d > 0 ? '+1' : '−1') + ' minute → ' + tt.name); } }); })(t, b[1], b[2]); });
+    OB.hits.push({ x: 8, y: y, w: 120, h: 64, fn: function () { OB.focus = t.key; OB.view = 'focus'; OB.pinned = true; obsUi(); } });
+    // map
+    let mx = 150; const mw = 600;
+    if (t.snap && t.map) {
+      const mini = miniFor(t, mw, h - 4), s = mini._s, mx2 = mx + (mw - mini.width) / 2; ctx.drawImage(mini, mx2, y + 2); const oy = y + 2; const mxs = mx; mx = mx2;
+      t.map.gates.forEach(function (g, gi) { ctx.fillStyle = t.map.gateOpen[gi] ? 'rgba(0,229,255,.35)' : 'rgba(255,60,110,.9)'; ctx.fillRect(mx + g.col * s - 1, oy + g.row * s, 2, 3 * s); });
+      const bn = t.map.bossNode; ctx.strokeStyle = t.snap.bd ? '#7dffb4' : 'rgba(255,60,110,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mx + bn.x / T * s, oy + bn.y / T * s, 5, 0, 7); ctx.stroke();
+      t.snap.E.forEach(function (a) { const sm = t.smooth.E[a[0]] || { x: a[2], y: a[3] }; ctoken(mx + sm.x / T * s, oy + sm.y / T * s, a[1] === 2 ? 4 : a[1] === 1 ? 3 : 2.2, a[1] === 2 ? '#ff9f0a' : a[1] === 1 ? '#ff6b8a' : '#8fd6ff', null, { lw: 0 }); });
+      t.snap.P.forEach(function (d) { const sm = t.smooth.P[d.i] || d, mem = (t.mem || []).filter(function (x) { return x.id === d.i; })[0], col = L.STUDIO_COLORS[mem ? mem.studio : 'unknown'] || '#7fd8ff'; ctoken(mx + sm.x / T * s, oy + sm.y / T * s, 5.5, col, null, { a: d.f & 4 ? .3 : 1, ring: d.f & 16 ? '#ffd740' : '#fff', lw: 1.6 }); });
+    } else { ctx.fillStyle = '#9bb8d6'; ctx.font = '600 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(st === 'lobby' ? 'In the lobby — waiting to launch' : 'Waiting for the first snapshot…', mx + mw / 2, y + h / 2); }
+    // members
+    mx = 150; const px = mx + mw + 12; (t.snap ? t.snap.P.map(function (d) { const mem = (t.mem || []).filter(function (x) { return x.id === d.i; })[0] || {}; return { name: mem.name || d.i, studio: mem.studio, v: d.v, m: d.m, down: d.f & 4, link: d.f & 16 }; }) : (t.mem || []).map(function (m2) { return { name: m2.name, studio: m2.studio, v: 1, m: 1 }; })).slice(0, 4).forEach(function (m3, k) {
+      const yy = y + 8 + k * 20, col = L.STUDIO_COLORS[m3.studio] || '#7fd8ff'; ctoken(px + 6, yy + 8, 5, col, null, { lw: 1 }); ctx.fillStyle = m3.down ? '#6b7a96' : '#dfe9ff'; ctx.font = '700 10px sans-serif'; ctx.textAlign = 'left'; ctx.fillText((m3.name || '').slice(0, 11) + (m3.link ? ' ◉' : '') + (m3.down ? ' ✕' : ''), px + 16, yy + 11); bar(px + 150 - 38, yy + 5, 38, m3.v, m3.m, col);
+    });
+  });
+  // page controls + legend
+  ctx.fillStyle = '#9bb8d6'; ctx.font = '600 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('Tokens: coloured circle = Evo (studio colour) · blue/pink/orange dots = Scouts / Interceptors / Sentries · red bar = sealed gate', 14, VH - 8);
+  if (pages > 1) { [['◀', -1, VW - 90], ['▶', 1, VW - 50]].forEach(function (b) { ctx.fillStyle = 'rgba(0,229,255,.15)'; ctx.fillRect(b[2], VH - 30, 34, 22); ctx.fillStyle = '#e6f7ff'; ctx.textAlign = 'center'; ctx.fillText(b[0], b[2] + 17, VH - 14); (function (d, xx) { OB.hits.push({ x: xx, y: VH - 30, w: 34, h: 22, fn: function () { OB.page = (OB.page + d + pages) % pages; } }); })(b[1], b[2]); }); ctx.textAlign = 'right'; ctx.fillText((OB.page + 1) + '/' + pages, VW - 98, VH - 14); }
+}
+
+// ─── src/g_hooks.js ───
 
 // ── Test hooks (only with ?test=1) ──
+function stepSim(dt) { // advance the leader's sim exactly like the frame loop does (tests drive time by hand)
+  if (S.mode === 'cut') cutAdvance(true);
+  if (!S.round || S.ended) return;
+  if (S.mode === 'play' && !((S.quizOpen || S.shopOpen) && soloLike())) simUpdate(dt); else if (S.mode === 'boss') bossTick(dt);
+  if (S.clock) { S.clock.tick(dt); if (S.clock.over) timeUp(); }
+  ageFx(dt); S.mirror(); renderHud();
+}
 if (TEST) window.__nf = {
-  S: S, L: L, bossState: bossState,
-  tp: function (x, y) { S.p.x = x; S.p.y = y; }, mode: function () { return S.mode; }, skipCut: function () { cutAdvance(true); },
-  stepFor: function (sec) { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) { if (S.mode === 'cut') cutAdvance(true); if (S.mode === 'play' && !S.quizOpen && !S.shopOpen) update(1 / 60); } },
+  S: S, L: L, NET: NET, OB: typeof OB !== 'undefined' ? OB : null, bossState: bossState,
+  tp: function (x, y) { S.p.x = x; S.p.y = y; S.p.tx = x; S.p.ty = y; }, mode: function () { return S.mode; }, skipCut: function () { cutAdvance(true); },
+  stepFor: function (sec) { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) stepSim(1 / 60); },
   breakAll: function () { S.mats.forEach(function (m2) { damageMat(m2, 99); }); }, awardRun: awardRun, godmode: function () { S.p.maxVit = 1e6; S.p.vit = 1e6; },
   answerCorrect: function () { if (!S.quizOpen) return null; const a = curAttempt; const r = S.quiz.answer(a.id, a._correctId, 5); S.p.charge = S.quiz.charge; if (S.sprint) { S.sprint.record(r.correct); answered = true; renderSprintHud(); renderHud(); if (S.sprint.over) endSprint(); else renderQuestion(); return r; } closeQuiz(); return r; },
   fillAmmo: function (f) { S.meter.setFill(f); S.quiz.setMeter(S.meter); renderHud(); },
-  eq: function () { return S.eq; }, meter: function () { return S.meter; }, sprint: function () { return S.sprint; }, setPicks: function (l) { S.ld.picks = l; }, openLoadout: openLoadout, openShop: openShop, shopBuy: shopBuy, leaveSprint: leaveSprint, evoDown: evoDown, hurt: hurtPlayer, saveProgress: saveProgress, roundOver: roundOver, sprintTick: function (sec) { if (S.sprint) { S.sprint.tick(sec); renderSprintHud(); if (S.sprint.over && !answered) endSprint(); } },
-  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossAct: bossAct, bossWin: bossWin
+  eq: function () { return S.p && S.p.eq; }, meter: function () { return S.meter; }, sprint: function () { return S.sprint; }, setPicks: function (l) { S.ld.picks = l; }, openLoadout: openLoadout, openShop: openShop, shopBuy: shopBuy, leaveSprint: leaveSprint,
+  evoDown: function () { return evoDown(S.p); }, hurt: function (d, src) { return hurtPlayer(S.p, d, src); }, saveProgress: saveProgress, roundOver: roundOver, sprintTick: function (sec) { if (S.sprint) { S.sprint.tick(sec); renderSprintHud(); if (S.sprint.over && !answered) endSprint(); } },
+  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossWin: bossWin, startBoss: startBoss, enterBoss: enterBoss,
+  hurtId: function (id, d) { const P = S.players[id]; if (P) { P.hurtCd = 0; P.inv = 0; P.protect = 0; hurtPlayer(P, d, 't'); } }, strip: function (id) { const P = S.players[id]; if (P && P.eq) { P.eq.abilityLeft = 0; P.eq.list = []; P.eq.inv = []; P.eq.aegisHits = 0; } }, addXc: function (id, n) { const P = S.players[id]; if (P) P.xc += n; S.mirror(); },
+  playerList: playerList, doBuy: doBuy, handleAct: handleAct, netAct: netAct, members: members, lobbyCheck: lobbyCheck, leaderId: leaderId, backToLobby: backToLobby, stepSim: stepSim,
+  snapNow: function () { return encodeSnap && encodeSnap(); }
 };
+requestAnimationFrame(frame);
 })();
+
 </script>
 </body>
 </html>

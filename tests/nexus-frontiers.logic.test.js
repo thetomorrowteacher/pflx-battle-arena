@@ -169,10 +169,10 @@ t('quiz deck + meter: correct fills the meter, wrong does not, charge mirrors pi
   assert.ok(q.spend(1)); assert.strictEqual(q.charge, 0); assert.ok(!q.spend(1));
 });
 t('difficulty: EXPERT area 1 is exactly the stage-5 wave distribution; every new stage is bigger or tougher', () => {
-  assert.deepStrictEqual(L.encounterFor('expert', 0, 1), L.W01_ENCOUNTERS[4]);
+  assert.deepStrictEqual(Object.assign({}, L.encounterFor('expert', 0, 1), { escort: undefined }), Object.assign({}, L.W01_ENCOUNTERS[4], { escort: undefined })); // escorts are additive
   for (const d of Object.keys(L.DIFFS)) { let prevPop = 0, prevHp = 0; for (let a = 0; a < 6; a++) { const e = L.encounterFor(d, a, 1), pop = e.waves * e.size, hp = L.hpMul(L.stageScale(d, a), 1); assert.ok(pop >= prevPop, d + ' pop'); assert.ok(hp > prevHp, d + ' hp'); prevPop = pop; prevHp = hp; } }
   for (let a = 0; a < 6; a++) { const p = ['cadet', 'ranger', 'veteran', 'expert'].map(d => { const e = L.encounterFor(d, a, 1); return e.waves * e.size; }); for (let i = 1; i < 4; i++) assert.ok(p[i] >= p[i - 1], 'harder difficulty never has fewer Archives (area ' + (a + 1) + ')'); }
-  assert.deepStrictEqual(L.encounterFor('cadet', 0, 1), L.W01_ENCOUNTERS[0]); // Cadet keeps the learning room
+  assert.deepStrictEqual(Object.assign({}, L.encounterFor('cadet', 0, 1), { escort: undefined }), Object.assign({}, L.W01_ENCOUNTERS[0], { escort: undefined })); // Cadet keeps the learning room
   assert.ok(L.encounterFor('expert', 5, 1).waves <= 10 && L.encounterFor('expert', 5, 4).size <= 30);
 });
 t('team of 4: more Archives and tougher bars, scaled per difficulty; the cap grows too', () => {
@@ -210,5 +210,63 @@ t('boosters: 10 s, triple / nova / star; drop odds by enemy, Star Seeker doubles
   let hits = { scout: 0, interceptor: 0 }, seek = 0; const r = L.mulberry32(11); for (let i = 0; i < 20000; i++) { if (L.boosterDrop('scout', r, false)) hits.scout++; if (L.boosterDrop('interceptor', r, false)) hits.interceptor++; if (L.boosterDrop('scout', r, true)) seek++; }
   assert.ok(Math.abs(hits.scout / 20000 - .04) < .01 && Math.abs(hits.interceptor / 20000 - .15) < .015 && Math.abs(seek / 20000 - .08) < .012);
   for (let i = 0; i < 50; i++) assert.ok(L.boosterDrop('sentry', r, false)); assert.strictEqual(L.boosterDrop('boss', r, false), null);
+});
+
+// ── Co-op (Oct 2026) ──
+t('sentry wave brings Scout escorts: never a lone Sentry, escorts skip the 7:1 bag, clear needs all of them', () => {
+  const e = new L.Encounter({ waves: 3, size: 2, interceptors: true, sentryAfter: [3], escort: 4 }, L.mulberry32(9));
+  for (let w = 0; w < 3; w++) { e.begin('wave'); while (e.pending) e.confirmSpawn(); while (e.alive) e.onDefeat('scout'); }
+  const bagBefore = e.bag.committed.scout + e.bag.committed.interceptor;
+  assert.strictEqual(e.readyKind(), 'sentry'); e.begin('sentry'); assert.strictEqual(e.pending, 5);
+  const seq = []; while (e.pending) { seq.push(e.requestSpawn()); e.confirmSpawn(); }
+  assert.deepStrictEqual(seq, ['sentry', 'scout', 'scout', 'scout', 'scout']);
+  assert.strictEqual(e.bag.committed.scout + e.bag.committed.interceptor, bagBefore, 'escorts must not consume the bag');
+  e.onDefeat('sentry'); assert.strictEqual(e.cleared(), false, 'escorts still alive'); for (let i = 0; i < 4; i++) e.onDefeat('scout'); assert.strictEqual(e.cleared(), true);
+  assert.strictEqual(e.spawnedTypes.sentry, 1); assert.strictEqual(e.spawnedTypes.scout >= 4, true);
+});
+t('legacy cfg without escort still spawns a lone sentry (old behaviour preserved for tests)', () => {
+  const e = new L.Encounter({ waves: 1, size: 1, interceptors: false, sentryAfter: [1] }, L.mulberry32(3)); e.begin('wave'); e.confirmSpawn(); e.onDefeat('scout'); e.begin('sentry'); assert.strictEqual(e.pending, 1);
+});
+t('encounterFor: escorts only where a sentry exists, grow with stage and team', () => {
+  assert.strictEqual(L.encounterFor('cadet', 0, 2).escort, 0);
+  for (const d of Object.keys(L.DIFFS)) for (let a = 1; a < 6; a++) { const e = L.encounterFor(d, a, 4); if (e.sentryAfter.length) assert.ok(e.escort >= 2 && e.escort <= 16); else assert.strictEqual(e.escort, 0); }
+  assert.ok(L.encounterFor('veteran', 2, 4).escort > L.encounterFor('veteran', 2, 2).escort);
+});
+t('lobbyCheck: 2+ ready, one per studio; solo only when the host allows it', () => {
+  const R = L.coopRules({});
+  const m = (id, s, ready, online) => ({ id, studioId: s, ready, online: online !== false });
+  assert.strictEqual(L.lobbyCheck([m('a', 'gentech', true)], R).ok, false);
+  assert.strictEqual(L.lobbyCheck([m('a', 'gentech', true), m('b', 'innov8', true)], R).ok, true);
+  const dup = L.lobbyCheck([m('a', 'gentech', true), m('b', 'studio-gentech', true)], R); assert.strictEqual(dup.ok, false); assert.deepStrictEqual(dup.dupStudios, ['gentech']);
+  assert.strictEqual(L.lobbyCheck([m('a', 'gentech', true), m('b', 'gentech', true)], L.coopRules({ nfStudioRule: 'relaxed' })).ok, true);
+  assert.strictEqual(L.lobbyCheck([m('a', 'gentech', true), m('b', 'innov8', false)], R).ok, false, 'a not-ready player does not count');
+  assert.strictEqual(L.lobbyCheck([m('a', 'gentech', true), m('b', 'innov8', true, false)], R).ok, false, 'an offline player does not count');
+  assert.strictEqual(L.lobbyCheck([m('a', 'gentech', true)], L.coopRules({ nfAllowSolo: true })).ok, true);
+  assert.strictEqual(L.lobbyCheck([m('a', '', true), m('b', '', true)], R).ok, true, 'unknown studios never conflict');
+  assert.strictEqual(L.lobbyCheck(['gentech', 'mindforge', 'emagination', 'innov8', 'gentech'].map((s, i) => m('p' + i, s, true)), R).ok, false, 'max 4');
+  assert.strictEqual(L.lobbyCheck([m('a', 'gentech', true), m('b', 'innov8', true), m('c', 'mindforge', false)], R).ok, true);
+});
+t('coopRules: round length 1..10 min (default 10), strict by default', () => {
+  assert.strictEqual(L.coopRules({}).roundSec, 600); assert.strictEqual(L.coopRules({ nfRoundMin: 7 }).roundSec, 420); assert.strictEqual(L.coopRules({ nfRoundMin: 99 }).roundSec, 600); assert.strictEqual(L.coopRules({ nfRoundMin: 0 }).roundSec, 60);
+  assert.strictEqual(L.coopRules({}).studioRule, 'strict'); assert.strictEqual(L.coopRules({}).minPlayers, 2);
+});
+t('assignTeams: X-Live squads win, open squads are one-studio-each, locked players never move, deterministic', () => {
+  const P = (id, s, sq) => ({ id, studioId: s, squad: sq });
+  const players = [P('p4', 'innov8'), P('p1', 'gentech', 'NOVA'), P('p2', 'mindforge', 'NOVA'), P('p3', 'gentech'), P('p5', 'emagination'), P('p6', 'gentech')];
+  const a = L.assignTeams(players, {}), b = L.assignTeams(players.slice().reverse(), {});
+  assert.deepStrictEqual(a, b, 'order independent');
+  const nova = a.find(t => t.name === 'NOVA'); assert.deepStrictEqual(nova.members.sort(), ['p1', 'p2']);
+  const opens = a.filter(t => !t.squad); opens.forEach(t => { const ss = t.members.map(id => players.find(p => p.id === id).studioId); assert.strictEqual(new Set(ss).size, ss.length, 'one studio each: ' + ss); assert.ok(t.members.length <= 4); });
+  assert.strictEqual(a.reduce((n, t) => n + t.members.length, 0), 6);
+  const locked = { p3: 'open-1' }; const c = L.assignTeams(players, locked); assert.ok(c.find(t => t.key === 'open-1').members.indexOf('p3') >= 0);
+  const big = L.assignTeams(['a', 'b', 'c', 'd', 'e'].map(i => P(i, 'gentech', 'X')), {}); assert.ok(big.every(t => t.members.length <= 4)); assert.strictEqual(big.length, 2);
+});
+t('RoundClock: <=10 min, +1/-1 minute live, ceiling, time-up', () => {
+  const c = new L.RoundClock(9999); assert.strictEqual(c.limit, 600); c.start(); c.tick(30); assert.strictEqual(Math.round(c.left), 570);
+  c.adjust(60); assert.strictEqual(Math.round(c.left), 630); c.adjust(-60); c.adjust(-60); assert.strictEqual(Math.round(c.left), 510);
+  c.adjust(9999); assert.strictEqual(Math.round(c.left), 570, 'one step per press'); for (let i = 0; i < 40; i++) c.adjust(60); assert.strictEqual(c.left, 1200, 'ceiling');
+  const d = new L.RoundClock(90); d.start(); d.tick(40); d.adjust(-60); assert.strictEqual(d.left, 0); assert.strictEqual(d.over, true); assert.strictEqual(d.tick(1), 0);
+  const e = new L.RoundClock(60); e.start(); e.tick(59.5); assert.strictEqual(e.over, false); e.tick(1); assert.strictEqual(e.over, true); assert.strictEqual(e.fmt(), '0:00');
+  assert.strictEqual(new L.RoundClock(425).fmt(), '7:05'); assert.deepStrictEqual(L.timeoutOutcome(3, false), { saved: 3, bossDone: false, reason: 'time' });
 });
 console.log('\n' + n + ' tests passed');

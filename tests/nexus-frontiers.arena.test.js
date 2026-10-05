@@ -13,9 +13,9 @@ function harness() {
     state: { player: { id: 'p1', xc: 100 } }, arenaGame: { open: true, frame: { contentWindow: { postMessage: m => sent.push(m) } }, opts: { sessionId: 's1' } },
     baSessions: { byId: id => id === 's1' ? { id: 's1', seasonMode: true, seasonId: 'fall' } : null },
     supabaseLoad: async k => db[k] === undefined ? null : JSON.parse(JSON.stringify(db[k])), supabaseSave: async (k, v) => { if (env.failSave) return false; db[k] = JSON.parse(JSON.stringify(v)); return true; },
-    exoSpend: (amt) => { if (env.state.player.xc < amt) return false; env.state.player.xc -= amt; return true; }, arenaPostAward: (pid, a) => awards.push(a)
+    exoSpend: (amt) => { if (env.state.player.xc < amt) return false; env.state.player.xc -= amt; return true; }, arenaPostAward: (pid, a) => awards.push(a), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_KEY: 'anon-key'
   };
-  const f = new Function('env', 'with (env) {' + block + '\n return { NF_MARKET, nfMergeTeam, nfApplyConsumed, nfScopeFor, nfHandleBuy, nfHandleSave, nfLoadState, nfClamp }; }')(env);
+  const f = new Function('env', 'with (env) {' + block + '\n return { NF_MARKET, nfMergeTeam, nfApplyConsumed, nfScopeFor, nfHandleBuy, nfHandleSave, nfLoadState, nfClamp, nfCoopRules, nfSquadFor, nfCoopContext, nfHandleScope, nfSessionTagsHtml }; }')(env);
   return { f, db, sent, awards, env };
 }
 (async () => {
@@ -59,7 +59,7 @@ function harness() {
     const h = harness(); await h.f.nfHandleSave({ scope: '../../evil key!', cleared: 1, final: false }); assert.ok(Object.keys(h.db).every(k => /^[A-Za-z0-9_\-]+$/.test(k)));
   });
   await t('Studio: host settings exist for Nexus Frontiers, are saved into the game/session config, and non-NF games are untouched', () => {
-    ['stNfDiff', 'stNfTeam', 'stNfMeter', 'stNfShop'].forEach(id => assert.ok(arena.includes('id="' + id + '"'), id));
+    ['stNfDiff', 'stNfRound', 'stNfSolo', 'stNfStudio', 'stNfMeter', 'stNfShop'].forEach(id => assert.ok(arena.includes('id="' + id + '"'), id));
     assert.ok(/nfDifficulty: studioSelTemplate === 'nexus-frontiers'/.test(arena)); assert.ok(/if \(c\.template === 'nexus-frontiers'\) \{ o\.nfDifficulty/.test(arena));
     assert.ok(/set\('stNfDiff'/.test(arena) && /set\('stNfShop'/.test(arena));
   });
@@ -67,5 +67,36 @@ function harness() {
     assert.ok(/nf: nf \|\| null/.test(arena)); assert.ok(/else sendDeck\(null\)/.test(arena)); assert.ok(/pflx_arena_nf_buy/.test(arena) && /pflx_arena_game_save/.test(arena));
     assert.ok(/pflx_arena_nf_state/.test(game) && /pflx_arena_game_save/.test(game) && /pflx_arena_nf_buy/.test(game));
   });
+  // ── Co-op (v0.3) ──
+  await t('co-op rules: round time clamps to 1–10 min (default 10), 1-player squads and same-studio teammates are opt-in', () => {
+    const { f } = harness();
+    assert.deepStrictEqual(f.nfCoopRules(null), { nfRoundMin: 10, nfAllowSolo: false, nfStudioRule: 'strict' });
+    assert.deepStrictEqual(f.nfCoopRules({ nfRoundMin: 45, nfAllowSolo: true, nfStudioRule: 'relaxed' }), { nfRoundMin: 10, nfAllowSolo: true, nfStudioRule: 'relaxed' });
+    assert.strictEqual(f.nfCoopRules({ nfRoundMin: 0 }).nfRoundMin, 1); assert.strictEqual(f.nfCoopRules({ nfRoundMin: 6 }).nfRoundMin, 6); assert.strictEqual(f.nfCoopRules({ nfAllowSolo: 'yes' }).nfAllowSolo, false);
+  });
+  await t('co-op context: players get their X-Live squad, hosts get the observer role; nothing without a session', () => {
+    const { f } = harness(), sess = { id: 'sess_ab12', title: 'Fall Forward', config: { nfRoundMin: 8 } }, lite = { teams: { names: ['Alpha'], assign: { p1: 'Alpha' } } };
+    const pl = f.nfCoopContext({ coop: true, sessionId: 'sess_ab12' }, sess, { id: 'p1' }, lite);
+    assert.strictEqual(pl.role, 'player'); assert.strictEqual(pl.squad, 'Alpha'); assert.strictEqual(pl.scope, 'sess_ab12'); assert.strictEqual(pl.rules.nfRoundMin, 8); assert.deepStrictEqual(pl.net, { url: 'https://x.supabase.co', key: 'anon-key' });
+    const ho = f.nfCoopContext({ coop: true, observe: true, sessionId: 'sess_ab12' }, sess, { id: 'host' }, lite); assert.strictEqual(ho.role, 'host'); assert.strictEqual(ho.squad, '');
+    assert.strictEqual(f.nfCoopContext({ coop: true, sessionId: 'sess_ab12' }, sess, { id: 'zz' }, lite).squad, ''); // not assigned → the cartridge forms an open squad
+    assert.strictEqual(f.nfCoopContext({ sessionId: 'sess_ab12' }, sess, { id: 'p1' }, lite), null); assert.strictEqual(f.nfCoopContext({ coop: true }, null, { id: 'p1' }, lite), null);
+    assert.strictEqual(f.nfSquadFor({ teams: { assign: { p1: 5 } } }, 'p1'), ''); assert.strictEqual(f.nfSquadFor(null, 'p1'), '');
+  });
+  await t('squad scope: the cartridge asks for ITS squad\'s checkpoint and gets that record + the player\'s stock back', async () => {
+    const h = harness(); h.db.pflx_nf_team_sess_s9_alpha = { cleared: 4, clears: 1, runs: 3, best: 700 }; h.db.pflx_nf_p_p1 = { owned: { aegis: 2 } };
+    await h.f.nfHandleScope('sess_s9_alpha'); const r = h.sent.pop(); assert.strictEqual(r.type, 'pflx_arena_nf_state'); assert.strictEqual(r.progress.cleared, 4); assert.deepStrictEqual(r.owned, { aegis: 2 });
+    await h.f.nfHandleScope('../bad scope!'); assert.ok(h.sent.length === 0 || /^[A-Za-z0-9_\-]*$/.test(String(h.sent[h.sent.length - 1].progress && 'ok') || ''));
+  });
+  await t('wiring: deck message carries coop; session play sends players to their lobby and hosts to observation; scope message is handled; Quick Launch exists', () => {
+    assert.ok(/coop: coop \|\| null/.test(arena)); assert.ok(/pflx_arena_nf_scope' && arenaGame\.open/.test(arena)); assert.ok(/coop: nx, observe: nx && isHostUser\(state\.player\)/.test(arena));
+    assert.ok(/studioLaunchLive\(true\)/.test(arena) && /async function studioLaunchLive\(quick\)/.test(arena)); assert.ok(/dev: isHostUser\(state\.player\)/.test(arena));
+    assert.ok(/pflx_arena_nf_scope/.test(game) && /coop/.test(game) && /OBSERVING/.test(game));
+  });
+  await t('session tags: Nexus cards show the co-op rule and an Observe button only for hosts', () => {
+    const h = harness(); h.env.isHostUser = () => false; let html = h.f.nfSessionTagsHtml({ id: 's1', config: { nfRoundMin: 7 } }); assert.ok(/Co-op/.test(html) && /7 min rounds/.test(html) && !/OBSERVE/.test(html));
+    h.env.isHostUser = () => true; html = h.f.nfSessionTagsHtml({ id: 's1', config: {} }); assert.ok(/OBSERVE SQUADS/.test(html) && /10 min rounds/.test(html));
+  });
+
   console.log('\n' + n + ' arena-side tests passed');
 })().catch(e => { console.error('FAIL', e); process.exit(1); });
