@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>PFLX: Nexus Frontiers — Battle Arena</title>
+<link rel="icon" href="data:,">
+<!-- ═══════════════════════════════════════════════════════════════
+     PFLX: NEXUS FRONTIERS — Arena Game Cartridge (Oct 2026), playable vertical slice.
+     Server 01 "Studio Defense Grid": 7 districts (6 sealed combat areas + Elite boss), 6 gates
+     that open ONLY on a true clear, real-time Archive swarms (7:1 Scout/Interceptor bag, Sentry after
+     every 3rd wave), protected quiz phases that charge attacks, a turn-based Elite boss.
+     Speaks ARENA GAME CARTRIDGE CONTRACT v0.1 (pflx_game_ready → pflx_arena_deck → pflx_arena_game_exit).
+     REWARDS: none by default. A result (and therefore X-Coin) is posted ONLY if config.rewards === true.
+     Orbs are run-temporary; nothing here converts to XP/X-Coin or removes persistent progress.
+     PROTOTYPE values (damage, HP, wave sizes, orb effect, boss cards) are flagged in the HANDOFF; they
+     are not canon. Dialogue is neutral DRAFT copy. Solo only: co-op / base-building / puzzles come later.
+     ═══════════════════════════════════════════════════════════════ -->
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#02040a; color:#e6f0ff; font-family:'Rajdhani','Segoe UI',system-ui,sans-serif; overflow:hidden; user-select:none; touch-action:none; }
+  #stage { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  #box { position:relative; width:min(100vw, calc(100vh * 16 / 9)); aspect-ratio:16/9; background:#000; overflow:hidden; font-size:calc(min(100vw, 100vh * 16 / 9) / 960 * 14); }
+  canvas { position:absolute; inset:0; width:100%; height:100%; image-rendering:auto; }
+  .ov { position:absolute; inset:0; display:none; }
+  .ov.on { display:flex; }
+  .mono { font-family:'Orbitron','Rajdhani',monospace; letter-spacing:.12em; }
+  /* HUD */
+  #hud { position:absolute; inset:0; pointer-events:none; display:none; }
+  #hud.on { display:block; }
+  .hudbox { position:absolute; background:rgba(4,8,22,.72); border:1px solid rgba(0,229,255,.35); border-radius:.6em; padding:.5em .8em; backdrop-filter:blur(3px); }
+  #hudL { left:1.2%; top:2%; width:22%; }
+  #hudC { left:50%; top:2%; transform:translateX(-50%); text-align:center; min-width:30%; }
+  #hudR { right:1.2%; top:2%; text-align:right; }
+  .lbl { font-size:.62em; color:#7fd8ff; letter-spacing:.2em; }
+  .bar { height:.8em; border-radius:.5em; background:rgba(255,255,255,.1); overflow:hidden; margin:.2em 0 .35em; border:1px solid rgba(255,255,255,.12); }
+  .bar > i { display:block; height:100%; width:100%; background:linear-gradient(90deg,#ff4d6d,#ffd740,#00e676); transition:width .15s; }
+  .pips { display:flex; gap:.3em; }
+  .pip { width:1.2em; height:.7em; border-radius:.2em; background:rgba(255,255,255,.12); border:1px solid rgba(255,215,64,.3); }
+  .pip.on { background:#ffd740; box-shadow:0 0 .8em rgba(255,215,64,.8); }
+  #obj { font-size:.95em; font-weight:700; color:#fff; }
+  #obj small { display:block; font-size:.7em; color:#9bb8d6; font-weight:600; letter-spacing:.06em; }
+  #banner { position:absolute; left:50%; top:30%; transform:translate(-50%,-50%); font-size:2.2em; font-weight:900; letter-spacing:.18em; color:#fff; text-shadow:0 0 1em #00e5ff; opacity:0; pointer-events:none; text-align:center; }
+  #banner.show { animation:bn 2.2s ease forwards; }
+  @keyframes bn { 0%{opacity:0;transform:translate(-50%,-40%) scale(.9);} 15%{opacity:1;transform:translate(-50%,-50%) scale(1);} 80%{opacity:1;} 100%{opacity:0;} }
+  .btn { pointer-events:auto; cursor:pointer; font-family:'Orbitron','Rajdhani',monospace; font-weight:800; letter-spacing:.12em; font-size:.75em; color:#e6f7ff; background:rgba(0,229,255,.12); border:1px solid rgba(0,229,255,.55); border-radius:.6em; padding:.6em 1.1em; }
+  .btn:hover { background:rgba(0,229,255,.25); }
+  .btn.gold { color:#ffd740; border-color:rgba(255,215,64,.6); background:rgba(255,215,64,.12); }
+  .btn[disabled], .btn.off { opacity:.35; pointer-events:none; }
+  #actions { position:absolute; right:1.5%; bottom:3%; display:flex; gap:.6em; pointer-events:auto; }
+  #actions .btn { padding:1em 1.2em; font-size:.8em; }
+  #linkBtn.pulse { animation:pl .9s infinite; }
+  @keyframes pl { 50% { box-shadow:0 0 1.4em rgba(255,215,64,.9); } }
+  #exitBtn { position:absolute; left:1.2%; bottom:2.5%; pointer-events:auto; opacity:.7; }
+  #joy { position:absolute; left:3%; bottom:6%; width:16%; aspect-ratio:1; border-radius:50%; border:2px solid rgba(0,229,255,.35); background:rgba(0,229,255,.06); display:none; pointer-events:auto; }
+  #joy i { position:absolute; left:50%; top:50%; width:42%; height:42%; margin:-21% 0 0 -21%; border-radius:50%; background:rgba(0,229,255,.35); border:1px solid #00e5ff; }
+  body.touch #joy { display:block; } body.touch #exitBtn { bottom:auto; top:2%; left:auto; right:1.5%; } body.touch #hudR { top:14%; }
+  /* menus / panels */
+  .panel { margin:auto; background:rgba(4,8,22,.94); border:1px solid rgba(0,229,255,.4); border-radius:1em; padding:1.4em 1.8em; box-shadow:0 0 3em rgba(0,160,255,.2); }
+  #menu { background:radial-gradient(ellipse at 50% 0, rgba(20,10,60,.55), rgba(2,4,10,.96) 70%); flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  #menu h1 { font-size:2.6em; font-weight:900; letter-spacing:.2em; color:#fff; text-shadow:0 0 .8em #00e5ff; }
+  #menu .sub { color:#8fb8dd; letter-spacing:.3em; font-size:.8em; margin:.4em 0 1.2em; }
+  #worlds { display:grid; grid-template-columns:repeat(5,1fr); gap:.6em; width:92%; margin:.4em 0 1em; }
+  .wc { border:1px solid rgba(255,255,255,.15); border-radius:.7em; padding:.7em .4em; background:rgba(10,14,34,.8); font-size:.8em; }
+  .wc b { display:block; font-size:1.3em; color:#7fd8ff; } .wc span { font-size:.85em; color:#9aa7c7; display:block; margin-top:.2em; min-height:2.2em; }
+  .wc.open { border-color:#00e5ff; cursor:pointer; box-shadow:0 0 1.2em rgba(0,229,255,.35); } .wc.open:hover { background:rgba(0,229,255,.16); }
+  .wc.lock { opacity:.45; } .wc em { font-style:normal; font-size:.7em; letter-spacing:.2em; color:#ffd740; }
+  .help { font-size:.8em; color:#9bb8d6; line-height:1.5; max-width:80%; }
+  .help kbd { background:rgba(255,255,255,.12); border-radius:.3em; padding:0 .4em; color:#fff; }
+  #cut { background:#000; align-items:flex-end; justify-content:center; }
+  #cut img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .6s; }
+  #cut img.in { opacity:1; }
+  #cutBox { position:relative; width:84%; margin-bottom:4%; background:rgba(2,6,18,.82); border:1px solid rgba(0,229,255,.45); border-radius:.8em; padding:1em 1.3em; min-height:5.2em; }
+  #cutBox .who { font-size:.65em; color:#7fd8ff; letter-spacing:.25em; margin-bottom:.3em; }
+  #cutTxt { font-size:1.15em; line-height:1.4; color:#fff; }
+  #cutSkip { position:absolute; right:2%; top:3%; }
+  #cutHint { position:absolute; right:1.3em; bottom:.6em; font-size:.65em; color:#7fd8ff; letter-spacing:.2em; }
+  #quiz { background:rgba(2,4,12,.72); align-items:center; justify-content:center; }
+  #quiz .panel { width:68%; border-color:rgba(255,215,64,.55); }
+  #quiz .kick { font-size:.62em; letter-spacing:.3em; color:#ffd740; }
+  #qTerm { font-size:1.8em; font-weight:900; margin:.25em 0 .6em; color:#fff; }
+  #qOpts { display:grid; grid-template-columns:1fr 1fr; gap:.6em; }
+  .qo { background:rgba(14,18,40,.95); border:1px solid rgba(255,255,255,.18); border-radius:.7em; padding:.8em .9em; font-size:.95em; cursor:pointer; text-align:left; line-height:1.3; }
+  .qo:hover { border-color:#ffd740; } .qo b { color:#ffd740; margin-right:.5em; }
+  .qo.ok { background:rgba(0,230,118,.18); border-color:#00e676; } .qo.bad { background:rgba(255,77,109,.18); border-color:#ff4d6d; } .qo.dim { opacity:.4; pointer-events:none; }
+  #qFoot { margin-top:.8em; min-height:2.4em; font-size:.9em; display:flex; justify-content:space-between; align-items:center; gap:1em; }
+  #qMsg { color:#cfe; } #qMsg.good { color:#7dffb4; } #qMsg.bad { color:#ff9db0; }
+  #qNote { font-size:.62em; color:#7a8fb0; letter-spacing:.12em; margin-top:.4em; }
+  /* boss */
+  #boss { pointer-events:none; }
+  #boss.on { display:block; }
+  #bossTop { position:absolute; left:50%; top:3%; transform:translateX(-50%); width:44%; text-align:center; }
+  #bossTop .nm { font-size:1.2em; font-weight:900; letter-spacing:.2em; } #bossBar { height:1.1em; position:relative; }
+  #bossBar i { background:linear-gradient(90deg,#ff2d55,#ff9f0a); } #bossBar u { position:absolute; left:50%; top:-.1em; bottom:-.1em; width:2px; background:#fff; opacity:.7; }
+  #intent { margin-top:.4em; font-size:.85em; color:#ffb4c0; font-weight:700; }
+  #queue { position:absolute; left:1.5%; top:3%; display:flex; gap:.4em; flex-wrap:wrap; max-width:28%; }
+  .qt { font-size:.62em; letter-spacing:.14em; padding:.35em .7em; border-radius:.5em; border:1px solid rgba(255,255,255,.2); background:rgba(4,8,22,.8); } .qt.act { border-color:#ffd740; color:#ffd740; box-shadow:0 0 .8em rgba(255,215,64,.5); }
+  #bossMe { position:absolute; left:1.5%; top:11%; width:22%; } #bossLog { position:absolute; left:50%; bottom:25%; transform:translateX(-50%); width:46%; text-align:center; font-size:1.05em; font-weight:700; min-height:2.6em; text-shadow:0 0 .6em #000; }
+  #cards { position:absolute; left:50%; bottom:3%; transform:translateX(-50%); display:flex; gap:.8em; pointer-events:auto; }
+  .card { width:15em; padding:.8em 1em; background:rgba(6,10,28,.94); border:1px solid rgba(0,229,255,.5); border-radius:.8em; cursor:pointer; text-align:left; }
+  .card:hover { border-color:#ffd740; transform:translateY(-.2em); } .card.off { opacity:.35; pointer-events:none; }
+  .card .t { font-weight:900; letter-spacing:.14em; font-size:.9em; color:#fff; } .card .d { font-size:.78em; color:#9bb8d6; margin-top:.25em; line-height:1.3; } .card .c { font-size:.62em; color:#ffd740; letter-spacing:.2em; margin-top:.35em; }
+  #end { background:rgba(2,4,12,.88); align-items:center; justify-content:center; text-align:center; }
+  #end h2 { font-size:2.2em; letter-spacing:.2em; color:#fff; text-shadow:0 0 .8em #00e5ff; } #end .st { display:grid; grid-template-columns:repeat(4,1fr); gap:.6em; margin:1em 0; } #end .st div { background:rgba(255,255,255,.06); border-radius:.6em; padding:.6em; } #end .st b { display:block; font-size:1.4em; color:#7fd8ff; } #end .st span { font-size:.62em; letter-spacing:.2em; color:#9aa7c7; }
+  #end .row { display:flex; gap:.8em; justify-content:center; margin-top:.8em; }
+  #toast { position:absolute; left:50%; bottom:11%; transform:translateX(-50%); font-size:.85em; background:rgba(4,8,22,.85); border:1px solid rgba(255,215,64,.5); border-radius:.6em; padding:.4em 1em; opacity:0; transition:opacity .3s; pointer-events:none; }
+  #toast.on { opacity:1; }
+  @media (prefers-reduced-motion: reduce) { #banner.show { animation:none; opacity:1; } .btn.pulse, #linkBtn.pulse { animation:none; } }
+</style>
+</head>
+<body>
+<div id="stage"><div id="box">
+  <canvas id="cv" width="960" height="540"></canvas>
+
+  <div id="hud">
+    <div class="hudbox" id="hudL">
+      <div class="lbl mono">EVO VITALITY</div><div class="bar"><i id="vitF"></i></div>
+      <div class="lbl mono">ATTACK CHARGE</div><div class="pips" id="pips"></div>
+    </div>
+    <div class="hudbox" id="hudC"><div id="obj">—<small></small></div></div>
+    <div class="hudbox" id="hudR"><div class="lbl mono">SCORE <b id="scoreV" style="color:#fff">0</b></div><div class="lbl mono" style="margin-top:.3em"><img src="/assets/nexus-frontiers/sprites/xcoin-32.png" alt="" style="width:1.3em;height:1.3em;vertical-align:-.3em;margin-right:.3em">X-COIN <b id="xcV" style="color:#ffd740">0</b></div><div class="lbl mono" style="margin-top:.3em">ORBS (THIS RUN) <b id="orbV" style="color:#7fd8ff">0</b></div></div>
+    <div id="banner" class="mono"></div>
+    <div id="toast"></div>
+    <div id="joy"><i></i></div>
+    <div id="actions">
+      <button class="btn" id="dashBtn">DASH <small>[SPACE]</small></button>
+      <button class="btn gold" id="surgeBtn">SURGE <small>[F]</small></button>
+      <button class="btn gold" id="linkBtn">LINK QUIZ <small>[Q]</small></button>
+    </div>
+    <button class="btn" id="exitBtn">EXIT</button>
+  </div>
+
+  <div class="ov" id="menu">
+    <h1 class="mono">PFLX: NEXUS FRONTIERS</h1>
+    <div class="sub mono">CHOOSE A SERVER</div>
+    <div id="worlds"></div>
+    <div class="help">Move <kbd>WASD</kbd>/<kbd>Arrows</kbd> · Dash <kbd>Space</kbd> · Open a LINK quiz <kbd>Q</kbd> — every correct answer charges your Evo · Fire a charged SURGE <kbd>F</kbd>. Your Evo's spark fires automatically. Clear every wave to open the gate; defeat the boss to finish the server.</div>
+    <div style="margin-top:1em"><button class="btn" id="menuExit">EXIT TO ARENA</button></div>
+  </div>
+
+  <div class="ov" id="cut"><img id="cutImg" alt=""><button class="btn" id="cutSkip">SKIP ▸</button><div id="cutBox"><div class="who mono" id="cutWho"></div><div id="cutTxt"></div></div><div id="cutHint" class="mono">CLICK / ENTER</div></div>
+
+  <div class="ov" id="boss">
+    <div id="bossTop"><div class="nm mono" id="bossName">ELITE ARCHIVE</div><div class="bar" id="bossBar"><i id="bossF"></i><u></u></div><div id="intent"></div></div>
+    <div id="queue"></div>
+    <div class="hudbox" id="bossMe"><div class="lbl mono">EVO VITALITY <b id="bVit" style="color:#fff"></b></div><div class="bar"><i id="bVitF"></i></div><div class="lbl mono">CHARGE</div><div class="pips" id="bPips"></div><div class="lbl mono" id="bGuard" style="margin-top:.3em;color:#7dffb4"></div></div>
+    <div id="bossLog"></div>
+    <div id="cards"></div>
+  </div>
+
+  <div class="ov" id="end"><div class="panel" style="min-width:56%"><h2 class="mono" id="endT"></h2><div id="endS" style="color:#9bb8d6;font-size:.9em"></div><div class="st" id="endStats"></div><div class="row"><button class="btn gold" id="endAgain">PLAY AGAIN</button><button class="btn" id="endExit">EXIT TO ARENA</button></div></div></div>
+  <div class="ov" id="quiz"><div class="panel">
+    <div class="kick mono">PROTECTED LINK · THE ROOM IS PAUSED</div>
+    <div id="qTerm"></div><div id="qOpts"></div>
+    <div id="qFoot"><div id="qMsg"></div><button class="btn" id="qClose">BACK TO FIELD</button></div>
+    <div id="qNote" class="mono">CORRECT = +1 CHARGE · WRONG = NO CHARGE, NOTHING IS LOST</div>
+  </div></div>
+</div></div>
+
+<script>
+/*LOGIC-START*/
+// ── PFLX: Nexus Frontiers · pure game logic (no DOM). Unit-tested in Node (tests/logic.test.js). ──
+const NFLogic = (function () {
+  const T = 32; // tile size in px
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(arr, rng) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+
+  // ── Spawn bag: 7 Scouts + 1 Interceptor per complete bag (ARCHIVE-POWER-PROGRESSION.md). Failed spawns never consume an entry. ──
+  function SpawnBag(rng) {
+    this.rng = rng; this.queue = []; this.committed = { scout: 0, interceptor: 0 };
+  }
+  SpawnBag.prototype.peek = function () {
+    if (!this.queue.length) this.queue = shuffle(['scout', 'scout', 'scout', 'scout', 'scout', 'scout', 'scout', 'interceptor'], this.rng);
+    return this.queue[0];
+  };
+  SpawnBag.prototype.commit = function () {
+    const t = this.peek(); this.queue.shift(); this.committed[t]++; return t;
+  };
+
+  // ── Encounter: finite waves, pending spawns, sentry milestone. Clear only when EVERYTHING is resolved. ──
+  // cfg: { waves, size, interceptors:bool, sentryAfter:[3,6] }
+  function Encounter(cfg, rng) {
+    this.cfg = cfg; this.bag = new SpawnBag(rng);
+    this.wavesIssued = 0; this.pending = 0; this.alive = 0; this.pendingKind = null; // 'wave' | 'sentry'
+    this.sentryDue = false; this.sentriesSpawned = 0; this.sentriesDefeated = 0; this.kills = 0;
+    this.queue = null; this.spawnedTypes = { scout: 0, interceptor: 0, sentry: 0 };
+  }
+  // Which kind of spawn (if any) is ready to begin? Only when nothing is pending or alive.
+  Encounter.prototype.readyKind = function () {
+    if (this.pending > 0 || this.alive > 0) return null;
+    if (this.sentryDue) return 'sentry';
+    if (this.wavesIssued < this.cfg.waves) return 'wave';
+    return null;
+  };
+  Encounter.prototype.begin = function (kind) {
+    if (this.readyKind() !== kind) return false;
+    if (kind === 'wave') { this.wavesIssued++; this.pending = this.cfg.size; this.pendingKind = 'wave'; }
+    else { this.sentryDue = false; this.pending = 1; this.pendingKind = 'sentry'; }
+    return true;
+  };
+  // Type of the next unit to place (does NOT consume). Null if nothing pending.
+  Encounter.prototype.requestSpawn = function () {
+    if (this.pending <= 0) return null;
+    if (this.pendingKind === 'sentry') return 'sentry';
+    if (!this.cfg.interceptors) return 'scout';
+    return this.bag.peek();
+  };
+  // Call only after the unit was actually placed in the room.
+  Encounter.prototype.confirmSpawn = function () {
+    const t = this.requestSpawn(); if (!t) return null;
+    if (t !== 'sentry' && this.cfg.interceptors) this.bag.commit();
+    this.pending--; this.alive++; this.spawnedTypes[t]++;
+    if (t === 'sentry') this.sentriesSpawned++;
+    return t;
+  };
+  Encounter.prototype.onDefeat = function (type) {
+    if (this.alive <= 0) return false;
+    this.alive--; this.kills++;
+    if (type === 'sentry') this.sentriesDefeated++;
+    // a wave just fully resolved -> maybe a sentry is due (after every 3rd ordinary wave)
+    if (this.alive === 0 && this.pending === 0 && this.pendingKind === 'wave') {
+      const sa = this.cfg.sentryAfter || [];
+      if (sa.indexOf(this.wavesIssued) >= 0) this.sentryDue = true;
+    }
+    return true;
+  };
+  Encounter.prototype.cleared = function () {
+    return this.wavesIssued >= this.cfg.waves && this.pending === 0 && this.alive === 0 && !this.sentryDue;
+  };
+  Encounter.prototype.remainingWaves = function () { return this.cfg.waves - this.wavesIssued + (this.sentryDue ? 1 : 0); };
+
+  // World 01 encounter budgets (PROTOTYPE values; the docs leave counts/caps/intervals to playtesting).
+  const W01_ENCOUNTERS = [
+    { waves: 3, size: 5, interceptors: false, sentryAfter: [] },       // area 1: scouts only (learning room)
+    { waves: 3, size: 8, interceptors: true,  sentryAfter: [3] },
+    { waves: 3, size: 8, interceptors: true,  sentryAfter: [3] },
+    { waves: 4, size: 8, interceptors: true,  sentryAfter: [3] },
+    { waves: 4, size: 8, interceptors: true,  sentryAfter: [3] },
+    { waves: 6, size: 8, interceptors: true,  sentryAfter: [3, 6] }
+  ];
+
+  // ── Quiz: unique attempt ids, one resolution per attempt, reading is safe. ──
+  const FALLBACK_DECK = [
+    ['Prototype', 'An early sample built to test an idea before the final version'],
+    ['Iteration', 'Repeating a cycle of making and testing to improve a design'],
+    ['Empathy', 'Understanding the needs and feelings of the people you design for'],
+    ['Stakeholder', 'A person or group affected by, or interested in, a project'],
+    ['Sustainability', 'Meeting present needs without harming future generations'],
+    ['Feedback loop', 'Using responses to a design to guide the next improvement'],
+    ['Brainstorm', 'Generating many ideas quickly without judging them'],
+    ['User persona', 'A fictional profile that represents a typical user'],
+    ['Pitch', 'A short presentation that explains and sells an idea'],
+    ['Storyboard', 'A sequence of sketches that plans how a story or flow unfolds'],
+    ['Digital citizenship', 'Using technology safely, responsibly and respectfully'],
+    ['SDG', 'One of the 17 global goals set by the United Nations for 2030']
+  ].map(function (a) { return { term: a[0], definition: a[1] }; });
+
+  function QuizDeck(cards, rng) {
+    const ok = (cards || []).filter(function (c) { return c && c.term && c.definition; });
+    this.cards = ok.length >= 2 ? ok : FALLBACK_DECK;
+    this.rng = rng; this.order = []; this.seq = 0; this.pendingAttempt = null; this.resolved = {}; this.charge = 0;
+    this.stats = { answered: 0, correct: 0 };
+  }
+  QuizDeck.prototype._nextCard = function () {
+    if (!this.order.length) this.order = shuffle(this.cards.map(function (_, i) { return i; }), this.rng);
+    return this.cards[this.order.shift()];
+  };
+  // Open (or re-read) the current question. Calling this twice returns the SAME attempt until it is answered.
+  QuizDeck.prototype.open = function () {
+    if (this.pendingAttempt) return this.pendingAttempt;
+    const card = this._nextCard();
+    const norm = function (s) { return String(s).trim().toLowerCase(); };
+    const seen = {}; seen[norm(card.definition)] = 1;
+    const pool = shuffle(this.cards.filter(function (c) { return c !== card; }), this.rng), opts = [];
+    for (let i = 0; i < pool.length && opts.length < 3; i++) {
+      const k = norm(pool[i].definition);
+      if (seen[k] || norm(pool[i].term) === norm(card.term)) continue; // never create a second correct answer
+      seen[k] = 1; opts.push(pool[i].definition);
+    }
+    const all = shuffle([card.definition].concat(opts), this.rng);
+    const id = 'q' + (++this.seq);
+    const options = all.map(function (txt, i) { return { id: id + 'o' + i, text: txt }; });
+    const correct = options.filter(function (o) { return o.text === card.definition; })[0];
+    this.pendingAttempt = { id: id, term: card.term, options: options, _correctId: correct.id, answerText: card.definition };
+    return this.pendingAttempt;
+  };
+  // Resolve once. Returns {accepted, correct, charge, answerText}.
+  QuizDeck.prototype.answer = function (attemptId, optionId, maxCharge) {
+    if (this.resolved[attemptId] || !this.pendingAttempt || this.pendingAttempt.id !== attemptId) {
+      return { accepted: false, correct: false, charge: 0 }; // replayed / stale submission
+    }
+    const a = this.pendingAttempt; const correct = optionId === a._correctId;
+    this.resolved[attemptId] = true; this.pendingAttempt = null;
+    this.stats.answered++; let gain = 0;
+    if (correct) { this.stats.correct++; if (this.charge < (maxCharge || 5)) { this.charge++; gain = 1; } }
+    return { accepted: true, correct: correct, charge: gain, answerText: a.answerText };
+  };
+  QuizDeck.prototype.spend = function (n) { if (this.charge < n) return false; this.charge -= n; return true; };
+
+  // ── Boss resolver (NEXUS-TEAM-QUIZ-AND-COMBAT.md): quiz first, then ONE exclusive roll: miss | block | crit | hit. ──
+  const BOSS_MOVES = {
+    strike: { id: 'strike', name: 'Strike', kind: 'attack', power: 8, cost: 0, miss: 0.10 },
+    surge:  { id: 'surge',  name: 'Surge',  kind: 'attack', power: 16, cost: 2, miss: 0.22 },
+    guard:  { id: 'guard',  name: 'Guard',  kind: 'defense', mitigate: 0.6, cost: 0 }
+  };
+  function resolveAttack(o) {
+    // o: {move, quizCorrect, rng, powerBonus(0..0.12), luck(0..0.12), bossBlock}
+    if (!o.quizCorrect) return { learning: 'wrong', result: 'inactive', damage: 0 }; // no roll after a failed quiz
+    const m = o.move; const r = o.rng();
+    const miss = m.miss, block = o.bossBlock != null ? o.bossBlock : 0.12, crit = 0.10 + (o.luck || 0);
+    let result, mult = 1;
+    if (r < miss) result = 'miss';
+    else if (r < miss + block) { result = 'block'; mult = 0.5; }
+    else if (r < miss + block + crit) { result = 'crit'; mult = 1.5; }
+    else result = 'hit';
+    const dmg = result === 'miss' ? 0 : Math.max(1, Math.round(m.power * (1 + (o.powerBonus || 0)) * mult));
+    return { learning: 'correct', result: result, damage: dmg };
+  }
+  // Incoming boss damage vs a prepared guard. Guard is consumed by the caller after the boss action.
+  function resolveIncoming(o) { // {raw, guarded, guardStat(0..0.12), mitigate}
+    let d = o.raw * (1 - Math.min(0.12, o.guardStat || 0));
+    if (o.guarded) d *= (1 - (o.mitigate || 0.6));
+    return Math.max(1, Math.round(d));
+  }
+
+  // ── World map ──
+  function boxTiles(x, y, r) {
+    return { x0: Math.floor((x - r) / T), x1: Math.floor((x + r - 0.001) / T), y0: Math.floor((y - r) / T), y1: Math.floor((y + r - 0.001) / T) };
+  }
+  function isSolidTile(map, tx, ty) {
+    if (tx < 0 || ty < 0 || tx >= map.W || ty >= map.H) return true;
+    const v = map.grid[ty * map.W + tx];
+    if (v === 1) return true;
+    if (v >= 2) return !map.gateOpen[v - 2];
+    return false;
+  }
+  function boxSolid(map, x, y, r) {
+    const b = boxTiles(x, y, r);
+    for (let ty = b.y0; ty <= b.y1; ty++) for (let tx = b.x0; tx <= b.x1; tx++) if (isSolidTile(map, tx, ty)) return true;
+    return false;
+  }
+  function moveBody(map, b, dx, dy) {
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 6));
+    const sx = dx / steps, sy = dy / steps; let hitX = false, hitY = false;
+    for (let i = 0; i < steps; i++) {
+      if (sx) { if (!boxSolid(map, b.x + sx, b.y, b.r)) b.x += sx; else hitX = true; }
+      if (sy) { if (!boxSolid(map, b.x, b.y + sy, b.r)) b.y += sy; else hitY = true; }
+    }
+    return { hitX: hitX, hitY: hitY };
+  }
+  function lineClear(map, x0, y0, x1, y1) {
+    const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 8) || 1;
+    for (let i = 0; i <= n; i++) { const t = i / n; if (isSolidTile(map, Math.floor((x0 + (x1 - x0) * t) / T), Math.floor((y0 + (y1 - y0) * t) / T))) return false; }
+    return true;
+  }
+
+  function buildWorldMap(seed) {
+    const rng = mulberry32(seed), N = 7, CL = 7;
+    const rooms = [];
+    for (let i = 0; i < N; i++) {
+      const last = i === N - 1;
+      const w = last ? 30 : 24 + Math.floor(rng() * 10), h = last ? 22 : 16 + Math.floor(rng() * 8);
+      rooms.push({ id: i, w: w, h: h, rowL: 2 + Math.floor(rng() * (h - 6)), rowR: 2 + Math.floor(rng() * (h - 6)) });
+    }
+    let cx = 2; rooms[0].y = 0;
+    for (let i = 0; i < N; i++) {
+      const r = rooms[i]; r.x = cx; cx += r.w + CL;
+      if (i > 0) r.y = rooms[i - 1].y + rooms[i - 1].rowR - r.rowL; // align the corridor
+    }
+    let minY = Infinity, maxY = -Infinity;
+    rooms.forEach(function (r) { minY = Math.min(minY, r.y); maxY = Math.max(maxY, r.y + r.h); });
+    rooms.forEach(function (r) { r.y += 2 - minY; });
+    const W = cx - CL + 2, H = maxY - minY + 4;
+    const grid = new Uint8Array(W * H).fill(1);
+    const set = function (tx, ty, v) { grid[ty * W + tx] = v; };
+    const get = function (tx, ty) { return grid[ty * W + tx]; };
+    const gates = [];
+    rooms.forEach(function (r) {
+      for (let ty = r.y + 1; ty < r.y + r.h - 1; ty++) for (let tx = r.x + 1; tx < r.x + r.w - 1; tx++) set(tx, ty, 0);
+    });
+    for (let i = 0; i < N - 1; i++) {
+      const r = rooms[i], n = rooms[i + 1], row = r.y + r.rowR;
+      for (let k = 0; k < 3; k++) {
+        set(r.x + r.w - 1, row + k, 0); set(n.x, n.y + n.rowL + k, 0);
+        for (let c = 0; c < CL; c++) set(r.x + r.w + c, row + k, c === 3 ? 2 + i : 0);
+      }
+      const gx = r.x + r.w + 3;
+      gates.push({ id: i, tiles: [0, 1, 2].map(function (k) { return { tx: gx, ty: row + k }; }), col: gx, row: row });
+    }
+    // obstacles per room
+    rooms.forEach(function (r, i) {
+      const interior = function (tx, ty) { return tx > r.x && tx < r.x + r.w - 1 && ty > r.y && ty < r.y + r.h - 1; };
+      const clear = function (tx, ty) {
+        // keep door approaches, start zone, and the boss-core zone free
+        if (i > 0 && Math.abs(tx - (r.x + 1)) <= 4 && Math.abs(ty - (r.y + r.rowL + 1)) <= 4) return true;
+        if (i < N - 1 && Math.abs(tx - (r.x + r.w - 2)) <= 4 && Math.abs(ty - (r.y + r.rowR + 1)) <= 4) return true;
+        if (i === 0 && Math.abs(tx - (r.x + 4)) <= 4 && Math.abs(ty - (r.y + (r.h >> 1))) <= 4) return true;
+        if (i === N - 1 && Math.abs(tx - (r.x + (r.w >> 1))) <= 6 && Math.abs(ty - (r.y + (r.h >> 1))) <= 6) return true;
+        return false;
+      };
+      const entry = i === 0 ? { tx: r.x + 4, ty: r.y + (r.h >> 1) } : { tx: r.x + 1, ty: r.y + r.rowL + 1 };
+      const exit = i === N - 1 ? { tx: r.x + (r.w >> 1), ty: r.y + (r.h >> 1) } : { tx: r.x + r.w - 2, ty: r.y + r.rowR + 1 };
+      for (let attempt = 0; attempt < 30; attempt++) {
+        // reset interior
+        for (let ty = r.y + 1; ty < r.y + r.h - 1; ty++) for (let tx = r.x + 1; tx < r.x + r.w - 1; tx++) set(tx, ty, 0);
+        if (attempt < 28) {
+          const lane = i >= 2 && i <= 5;
+          if (lane) {
+            const wx = r.x + Math.floor(r.w * (0.42 + rng() * 0.16)), gap = 4, gy = r.y + 2 + Math.floor(rng() * (r.h - 4 - gap));
+            for (let ty = r.y + 1; ty < r.y + r.h - 1; ty++) if (ty < gy || ty >= gy + gap) for (let dx = 0; dx < 2; dx++) set(wx + dx, ty, 1);
+          }
+          const nb = (i === N - 1 ? 3 : 4) + Math.floor(rng() * 5);
+          for (let b = 0; b < nb; b++) {
+            const bw = 2 + Math.floor(rng() * 3), bh = 2 + Math.floor(rng() * 4);
+            const bx = r.x + 3 + Math.floor(rng() * (r.w - 6 - bw)), by = r.y + 3 + Math.floor(rng() * (r.h - 6 - bh));
+            let ok = true;
+            for (let ty = by - 1; ty <= by + bh && ok; ty++) for (let tx = bx - 1; tx <= bx + bw; tx++) {
+              if (!interior(tx, ty) || get(tx, ty) === 1 || clear(tx, ty)) { ok = false; break; }
+            }
+            if (!ok) continue;
+            for (let ty = by; ty < by + bh; ty++) for (let tx = bx; tx < bx + bw; tx++) set(tx, ty, 1);
+          }
+        }
+        // flood from entry; wall off enclosed pockets
+        const seen = new Uint8Array(W * H), stack = [entry.tx + entry.ty * W]; seen[stack[0]] = 1;
+        if (get(entry.tx, entry.ty) !== 0) continue;
+        while (stack.length) {
+          const p = stack.pop(), px = p % W, py = (p / W) | 0;
+          [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+            const nx = px + d[0], ny = py + d[1];
+            if (!interior(nx, ny) || seen[nx + ny * W] || get(nx, ny) !== 0) return;
+            seen[nx + ny * W] = 1; stack.push(nx + ny * W);
+          });
+        }
+        if (!seen[exit.tx + exit.ty * W]) continue; // door-to-door must stay connected
+        for (let ty = r.y + 1; ty < r.y + r.h - 1; ty++) for (let tx = r.x + 1; tx < r.x + r.w - 1; tx++) if (get(tx, ty) === 0 && !seen[tx + ty * W]) set(tx, ty, 1);
+        break;
+      }
+    });
+    const gateOpen = gates.map(function () { return false; });
+    rooms.forEach(function (r) {
+      r.px = { x: r.x * T, y: r.y * T, w: r.w * T, h: r.h * T };
+      r.cells = [];
+      for (let ty = r.y + 3; ty < r.y + r.h - 3; ty++) for (let tx = r.x + 3; tx < r.x + r.w - 3; tx++) {
+        let free = true;
+        for (let dy = -1; dy <= 1 && free; dy++) for (let dx = -1; dx <= 1; dx++) if (get(tx + dx, ty + dy) !== 0) { free = false; break; }
+        if (free) r.cells.push({ tx: tx, ty: ty });
+      }
+    });
+    const r0 = rooms[0], rb = rooms[N - 1];
+    return {
+      T: T, W: W, H: H, grid: grid, rooms: rooms, gates: gates, gateOpen: gateOpen, seed: seed,
+      start: { x: (r0.x + 4) * T + T / 2, y: (r0.y + (r0.h >> 1)) * T + T / 2 },
+      bossNode: { x: (rb.x + (rb.w >> 1)) * T + T / 2, y: (rb.y + (rb.h >> 1)) * T + T / 2 }
+    };
+  }
+  function roomIndexAt(map, tx, ty) {
+    for (let i = 0; i < map.rooms.length; i++) { const r = map.rooms[i]; if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h) return i; }
+    return -1;
+  }
+  // BFS over walkable tiles from the start; returns {rooms:Set of room indexes reached, tiles}.
+  function reachable(map, from) {
+    const sx = Math.floor(from.x / T), sy = Math.floor(from.y / T), W = map.W;
+    const seen = new Uint8Array(map.W * map.H), st = [sx + sy * W]; seen[st[0]] = 1; const rooms = {}; let tiles = 0;
+    while (st.length) {
+      const p = st.pop(), px = p % W, py = (p / W) | 0; tiles++;
+      const ri = roomIndexAt(map, px, py); if (ri >= 0) rooms[ri] = 1;
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+        const nx = px + d[0], ny = py + d[1];
+        if (isSolidTile(map, nx, ny) || seen[nx + ny * W]) return;
+        seen[nx + ny * W] = 1; st.push(nx + ny * W);
+      });
+    }
+    return { rooms: Object.keys(rooms).map(Number).sort(function (a, b) { return a - b; }), tiles: tiles };
+  }
+
+  // ── Drops: one per defeated enemy, claimed once. ──
+  function DropLedger() { this.created = {}; this.claimed = {}; }
+  DropLedger.prototype.create = function (enemyId) { if (this.created[enemyId]) return false; this.created[enemyId] = true; return true; };
+  DropLedger.prototype.claim = function (dropId) { if (this.claimed[dropId]) return false; this.claimed[dropId] = true; return true; };
+
+
+  // ── X-Coin drops (Ennis, 5 Oct 2026): minimal value, from defeating Archives AND breaking materials. Hard per-run cap. ──
+  // Prototype rates — tune after playtesting. 1 X-Coin pickup = 1 XC. Cap equals the Arena's per-game maximum award.
+  const XC_RULES = { cap: 40, scout: { p: 0.03, n: 1 }, interceptor: { p: 0.10, n: 1 }, sentry: { p: 1, n: 1 }, material: { p: 0.75, n: 1 } };
+  function coinDrop(kind, rng, alreadyDropped) {
+    const r = XC_RULES[kind]; if (!r) return 0;
+    const room = Math.max(0, XC_RULES.cap - (alreadyDropped || 0));
+    if (!room || rng() >= r.p) return 0;
+    return Math.min(r.n, room);
+  }
+  // Breakable material nodes (non-solid, so they never affect reachability). 3 per combat district.
+  function placeMaterials(map, rng, perRoom) {
+    const kinds = ['alloy', 'crystal', 'data'], out = []; let id = 1;
+    for (let i = 0; i < 6; i++) {
+      const r = map.rooms[i], cells = shuffle(r.cells.filter(function (c) {
+        if (i === 0 && Math.hypot(c.tx * T + 16 - map.start.x, c.ty * T + 16 - map.start.y) < T * 5) return false; return true; }), rng);
+      for (let k = 0; k < (perRoom || 3) && k < cells.length; k++) out.push({ id: 'm' + (id++), room: i, kind: kinds[(k + i) % 3], x: cells[k].tx * T + 16, y: cells[k].ty * T + 16, hp: 3, max: 3, dead: false });
+    }
+    return out;
+  }
+
+  return {
+    XC_RULES: XC_RULES, coinDrop: coinDrop, placeMaterials: placeMaterials,
+    T: T, mulberry32: mulberry32, shuffle: shuffle, SpawnBag: SpawnBag, Encounter: Encounter, W01_ENCOUNTERS: W01_ENCOUNTERS,
+    QuizDeck: QuizDeck, FALLBACK_DECK: FALLBACK_DECK, BOSS_MOVES: BOSS_MOVES, resolveAttack: resolveAttack, resolveIncoming: resolveIncoming,
+    buildWorldMap: buildWorldMap, isSolidTile: isSolidTile, moveBody: moveBody, boxSolid: boxSolid, lineClear: lineClear,
+    roomIndexAt: roomIndexAt, reachable: reachable, DropLedger: DropLedger
+  };
+})();
+/*LOGIC-END*/
+
+</script>
+<script>
+(function () {
+'use strict';
+const L = NFLogic, T = L.T;
+const $ = function (id) { return document.getElementById(id); };
+const qs = new URLSearchParams(location.search);
+const TEST = qs.get('test') === '1';
+const REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const ASSET = '/assets/nexus-frontiers/', ARCH = '/assets/archive-icons/', EVO = '/assets/evo-icons/';
+const cv = $('cv'), ctx = cv.getContext('2d'); const VW = 960, VH = 540;
+
+// ── Draft dialogue (neutral, NON-CANON placeholder copy until Ennis supplies story text) ──
+const LINES = {
+  intro: ['SERVER 01', 'Studio Defense Grid online. Archive signals are gathering at the first section. Charge your Evo with LINK answers and hold the line.'],
+  combat: function (n) { return ['SECTION ' + n, 'The section is sealed. Defeat every wave to open the gate.']; },
+  transition: function (n) { return ['GATE ' + n + ' OPEN', 'Section ' + (n + 1) + ' lies ahead. Stay sharp.']; },
+  boss: ['MAIN HUB', 'An Elite Archive guards the exit. Choose a move, answer the LINK, then see if it lands.']
+};
+
+// ── State ──
+const S = {
+  mode: 'boot', // boot | menu | cut | play | boss | end
+  deck: null, player: { id: 'p', brand: 'Challenger', studioId: 'gentech' }, config: {}, exo: null,
+  worldNames: {}, iconCard: null, quiz: null, rng: null, map: null, t: 0,
+  p: null, enemies: [], shots: [], orbs: [], coins: [], mats: [], xc: 0, xcDropped: 0, awarded: false, fx: [], rings: [], ledger: null,
+  areas: [], areaIdx: -1, seenCut: {}, crossed: {}, score: 0, orbCount: 0, kills: 0, startedAt: 0, timeSec: 0,
+  quizOpen: false, quizContext: null, cam: { x: 0, y: 0 }, shake: 0, bossDone: false, portal: null, ended: false, paused: false, nid: 1
+};
+const IMG = {};
+function img(src) { if (IMG[src]) return IMG[src]; const i = new Image(); i.decoding = 'async'; i.src = src; IMG[src] = i; return i; }
+function ready(i) { return i && i.complete && i.naturalWidth > 0; }
+function post(o) { try { parent.postMessage(JSON.stringify(o), '*'); } catch (e) {} }
+function sx(n) { return Math.max(0, Math.min(0.12, n * 0.01)); } // bounded ≤12% stat swing
+function stat(k) { const s = S.exo && S.exo.stats; return s ? (Number(s[k]) || 0) : 0; }
+
+// ── Boot / contract ──
+window.addEventListener('message', function (e) {
+  let m = e.data; if (typeof m === 'string') { try { m = JSON.parse(m); } catch (x) { return; } }
+  if (m && m.type === 'pflx_arena_deck') applyDeck(m);
+});
+let deckApplied = false;
+function applyDeck(m) {
+  if (deckApplied) return; deckApplied = true;
+  S.player = Object.assign(S.player, m.player || {}); S.config = m.config || {}; S.exo = m.exo || null;
+  S.deck = m.deck || null; start();
+}
+post({ type: 'pflx_game_ready', game: 'nexus-frontiers' });
+setTimeout(function () { if (!deckApplied) { deckApplied = true; S.deck = { id: 'dev', name: 'Dev deck', cards: L.FALLBACK_DECK }; S.player.studioId = 'innov8'; S.exo = { level: 3, stats: { power: 3, guard: 2, speed: 2, luck: 2 } }; start(); } }, TEST ? 100 : 2500);
+
+function start() {
+  S.rng = L.mulberry32((qs.get('seed') | 0) || (Date.now() & 0xffffff));
+  S.quiz = new L.QuizDeck((S.deck && S.deck.cards) || [], L.mulberry32((Date.now() ^ 0x5bd1e995) & 0xffffff));
+  loadIcons();
+  fetch(ASSET + 'world-routes.json').then(function (r) { return r.json(); }).then(function (j) { (j.worlds || []).forEach(function (w) { S.worldNames[w.world] = w.name; }); buildMenu(); }).catch(buildMenu);
+  buildMenu(); setMode('menu');
+  if (qs.get('autostart') === '1') beginWorld(1);
+}
+function loadIcons() {
+  const studio = String(S.player.studioId || 'gentech').toLowerCase();
+  const lvl = Math.max(1, Math.min(10, (S.exo && S.exo.level) | 0 || 1));
+  const tier = lvl <= 2 ? 1 : lvl <= 4 ? 2 : lvl <= 6 ? 3 : lvl <= 9 ? 4 : 5;
+  fetch(EVO + 'manifest.json').then(function (r) { return r.json(); }).then(function (m) {
+    const c = (m.cards || []).filter(function (x) { return x.studio === studio && x.tier === tier; })[0];
+    if (c) { S.iconCard = c; img('/' + c.files['128']); img('/' + c.files['256']); }
+  }).catch(function () {});
+}
+['scout', 'interceptor', 'sentry', 'elite'].forEach(function (id) { img(ARCH + id + '-64.png'); img(ARCH + id + '-128.png'); });
+img(ASSET + 'props/gate-forcefield-128.png'); img(ASSET + 'sprites/orb-energy-64.png'); img(ASSET + 'sprites/xcoin-64.png'); ['alloy', 'crystal', 'data'].forEach(function (k) { img(ASSET + 'props/resource-' + k + '-64.png'); });
+img(ASSET + 'sprites/circuit-portal-open-256.png'); img(ASSET + 'web/void.jpg');
+
+function setMode(m) {
+  S.mode = m;
+  ['menu', 'cut', 'quiz', 'boss', 'end'].forEach(function (k) { $(k).classList.toggle('on', k === m || (k === 'quiz' && S.quizOpen)); });
+  $('hud').classList.toggle('on', m === 'play');
+}
+function buildMenu() {
+  const w = $('worlds'); w.innerHTML = '';
+  for (let i = 1; i <= 10; i++) {
+    const d = document.createElement('div'); const open = i === 1;
+    d.className = 'wc ' + (open ? 'open' : 'lock');
+    d.innerHTML = '<b class="mono">' + String(i).padStart(2, '0') + '</b><span>' + (S.worldNames[i] || 'Server ' + String(i).padStart(2, '0')) + '</span><em class="mono">' + (open ? 'PLAY' : 'LOCKED') + '</em>';
+    if (open) d.onclick = function () { beginWorld(1); };
+    w.appendChild(d);
+  }
+}
+$('menuExit').onclick = exitToArena; $('endExit').onclick = exitToArena; $('exitBtn').onclick = exitToArena;
+$('endAgain').onclick = function () { awardRun(); beginWorld(1); };
+// X-Coin is the ONLY thing that leaves the game, as an explicit capped amount (the Arena turns it into a host-approved award proposal).
+// Hosts can switch it off with config.rewards === false. Orbs, score and charge never convert to anything.
+function awardRun() {
+  if (S.awarded || !S.xc || (S.config && S.config.rewards === false)) return;
+  S.awarded = true;
+  post({ type: 'pflx_arena_game_result', game: 'nexus-frontiers', deckId: S.deck && S.deck.id, score: S.score, won: !!S.bossDone, xc: Math.min(L.XC_RULES.cap, S.xc) });
+}
+function exitToArena() { awardRun(); post({ type: 'pflx_arena_game_exit', game: 'nexus-frontiers' }); }
+
+// ── Cutscenes (skippable; presentation only, never changes outcomes) ──
+let cutQ = null, cutTimer = 0, cutFull = '', cutPos = 0;
+function playCut(sceneId, lines, done) {
+  if (S.seenCut[sceneId]) { done && done(); return; }
+  S.seenCut[sceneId] = true;
+  const im = $('cutImg'); im.classList.remove('in'); im.src = ASSET + 'web/w01/' + sceneId + '.jpg'; im.onload = function () { im.classList.add('in'); };
+  $('cutWho').textContent = lines[0]; cutFull = lines[1]; cutPos = REDUCED ? cutFull.length : 0; $('cutTxt').textContent = cutFull.slice(0, cutPos);
+  cutQ = { done: done, prev: S.mode }; setMode('cut');
+  clearInterval(cutTimer); if (!REDUCED) cutTimer = setInterval(function () { cutPos = Math.min(cutFull.length, cutPos + 2); $('cutTxt').textContent = cutFull.slice(0, cutPos); if (cutPos >= cutFull.length) clearInterval(cutTimer); }, 22);
+}
+function cutAdvance(skip) {
+  if (!cutQ) return;
+  if (!skip && cutPos < cutFull.length) { cutPos = cutFull.length; $('cutTxt').textContent = cutFull; clearInterval(cutTimer); return; }
+  clearInterval(cutTimer); const q = cutQ; cutQ = null; setMode(q.prev === 'boss' ? 'boss' : 'play'); q.done && q.done();
+}
+$('cut').addEventListener('click', function (e) { if (e.target.id !== 'cutSkip') cutAdvance(false); });
+$('cutSkip').onclick = function () { cutAdvance(true); };
+
+// ── World start ──
+function beginWorld(n) {
+  S.map = L.buildWorldMap(S.rng() * 1e9 | 0 || 1);
+  if (TEST && qs.get('seed')) S.map = L.buildWorldMap(qs.get('seed') | 0);
+  const m = S.map; S.enemies = []; S.shots = []; S.orbs = []; S.coins = []; S.xc = 0; S.xcDropped = 0; S.awarded = false; S.fx = []; S.rings = []; S.ledger = new L.DropLedger(); S.mats = L.placeMaterials(m, S.rng);
+  S.areas = L.W01_ENCOUNTERS.map(function (c, i) { return { idx: i, cfg: c, enc: new L.Encounter(c, L.mulberry32((m.seed + i * 7919) >>> 0)), state: 'dormant', cd: 0 }; });
+  S.areaIdx = -1; S.crossed = {}; S.seenCut = {}; S.score = 0; S.orbCount = 0; S.kills = 0; S.bossDone = false; S.portal = null; S.ended = false; S.t = 0; S.timeSec = 0;
+  S.quiz = new L.QuizDeck((S.deck && S.deck.cards) || [], L.mulberry32((Date.now() ^ 0x1234567) & 0xffffff));
+  S.p = { x: m.start.x, y: m.start.y, r: 11, vit: 100, maxVit: 100, vx: 0, vy: 0, face: 0, dash: 0, dashCd: 0, inv: 0, hit: 0, shotCd: 0, charge: 0, hurtCd: 0 };
+  S.startedAt = performance.now(); S.cam.x = S.p.x - VW / 2; S.cam.y = S.p.y - VH / 2;
+  setMode('play'); renderHud();
+  playCut('intro', LINES.intro, function () { /* encounter starts when the player is inside room 1 */ });
+}
+
+// ── Input ──
+const keys = {};
+addEventListener('keydown', function (e) {
+  const k = e.key.toLowerCase(); keys[k] = true;
+  if (S.mode === 'cut' && (k === 'enter' || k === ' ')) { cutAdvance(false); e.preventDefault(); return; }
+  if (S.mode === 'cut' && k === 'escape') { cutAdvance(true); return; }
+  if (S.quizOpen) { if (k >= '1' && k <= '4') pickOption(+k - 1); if (k === 'escape' && S.quizContext === 'field') closeQuiz(); return; }
+  if (S.mode === 'play') { if (k === 'q') openQuiz('field'); if (k === 'f') surge(); if (k === ' ') { dash(); e.preventDefault(); } }
+  if (S.mode === 'boss' && k >= '1' && k <= '3' && bossState.turn === 'player' && !S.quizOpen) chooseCard(['strike', 'surge', 'guard'][+k - 1]);
+});
+addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
+addEventListener('blur', function () { for (const k in keys) keys[k] = false; });
+let joy = { x: 0, y: 0, id: null };
+(function () {
+  const j = $('joy'), nub = j.firstElementChild;
+  function set(e) { const r = j.getBoundingClientRect(); let dx = (e.clientX - r.left - r.width / 2) / (r.width / 2), dy = (e.clientY - r.top - r.height / 2) / (r.height / 2); const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; } joy.x = dx; joy.y = dy; nub.style.transform = 'translate(' + dx * 60 + '%,' + dy * 60 + '%)'; }
+  j.addEventListener('pointerdown', function (e) { joy.id = e.pointerId; j.setPointerCapture(e.pointerId); set(e); });
+  j.addEventListener('pointermove', function (e) { if (joy.id === e.pointerId) set(e); });
+  const up = function (e) { if (joy.id === e.pointerId) { joy.id = null; joy.x = joy.y = 0; nub.style.transform = ''; } };
+  j.addEventListener('pointerup', up); j.addEventListener('pointercancel', up);
+  addEventListener('touchstart', function () { document.body.classList.add('touch'); }, { once: true, passive: true });
+})();
+$('dashBtn').onclick = function () { dash(); }; $('surgeBtn').onclick = function () { surge(); }; $('linkBtn').onclick = function () { openQuiz('field'); };
+
+// ── Quiz (protected phase: the whole sim is frozen while open) ──
+let curAttempt = null, answered = false;
+function openQuiz(ctxName, cb) {
+  if (S.quizOpen) return;
+  S.quizOpen = true; S.quizContext = ctxName; S.quizCb = cb || null; answered = false;
+  curAttempt = S.quiz.open(); // re-opening returns the SAME unanswered attempt: reading is safe, no re-roll
+  $('qTerm').textContent = curAttempt.term; $('qMsg').textContent = ''; $('qMsg').className = '';
+  const box = $('qOpts'); box.innerHTML = '';
+  curAttempt.options.forEach(function (o, i) {
+    const b = document.createElement('div'); b.className = 'qo'; b.dataset.id = o.id; b.innerHTML = '<b>' + (i + 1) + '</b>' + escapeHtml(o.text);
+    b.onclick = function () { pickOption(i); }; box.appendChild(b);
+  });
+  $('qClose').style.display = ctxName === 'boss' ? 'none' : ''; $('quiz').classList.add('on');
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function pickOption(i) {
+  if (!S.quizOpen || answered || !curAttempt) return;
+  const o = curAttempt.options[i]; if (!o) return;
+  answered = true;
+  const res = S.quiz.answer(curAttempt.id, o.id, 5);
+  const els = $('qOpts').children;
+  for (let k = 0; k < els.length; k++) { const e = els[k]; if (e.dataset.id === o.id) e.classList.add(res.correct ? 'ok' : 'bad'); else { e.classList.add('dim'); if (!res.correct && e.textContent.slice(1) === res.answerText) { e.classList.remove('dim'); e.classList.add('ok'); } } }
+  S.p.charge = S.quiz.charge;
+  $('qMsg').className = res.correct ? 'good' : 'bad';
+  $('qMsg').textContent = res.correct ? (res.charge ? 'Correct! +1 attack charge.' : 'Correct! Charge is already full.') : 'Not this time. The answer: ' + res.answerText;
+  S.score += res.correct ? 20 : 0; renderHud();
+  const cb = S.quizCb; S.quizCb = null;
+  setTimeout(function () { if (!S.quizOpen) return; closeQuiz(); cb && cb(res); }, res.correct ? 650 : 1700);
+}
+function closeQuiz() { S.quizOpen = false; $('quiz').classList.remove('on'); }
+$('qClose').onclick = closeQuiz;
+
+// ── Player actions ──
+function dash() {
+  const p = S.p; if (S.mode !== 'play' || S.quizOpen || p.dashCd > 0) return;
+  let dx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + joy.x, dy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + joy.y;
+  const m = Math.hypot(dx, dy); if (m < .1) { dx = Math.cos(p.face); dy = Math.sin(p.face); } else { dx /= m; dy /= m; }
+  p.dash = .17; p.inv = .22; p.dashCd = 1.1; p.dvx = dx; p.dvy = dy;
+}
+function surge() {
+  const p = S.p; if (S.mode !== 'play' || S.quizOpen) return;
+  if (!S.quiz.spend(1)) { toast('No charge — open a LINK quiz (Q)'); return; }
+  p.charge = S.quiz.charge; renderHud();
+  const powerB = 1 + sx(stat('power')); S.rings.push({ x: p.x, y: p.y, r: 10, max: 150, a: 1, c: '#ffd740' }); shake(5);
+  S.mats.forEach(function (mt) { if (!mt.dead && Math.hypot(mt.x - p.x, mt.y - p.y) < 150) damageMat(mt, 6); });
+  S.enemies.forEach(function (e) {
+    if (e.dead) return; const d = Math.hypot(e.x - p.x, e.y - p.y);
+    if (e.type === 'sentry') { e.petals.forEach(function (pt) { if (pt.hp > 0 && Math.hypot(pt.px - p.x, pt.py - p.y) < 150 + 10) damagePetal(e, pt, 6 * powerB); }); if (d < 150 + e.r) damageEnemy(e, 6 * powerB * (e.petals.some(function (q) { return q.hp > 0; }) ? .5 : 1)); }
+    else if (d < 150 + e.r) damageEnemy(e, 6 * powerB);
+  });
+}
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove('on'); }, 1600); }
+function banner(t) { const b = $('banner'); b.textContent = t; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
+function shake(n) { if (!REDUCED) S.shake = Math.max(S.shake, n); }
+
+// ── Enemy pathing: flow field (BFS) toward the player inside the active room, so lane walls never trap the swarm ──
+function buildFlow() {
+  const a = S.areas[S.areaIdx]; if (!a) { S.flow = null; return; }
+  const r = S.map.rooms[a.idx], ptx = Math.floor(S.p.x / T), pty = Math.floor(S.p.y / T);
+  if (S.flow && S.flow.room === r.id && S.flow.tx === ptx && S.flow.ty === pty) return;
+  const w = r.w, h = r.h, d = new Uint16Array(w * h).fill(65535);
+  if (ptx < r.x || ptx >= r.x + w || pty < r.y || pty >= r.y + h || L.isSolidTile(S.map, ptx, pty)) { S.flow = { room: r.id, tx: ptx, ty: pty, d: d, r: r, ok: false }; return; }
+  const q = [ptx - r.x + (pty - r.y) * w]; d[q[0]] = 0;
+  for (let qi = 0; qi < q.length; qi++) {
+    const c = q[qi], cx = c % w, cy = (c / w) | 0;
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (v) {
+      const nx = cx + v[0], ny = cy + v[1]; if (nx < 0 || ny < 0 || nx >= w || ny >= h) return;
+      if (d[nx + ny * w] !== 65535 || L.isSolidTile(S.map, r.x + nx, r.y + ny)) return;
+      d[nx + ny * w] = d[c] + 1; q.push(nx + ny * w);
+    });
+  }
+  S.flow = { room: r.id, tx: ptx, ty: pty, d: d, r: r, ok: true };
+}
+function wideClear(e, p) {
+  const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d * e.r * .9, ny = dx / d * e.r * .9;
+  return L.lineClear(S.map, e.x, e.y, p.x, p.y) && L.lineClear(S.map, e.x + nx, e.y + ny, p.x + nx, p.y + ny) && L.lineClear(S.map, e.x - nx, e.y - ny, p.x - nx, p.y - ny);
+}
+function chaseVec(e) {
+  const p = S.p, dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
+  if (wideClear(e, p) || !S.flow || !S.flow.ok) return [dx / d, dy / d];
+  const f = S.flow, r = f.r, etx = Math.floor(e.x / T) - r.x, ety = Math.floor(e.y / T) - r.y;
+  if (etx < 0 || ety < 0 || etx >= r.w || ety >= r.h) return [dx / d, dy / d];
+  let best = f.d[etx + ety * r.w], bx = 0, by = 0;
+  for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+    if (!ox && !oy) continue; const nx = etx + ox, ny = ety + oy; if (nx < 0 || ny < 0 || nx >= r.w || ny >= r.h) continue;
+    if (ox && oy && (L.isSolidTile(S.map, r.x + etx + ox, r.y + ety) || L.isSolidTile(S.map, r.x + etx, r.y + ety + oy))) continue; // no corner cutting
+    const v = f.d[nx + ny * r.w]; if (v < best) { best = v; bx = ox; by = oy; }
+  }
+  if (!bx && !by) return [dx / d, dy / d];
+  const tx = (r.x + etx + bx) * T + T / 2 - e.x, ty = (r.y + ety + by) * T + T / 2 - e.y, m = Math.hypot(tx, ty) || 1; return [tx / m, ty / m];
+}
+
+// ── Enemies ──
+const DEF = {
+  scout: { hp: 2, r: 11, spd: 105, dmg: 6, score: 10, drop: .35 },
+  interceptor: { hp: 6, r: 13, spd: 82, dmg: 14, score: 30, drop: .6 },
+  sentry: { hp: 24, r: 22, spd: 0, dmg: 18, score: 120, drop: 1 }
+};
+function pickSpawnCell(room) {
+  const p = S.p; const cells = room.cells.filter(function (c) { return Math.hypot(c.tx * T + 16 - p.x, c.ty * T + 16 - p.y) > T * 8; });
+  const list = cells.length ? cells : room.cells; return list[Math.floor(S.rng() * list.length)];
+}
+function placeEnemy(type, room) {
+  const c = pickSpawnCell(room); if (!c) return null;
+  const d = DEF[type];
+  const e = { id: S.nid++, type: type, x: c.tx * T + 16, y: c.ty * T + 16, r: d.r, hp: d.hp, max: d.hp, spawnT: .8, cd: 1.2 + S.rng() * 1.5, state: 'move', st: 0, dead: false, hurt: 0, tx: 0, ty: 0, vx: 0, vy: 0, touchCd: 0 };
+  if (type === 'sentry') {
+    e.x = room.px.x + room.px.w / 2; e.y = room.px.y + room.px.h / 2; e.cd = 2.4; e.beam = null;
+    e.petals = [0, 1].map(function (i) { return { a: i * Math.PI, hp: 8, max: 8, px: 0, py: 0 }; });
+    // keep the core off any wall block
+    let tries = 0; while (L.boxSolid(S.map, e.x, e.y, e.r + 6) && tries++ < 60) { const cc = room.cells[Math.floor(S.rng() * room.cells.length)]; e.x = cc.tx * T + 16; e.y = cc.ty * T + 16; }
+  }
+  S.enemies.push(e); return e;
+}
+function damageEnemy(e, amt) {
+  if (e.dead || e.spawnT > 0) return; e.hp -= amt; e.hurt = .12; S.fx.push({ x: e.x, y: e.y, t: .25, k: 'spark' });
+  if (e.hp <= 0) killEnemy(e);
+}
+function damagePetal(e, pt, amt) { if (pt.hp <= 0) return; pt.hp -= amt; S.fx.push({ x: pt.px, y: pt.py, t: .25, k: 'spark' }); if (pt.hp <= 0) { S.fx.push({ x: pt.px, y: pt.py, t: .5, k: 'burst' }); toast('Shield node broken!'); } }
+function dropCoins(kind, x, y, key) {
+  if (!S.ledger.create(key)) return; // one roll per source, ever
+  const n = L.coinDrop(kind, S.rng, S.xcDropped); S.xcDropped += n;
+  for (let i = 0; i < n; i++) S.coins.push({ id: key + 'c' + i, x: x + (i - (n - 1) / 2) * 14, y: y + 4, life: 30, vy: -60 });
+}
+function damageMat(mt, amt) {
+  if (mt.dead) return; mt.hp -= amt; mt.hurt = .12; S.fx.push({ x: mt.x, y: mt.y, t: .2, k: 'spark' });
+  if (mt.hp <= 0) { mt.dead = true; S.fx.push({ x: mt.x, y: mt.y, t: .5, k: 'burst' }); dropCoins('material', mt.x, mt.y, 'mat' + mt.id); }
+}
+function killEnemy(e) {
+  if (e.dead) return; e.dead = true; e.hp = 0;
+  const a = S.areas[S.areaIdx]; if (a) a.enc.onDefeat(e.type);
+  S.kills++; S.score += DEF[e.type].score; S.fx.push({ x: e.x, y: e.y, t: .5, k: 'burst' }); dropCoins(e.type, e.x, e.y, 'xe' + e.id);
+  if (S.ledger.create('e' + e.id) && S.rng() < DEF[e.type].drop) {
+    const n = e.type === 'sentry' ? 3 : 1;
+    for (let i = 0; i < n; i++) S.orbs.push({ id: 'o' + e.id + '_' + i, x: e.x + (i - (n - 1) / 2) * 16, y: e.y + (i ? 6 : 0), life: 15 });
+  }
+  renderHud();
+}
+
+// ── Area / encounter flow ──
+function roomOfPlayer() { return L.roomIndexAt(S.map, Math.floor(S.p.x / T), Math.floor(S.p.y / T)); }
+function startArea(i) {
+  const a = S.areas[i]; a.state = 'active'; a.cd = 1.2; S.areaIdx = i;
+  banner('SECTION ' + (i + 1) + ' SEALED');
+}
+function resetArea(i) { const a = S.areas[i]; S.enemies = []; a.enc = new L.Encounter(a.cfg, L.mulberry32((S.map.seed + i * 7919 + Math.floor(S.t)) >>> 0)); a.cd = 1.5; }
+function openGate(i) { S.map.gateOpen[i] = true; banner('GATE ' + (i + 1) + ' OPEN'); S.fx.push({ x: S.map.gates[i].col * T + 16, y: S.map.gates[i].row * T + 48, t: .8, k: 'burst' }); }
+
+function updateAreas(dt) {
+  const ri = roomOfPlayer(), p = S.p;
+  // entering a room (past its door) begins its encounter once
+  if (ri >= 0 && ri <= 5 && S.areas[ri].state === 'dormant') {
+    const r = S.map.rooms[ri]; if (p.x > r.px.x + T * 3 && S.mode === 'play') { S.areas[ri].state = 'intro'; playCut('combat-0' + (ri + 1), LINES.combat(ri + 1), function () { startArea(ri); }); }
+  }
+  if (ri === 6 && !S.bossDone && S.mode === 'play' && Math.hypot(p.x - S.map.bossNode.x, p.y - S.map.bossNode.y) < 44) enterBoss();
+  // crossing an opened gate for the first time plays the transition plate
+  S.map.gates.forEach(function (g, i) { if (S.map.gateOpen[i] && !S.crossed[i] && p.x > (g.col + 1) * T + 16 && S.mode === 'play') { for (let j = 0; j <= i; j++) S.crossed[j] = true; playCut('transition-0' + (i + 1), LINES.transition(i + 1), null); } });
+  const a = S.areas[S.areaIdx]; if (!a || a.state !== 'active') return;
+  const room = S.map.rooms[a.idx], enc = a.enc;
+  if (enc.pending > 0) {
+    a.sp = (a.sp || 0) - dt; const alive = S.enemies.filter(function (e) { return !e.dead; }).length;
+    if (a.sp <= 0 && alive < 9) { // active cap 9
+      const t = enc.requestSpawn(); const e = t && placeEnemy(t, room);
+      if (e) { enc.confirmSpawn(); a.sp = enc.pendingKind === 'sentry' ? 0 : .55; if (t === 'interceptor') toast('Interceptor incoming!'); } else a.sp = .3; // failed spawn does not consume the bag
+    }
+  } else {
+    const k = enc.readyKind();
+    if (k) { a.cd -= dt; if (a.cd <= 0) { enc.begin(k); a.sp = 0; a.cd = 1.8; banner(k === 'sentry' ? 'SENTRY ALERT' : 'WAVE ' + enc.wavesIssued + ' / ' + a.cfg.waves); } }
+    else if (enc.cleared()) { a.state = 'cleared'; S.score += 100; openGate(a.idx); renderHud(); }
+  }
+}
+
+// ── Boss: turn-based Elite (prototype cards/values) ──
+const bossState = { hp: 60, max: 60, vit: 100, maxVit: 100, turn: 'player', guard: false, intent: null, round: 0, phase: 1, busy: false, log: '' };
+const ELITE = { pulse: { name: 'PULSE', hits: [14] }, barrage: { name: 'BARRAGE', hits: [7, 7] }, cross: { name: 'CROSS', hits: [20] } };
+function pickIntent() { const seq = bossState.phase === 1 ? ['pulse', 'barrage'] : ['pulse', 'barrage', 'cross']; bossState.intent = seq[bossState.round % seq.length]; bossState.round++; }
+function enterBoss() {
+  if (S.mode === 'boss') return;
+  playCut('boss', LINES.boss, function () { startBoss(); });
+}
+function startBoss() {
+  Object.assign(bossState, { hp: bossState.max, vit: bossState.maxVit, turn: 'player', guard: false, round: 0, phase: 1, busy: false, log: 'Elite Archive blocks the exit.' });
+  S.quizOpen && closeQuiz(); S.p.charge = S.quiz.charge; pickIntent(); setMode('boss'); renderBoss();
+}
+function renderBoss() {
+  const b = bossState; $('bossF').style.width = Math.max(0, b.hp / b.max * 100) + '%';
+  $('bVitF').style.width = Math.max(0, b.vit / b.maxVit * 100) + '%'; $('bVit').textContent = Math.max(0, Math.round(b.vit));
+  $('bGuard').textContent = b.guard ? 'GUARD READY' : '';
+  const ip = $('bPips'), c = S.quiz.charge; ip.innerHTML = ''; for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'pip' + (i < c ? ' on' : ''); ip.appendChild(d); }
+  const it = ELITE[b.intent]; $('intent').textContent = 'NEXT: ' + it.name + ' — ' + it.hits.reduce(function (a, x) { return a + x; }, 0) + ' dmg' + (it.hits.length > 1 ? ' (' + it.hits.length + ' hits)' : '') + (b.phase === 2 ? ' · PHASE 2' : '');
+  $('bossLog').textContent = b.log;
+  $('queue').innerHTML = '<div class="qt mono ' + (b.turn === 'player' ? 'act' : '') + '">YOUR EVO</div><div class="qt mono ' + (b.turn === 'boss' ? 'act' : '') + '">ELITE</div>';
+  const cards = $('cards'); cards.innerHTML = '';
+  [['strike', '1', 'Quick attack. Power 8. Reliable.'], ['surge', '2', 'Heavy attack. Power 16. Costs 2 charge, can miss more.'], ['guard', '3', 'Brace: cut the next Archive attack by 60%.']].forEach(function (c) {
+    const mv = L.BOSS_MOVES[c[0]], d = document.createElement('div');
+    d.className = 'card' + ((b.turn !== 'player' || b.busy || mv.cost > S.quiz.charge) ? ' off' : '');
+    d.innerHTML = '<div class="t mono">' + mv.name.toUpperCase() + ' [' + c[1] + ']</div><div class="d">' + c[2] + '</div><div class="c mono">' + (mv.cost ? 'COST ' + mv.cost + ' CHARGE · ' : '') + 'QUIZ FIRST</div>';
+    d.onclick = function () { chooseCard(c[0]); }; cards.appendChild(d);
+  });
+}
+function chooseCard(id) {
+  const b = bossState, mv = L.BOSS_MOVES[id]; if (b.turn !== 'player' || b.busy || S.quizOpen) return;
+  if (mv.cost > S.quiz.charge) return;
+  b.busy = true; b.log = mv.name.toUpperCase() + ' selected — answer the LINK to activate it.'; renderBoss();
+  openQuiz('boss', function (res) {
+    const out = (mv.kind === 'defense')
+      ? { learning: res.correct ? 'correct' : 'wrong', result: res.correct ? 'guard' : 'inactive', damage: 0 }
+      : L.resolveAttack({ move: mv, quizCorrect: res.correct, rng: S.rng, powerBonus: sx(stat('power')), luck: sx(stat('luck')) });
+    if (res.correct && mv.cost) S.quiz.spend(mv.cost);
+    let msg;
+    if (!res.correct) msg = 'Learning missed — ' + mv.name + ' does not activate. Turn ends.';
+    else if (mv.kind === 'defense') { b.guard = true; msg = 'Correct! Guard is up for the next Archive attack.'; }
+    else if (out.result === 'miss') msg = 'Correct answer — but the attack MISSES.';
+    else if (out.result === 'block') { b.hp -= out.damage; msg = 'Correct! The Elite BLOCKS — ' + out.damage + ' damage.'; }
+    else if (out.result === 'crit') { b.hp -= out.damage; msg = 'Correct! CRITICAL HIT — ' + out.damage + ' damage!'; shake(8); }
+    else { b.hp -= out.damage; msg = 'Correct! Direct hit — ' + out.damage + ' damage.'; shake(4); }
+    if (res.correct) S.score += out.damage * 2;
+    b.log = msg; if (b.hp <= b.max / 2 && b.phase === 1 && b.hp > 0) { b.phase = 2; b.log += ' The Elite shifts into PHASE 2!'; }
+    S.p.charge = S.quiz.charge; renderBoss();
+    if (b.hp <= 0) { setTimeout(bossWin, 900); return; }
+    b.turn = 'boss'; renderBoss(); setTimeout(bossAct, 1300);
+  });
+}
+function bossAct() {
+  const b = bossState; if (S.mode !== 'boss') return;
+  const mv = ELITE[b.intent]; let log = 'ELITE uses ' + mv.name + '! ';
+  mv.hits.forEach(function (raw) {
+    const d = L.resolveIncoming({ raw: raw, guarded: b.guard, guardStat: sx(stat('guard')), mitigate: L.BOSS_MOVES.guard.mitigate }); b.vit -= d; log += '-' + d + ' ';
+  });
+  if (b.guard) log += '(guarded)'; b.guard = false; shake(6);
+  b.log = log; renderBoss();
+  if (b.vit <= 0) { b.log = 'Evo overloaded — safe retry. Nothing is lost.'; renderBoss(); setTimeout(function () { startBoss(); }, 2000); return; }
+  setTimeout(function () { b.turn = 'player'; b.busy = false; pickIntent(); renderBoss(); }, 1100);
+}
+function bossWin() {
+  S.bossDone = true; S.score += 500; S.map.gateOpen.fill(true); S.map.gates.forEach(function (g, i) { S.crossed[i] = true; }); setMode('play');
+  S.enemies = []; S.portal = { x: S.map.bossNode.x, y: S.map.bossNode.y }; S.p.x = S.portal.x - 110; S.p.y = S.portal.y; banner('ELITE DEFEATED'); toast('The exit portal is open.'); renderHud();
+}
+function finish() {
+  if (S.ended) return; S.ended = true; S.timeSec = Math.round((performance.now() - S.startedAt) / 1000);
+  const q = S.quiz.stats; $('endT').textContent = 'SERVER 01 CLEARED'; $('endS').textContent = 'Studio Defense Grid is secure. X-Coin collected is proposed to the Arena (host-approved). Orbs and charge were this run only.';
+  const mm = Math.floor(S.timeSec / 60), ss = String(S.timeSec % 60).padStart(2, '0');
+  $('endStats').innerHTML = [[S.score, 'SCORE'], [mm + ':' + ss, 'TIME'], [S.kills, 'ARCHIVES DEFEATED'], [q.correct + '/' + q.answered, 'LINK ANSWERS'], [S.xc, 'X-COIN EARNED'], [S.orbCount, 'ORBS'], [q.answered ? Math.round(q.correct / q.answered * 100) + '%' : '—', 'ACCURACY']].map(function (a) { return '<div><b>' + a[0] + '</b><span class="mono">' + a[1] + '</span></div>'; }).join('');
+  setMode('end');
+}
+
+// ── HUD ──
+function renderHud() {
+  const p = S.p; if (!p) return;
+  $('vitF').style.width = Math.max(0, p.vit / p.maxVit * 100) + '%';
+  const ip = $('pips'); const c = S.quiz.charge; if (ip.children.length !== 5) { ip.innerHTML = ''; for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'pip'; ip.appendChild(d); } }
+  for (let i = 0; i < 5; i++) ip.children[i].className = 'pip' + (i < c ? ' on' : '');
+  $('scoreV').textContent = S.score; $('xcV').textContent = S.xc; $('orbV').textContent = S.orbCount;
+  $('linkBtn').classList.toggle('pulse', c === 0 && S.enemies.some(function (e) { return !e.dead; }));
+  const a = S.areas[S.areaIdx], o = $('obj'); let t = 'Enter the first section', sub = '';
+  if (S.bossDone) { t = 'Reach the exit portal'; }
+  else if (a && a.state === 'active') { const e = a.enc, left = S.enemies.filter(function (x) { return !x.dead; }).length + e.pending; t = 'SECTION ' + (a.idx + 1) + ' / 7 — Defeat all Archives'; sub = 'Waves left: ' + e.remainingWaves() + ' · Enemies: ' + left + ' · Gate sealed'; }
+  else if (a && a.state === 'cleared') { t = 'Gate ' + (a.idx + 1) + ' open — move on'; sub = a.idx === 5 ? 'The main hub awaits' : 'Section ' + (a.idx + 2) + ' ahead'; }
+  else if (S.areaIdx < 0) { t = 'Move into the first section'; sub = 'WASD / arrows'; }
+  o.firstChild.nodeValue = t; o.lastChild.textContent = sub;
+}
+
+// ── Main update ──
+function update(dt) {
+  S.t += dt; const p = S.p, m = S.map;
+  p.dashCd = Math.max(0, p.dashCd - dt); p.inv = Math.max(0, p.inv - dt); p.hurtCd = Math.max(0, p.hurtCd - dt); p.hit = Math.max(0, p.hit - dt);
+  let ax = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + joy.x, ay = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + joy.y;
+  const mag = Math.hypot(ax, ay); if (mag > 1) { ax /= mag; ay /= mag; }
+  const spd = 190 * (1 + sx(stat('speed')));
+  if (p.dash > 0) { p.dash -= dt; L.moveBody(m, p, p.dvx * 560 * dt, p.dvy * 560 * dt); }
+  else { L.moveBody(m, p, ax * spd * dt, ay * spd * dt); if (mag > .1) p.face = Math.atan2(ay, ax); }
+  // auto-aim spark at nearest visible target
+  p.shotCd -= dt;
+  if (p.shotCd <= 0) {
+    let best = null, bd = 300;
+    S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd && L.lineClear(m, p.x, p.y, e.x, e.y)) { bd = d; best = e; } });
+    if (!best) S.mats.forEach(function (mt) { if (mt.dead) return; const d = Math.hypot(mt.x - p.x, mt.y - p.y); if (d < 230 && d < bd + 300 && L.lineClear(m, p.x, p.y, mt.x, mt.y) && (!best || d < bd)) { bd = d; best = mt; } });
+    if (best) { const an = Math.atan2(best.y - p.y, best.x - p.x); S.shots.push({ x: p.x, y: p.y, vx: Math.cos(an) * 540, vy: Math.sin(an) * 540, life: .7 }); p.shotCd = .42; p.face = an; } else p.shotCd = .1;
+  }
+  const powerB = 1 + sx(stat('power'));
+  S.shots.forEach(function (s) {
+    const step = 1 / 60; let n = Math.ceil(Math.hypot(s.vx, s.vy) * dt / 8) || 1;
+    for (let i = 0; i < n && !s.dead; i++) {
+      s.x += s.vx * dt / n; s.y += s.vy * dt / n;
+      if (L.isSolidTile(m, Math.floor(s.x / T), Math.floor(s.y / T))) { s.dead = true; break; }
+      for (let k = 0; k < S.mats.length && !s.dead; k++) { const mt = S.mats[k]; if (!mt.dead && Math.hypot(mt.x - s.x, mt.y - s.y) < 14) { damageMat(mt, 1); s.dead = true; } }
+      for (let k = 0; k < S.enemies.length && !s.dead; k++) {
+        const e = S.enemies[k]; if (e.dead || e.spawnT > 0) continue;
+        if (e.type === 'sentry') for (let q = 0; q < e.petals.length; q++) { const pt = e.petals[q]; if (pt.hp > 0 && Math.hypot(pt.px - s.x, pt.py - s.y) < 11) { damagePetal(e, pt, 1 * powerB); s.dead = true; break; } }
+        if (!s.dead && Math.hypot(e.x - s.x, e.y - s.y) < e.r + 4) { damageEnemy(e, 1 * powerB); s.dead = true; }
+      }
+    }
+    s.life -= dt; if (s.life <= 0) s.dead = true;
+  });
+  S.shots = S.shots.filter(function (s) { return !s.dead; });
+  // enemies
+  buildFlow();
+  S.enemies.forEach(function (e) {
+    if (e.dead) return; e.hurt = Math.max(0, e.hurt - dt); e.touchCd = Math.max(0, e.touchCd - dt);
+    if (e.spawnT > 0) { e.spawnT -= dt; return; }
+    const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
+    if (e.type === 'scout') {
+      const cv2 = chaseVec(e); L.moveBody(m, e, cv2[0] * DEF.scout.spd * dt, cv2[1] * DEF.scout.spd * dt);
+    } else if (e.type === 'interceptor') {
+      if (e.state === 'move') { const cv3 = chaseVec(e); L.moveBody(m, e, cv3[0] * DEF.interceptor.spd * dt, cv3[1] * DEF.interceptor.spd * dt); e.cd -= dt; if (e.cd <= 0 && d < 380 && L.lineClear(m, e.x, e.y, p.x, p.y)) { e.state = 'wind'; e.st = .75; e.tx = dx / d; e.ty = dy / d; } }
+      else if (e.state === 'wind') { e.st -= dt; if (e.st <= 0) { e.state = 'dash'; e.st = .38; } }
+      else if (e.state === 'dash') { e.st -= dt; const r = L.moveBody(m, e, e.tx * 470 * dt, e.ty * 470 * dt); if (e.st <= 0 || r.hitX || r.hitY) { e.state = 'move'; e.cd = 3 + S.rng() * 1.5; } }
+    } else if (e.type === 'sentry') {
+      e.petals.forEach(function (pt) { pt.a += dt * 1.1; pt.px = e.x + Math.cos(pt.a) * 40; pt.py = e.y + Math.sin(pt.a) * 40; });
+      if (e.state === 'move') { e.cd -= dt; if (e.cd <= 0 && L.lineClear(m, e.x, e.y, p.x, p.y)) { e.state = 'wind'; e.st = 1.0; e.tx = Math.atan2(dy, dx); } }
+      else if (e.state === 'wind') { e.st -= dt; if (e.st <= 0) { e.state = 'beam'; e.st = .28; shake(3); } }
+      else if (e.state === 'beam') { e.st -= dt; const bx = Math.cos(e.tx), by = Math.sin(e.tx), rx = p.x - e.x, ry = p.y - e.y, along = rx * bx + ry * by, perp = Math.abs(rx * by - ry * bx); if (along > 0 && along < 520 && perp < 16 + p.r) hurtPlayer(DEF.sentry.dmg, 'beam'); if (e.st <= 0) { e.state = 'move'; e.cd = 2.8; } }
+    }
+    // contact damage (interceptor only while dashing; scouts by touch)
+    if (Math.hypot(p.x - e.x, p.y - e.y) < p.r + e.r - 2) {
+      if (e.type === 'scout' && e.touchCd <= 0) { hurtPlayer(DEF.scout.dmg, 'touch'); e.touchCd = .8; }
+      if (e.type === 'interceptor' && e.state === 'dash' && e.touchCd <= 0) { hurtPlayer(DEF.interceptor.dmg, 'dash'); e.touchCd = 1; }
+    }
+    // soft separation
+    S.enemies.forEach(function (o) { if (o === e || o.dead || o.type === 'sentry' || e.type === 'sentry') return; const ox = e.x - o.x, oy = e.y - o.y, od = Math.hypot(ox, oy); if (od > 0 && od < e.r + o.r) L.moveBody(m, e, ox / od * 40 * dt, oy / od * 40 * dt); });
+  });
+  S.enemies = S.enemies.filter(function (e) { return !e.dead; });
+  // orbs (temporary pickups; run-only heal, never XP/X-Coin)
+  S.orbs.forEach(function (o) {
+    o.life -= dt; if (Math.hypot(o.x - p.x, o.y - p.y) < 22 && S.ledger.claim(o.id)) { o.life = -1; S.orbCount++; p.vit = Math.min(p.maxVit, p.vit + 8); S.rings.push({ x: o.x, y: o.y, r: 6, max: 34, a: 1, c: '#7fd8ff' }); renderHud(); }
+  });
+  S.orbs = S.orbs.filter(function (o) { return o.life > 0; });
+  S.coins.forEach(function (c) {
+    c.life -= dt; if (c.vy) { c.y += c.vy * dt; c.vy += 240 * dt; if (c.vy > 0) c.vy = 0; }
+    const d = Math.hypot(c.x - p.x, c.y - p.y); if (d < 90 && d > 1) { c.x += (p.x - c.x) / d * 220 * dt; c.y += (p.y - c.y) / d * 220 * dt; } // gentle magnet
+    if (d < 20 && S.ledger.claim(c.id)) { c.life = -1; S.xc++; S.fx.push({ x: c.x, y: c.y - 8, t: .8, k: 'txt', text: '+1 X' }); renderHud(); }
+  });
+  S.coins = S.coins.filter(function (c) { return c.life > 0; });
+  S.mats.forEach(function (mt) { mt.hurt = Math.max(0, (mt.hurt || 0) - dt); });
+  S.fx.forEach(function (f) { f.t -= dt; }); S.fx = S.fx.filter(function (f) { return f.t > 0; });
+  S.rings.forEach(function (r) { r.r += (r.max - r.r) * Math.min(1, dt * 9); r.a -= dt * 2.4; }); S.rings = S.rings.filter(function (r) { return r.a > 0; });
+  updateAreas(dt);
+  if (S.portal && Math.hypot(p.x - S.portal.x, p.y - S.portal.y) < 36) finish();
+  S.shake = Math.max(0, S.shake - dt * 22);
+  hudTick = (hudTick || 0) + dt; if (hudTick > .2) { hudTick = 0; renderHud(); }
+}
+let hudTick = 0;
+function hurtPlayer(d, src) {
+  const p = S.p; if (p.inv > 0 || p.hurtCd > 0) return;
+  d = L.resolveIncoming({ raw: d, guarded: false, guardStat: sx(stat('guard')) }); p.vit -= d; p.hurtCd = .5; p.hit = .2; shake(4); renderHud();
+  if (p.vit <= 0) {
+    // safe retry: the area restarts, nothing persistent is touched
+    p.vit = p.maxVit; const a = S.areas[S.areaIdx];
+    banner('EVO OVERLOADED — RETRY'); const r = S.map.rooms[a ? a.idx : 0];
+    S.enemies = []; S.shots = []; if (a && a.state === 'active') resetArea(a.idx);
+    if (!a || a.idx === 0) { p.x = S.map.start.x; p.y = S.map.start.y; } else { p.x = (r.x + 2) * T + 16; p.y = (r.y + r.rowL + 1) * T + 16; }
+    p.inv = 1.2; renderHud();
+  }
+}
+
+// ── Render ──
+function drawIcon(i, x, y, size) { if (ready(i)) ctx.drawImage(i, x - size / 2, y - size / 2, size, size); else { ctx.fillStyle = '#7fd8ff'; ctx.beginPath(); ctx.arc(x, y, size * .35, 0, 7); ctx.fill(); } }
+function evoIcon() { return S.iconCard ? img('/' + S.iconCard.files['128']) : null; }
+function bar(x, y, w, v, max, col) { ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(x - w / 2 - 1, y - 1, w + 2, 6); ctx.fillStyle = col || '#00e676'; ctx.fillRect(x - w / 2, y, w * Math.max(0, v / max), 4); }
+function cover(im, x, y, w, h, alpha) {
+  if (!ready(im)) return; const ir = im.naturalWidth / im.naturalHeight, r = w / h; let sw = im.naturalWidth, sh = im.naturalHeight, sx0 = 0, sy0 = 0;
+  if (ir > r) { sw = sh * r; sx0 = (im.naturalWidth - sw) / 2; } else { sh = sw / r; sy0 = (im.naturalHeight - sh) / 2; }
+  ctx.globalAlpha = alpha; ctx.drawImage(im, sx0, sy0, sw, sh, x, y, w, h); ctx.globalAlpha = 1;
+}
+function render() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#02040a'; ctx.fillRect(0, 0, VW, VH);
+  if (S.mode === 'boss') return renderBossScene();
+  if (!S.map || !S.p) { cover(img(ASSET + 'web/void.jpg'), 0, 0, VW, VH, .6); return; }
+  const p = S.p, m = S.map;
+  // camera
+  const tx = p.x - VW / 2, ty = p.y - VH / 2; S.cam.x += (tx - S.cam.x) * .12; S.cam.y += (ty - S.cam.y) * .12;
+  cover(img(ASSET + 'web/void.jpg'), -((S.cam.x * .08) % 80), -((S.cam.y * .08) % 40), VW + 160, VH + 80, .85);
+  const shx = S.shake ? (Math.random() - .5) * S.shake : 0, shy = S.shake ? (Math.random() - .5) * S.shake : 0;
+  ctx.translate(-Math.round(S.cam.x) + shx, -Math.round(S.cam.y) + shy);
+  const x0 = Math.max(0, Math.floor(S.cam.x / T)), x1 = Math.min(m.W - 1, Math.ceil((S.cam.x + VW) / T)), y0 = Math.max(0, Math.floor(S.cam.y / T)), y1 = Math.min(m.H - 1, Math.ceil((S.cam.y + VH) / T));
+  // room plates under the floor
+  m.rooms.forEach(function (r, i) {
+    if (r.px.x > S.cam.x + VW || r.px.x + r.px.w < S.cam.x || r.px.y > S.cam.y + VH || r.px.y + r.px.h < S.cam.y) return;
+    const plate = img(ASSET + 'web/w01/' + (i < 6 ? 'combat-0' + (i + 1) : 'boss') + '.jpg'); cover(plate, r.px.x, r.px.y, r.px.w, r.px.h, .55);
+    ctx.fillStyle = 'rgba(2,6,18,.5)'; ctx.fillRect(r.px.x, r.px.y, r.px.w, r.px.h);
+  });
+  ctx.strokeStyle = 'rgba(0,229,255,.07)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let gx = x0; gx <= x1 + 1; gx++) { ctx.moveTo(gx * T + .5, y0 * T); ctx.lineTo(gx * T + .5, (y1 + 1) * T); }
+  for (let gy = y0; gy <= y1 + 1; gy++) { ctx.moveTo(x0 * T, gy * T + .5); ctx.lineTo((x1 + 1) * T, gy * T + .5); }
+  ctx.stroke();
+  // corridors + walls
+  for (let ty2 = y0; ty2 <= y1; ty2++) for (let tx2 = x0; tx2 <= x1; tx2++) {
+    const v = m.grid[ty2 * m.W + tx2], X = tx2 * T, Y = ty2 * T;
+    if (v === 1) {
+      ctx.fillStyle = '#070b1c'; ctx.fillRect(X, Y, T, T);
+      const open = function (a, b) { return a >= 0 && b >= 0 && a < m.W && b < m.H && m.grid[b * m.W + a] !== 1; };
+      ctx.fillStyle = 'rgba(0,229,255,.55)';
+      if (open(tx2, ty2 + 1)) ctx.fillRect(X, Y + T - 2, T, 2); if (open(tx2, ty2 - 1)) ctx.fillRect(X, Y, T, 2);
+      if (open(tx2 + 1, ty2)) ctx.fillRect(X + T - 2, Y, 2, T); if (open(tx2 - 1, ty2)) ctx.fillRect(X, Y, 2, T);
+    } else if (roomLess(tx2, ty2)) { ctx.fillStyle = 'rgba(8,14,36,.92)'; ctx.fillRect(X, Y, T, T); ctx.fillStyle = 'rgba(0,229,255,.08)'; ctx.fillRect(X, Y + T / 2 - 1, T, 2); }
+  }
+  // gates
+  m.gates.forEach(function (g, i) {
+    const open = m.gateOpen[i], x = g.col * T, y = g.row * T;
+    ctx.save(); ctx.globalAlpha = open ? .15 : .95; const ff = img(ASSET + 'props/gate-forcefield-128.png');
+    ctx.fillStyle = open ? 'rgba(0,229,255,.12)' : 'rgba(255,60,110,.45)'; ctx.fillRect(x, y, T, T * 3);
+    if (!open) { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(x + T / 2 - 1, y, 2, T * 3); if (ready(ff)) ctx.drawImage(ff, x - 24, y - 6, 80, T * 3 + 12); }
+    ctx.restore();
+  });
+  // portal & boss node
+  if (S.portal) { const pi = img(ASSET + 'sprites/circuit-portal-open-256.png'); if (ready(pi)) ctx.drawImage(pi, S.portal.x - 60, S.portal.y - 60, 120, 120); else { ctx.strokeStyle = '#7dffb4'; ctx.beginPath(); ctx.arc(S.portal.x, S.portal.y, 40, 0, 7); ctx.stroke(); } }
+  else if (!S.bossDone) { const n = m.bossNode, pulse = 1 + Math.sin(S.t * 3) * .06; ctx.strokeStyle = 'rgba(255,60,110,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(n.x, n.y, 40 * pulse, 0, 7); ctx.stroke(); drawIcon(img(ARCH + 'elite-128.png'), n.x, n.y, 72); ctx.fillStyle = '#fff'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ELITE — step in to challenge', n.x, n.y + 58); }
+  // breakable materials
+  S.mats.forEach(function (mt) { if (mt.dead || mt.x < S.cam.x - 40 || mt.x > S.cam.x + VW + 40 || mt.y < S.cam.y - 40 || mt.y > S.cam.y + VH + 40) return; const mi = img(ASSET + 'props/resource-' + mt.kind + '-64.png'); ctx.globalAlpha = mt.hurt > 0 ? .6 : 1; ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(mt.x, mt.y + 11, 13, 5, 0, 0, 7); ctx.fill(); if (ready(mi)) ctx.drawImage(mi, mt.x - 17, mt.y - 17, 34, 34); else { ctx.fillStyle = '#9ad'; ctx.fillRect(mt.x - 10, mt.y - 10, 20, 20); } ctx.globalAlpha = 1; if (mt.hp < mt.max) bar(mt.x, mt.y - 24, 24, mt.hp, mt.max, '#ffd740'); });
+  // orbs
+  S.orbs.forEach(function (o) { const oi = img(ASSET + 'sprites/orb-energy-64.png'); const f = o.life < 3 && Math.floor(S.t * 8) % 2 ? .4 : 1; ctx.globalAlpha = f; if (ready(oi)) ctx.drawImage(oi, o.x - 12, o.y - 12 + Math.sin(S.t * 5 + o.x) * 2, 24, 24); else { ctx.fillStyle = '#7fd8ff'; ctx.beginPath(); ctx.arc(o.x, o.y, 7, 0, 7); ctx.fill(); } ctx.globalAlpha = 1; });
+  // X-Coin pickups
+  S.coins.forEach(function (c) { const ci = img(ASSET + 'sprites/xcoin-64.png'), f = c.life < 4 && Math.floor(S.t * 8) % 2 ? .4 : 1, w = Math.max(.25, Math.abs(Math.cos(S.t * 4 + c.x * .05))) * 20; ctx.globalAlpha = f; ctx.shadowColor = '#ffd740'; ctx.shadowBlur = 8; if (ready(ci)) ctx.drawImage(ci, c.x - w / 2, c.y - 10, w, 20); else { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(c.x, c.y, 7, 0, 7); ctx.fill(); } ctx.shadowBlur = 0; ctx.globalAlpha = 1; });
+  // enemies
+  S.enemies.forEach(function (e) {
+    if (e.spawnT > 0) { ctx.strokeStyle = 'rgba(255,80,120,' + (.9 - e.spawnT * .6) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, Math.max(1, 6 + (0.8 - e.spawnT) * 26), 0, 7); ctx.stroke(); if (e.type === 'interceptor') { ctx.fillStyle = '#ff6b8a'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', e.x, e.y - 18); } return; }
+    if (e.type === 'interceptor' && e.state === 'wind') { ctx.strokeStyle = 'rgba(255,80,120,.8)'; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + e.tx * 260, e.y + e.ty * 260); ctx.stroke(); ctx.setLineDash([]); }
+    if (e.type === 'sentry') {
+      if (e.state === 'wind' || e.state === 'beam') { ctx.strokeStyle = e.state === 'beam' ? 'rgba(255,230,120,.95)' : 'rgba(255,80,120,.6)'; ctx.lineWidth = e.state === 'beam' ? 16 : 2; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + Math.cos(e.tx) * 520, e.y + Math.sin(e.tx) * 520); ctx.stroke(); }
+      e.petals.forEach(function (pt) { if (pt.hp > 0) { ctx.fillStyle = 'rgba(120,200,255,.9)'; ctx.beginPath(); ctx.arc(pt.px, pt.py, 10, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); bar(pt.px, pt.py - 17, 22, pt.hp, pt.max, '#7fd8ff'); } });
+    }
+    const sz = e.type === 'sentry' ? 62 : e.type === 'interceptor' ? 40 : 34;
+    ctx.globalAlpha = e.hurt > 0 ? .55 : 1; drawIcon(img(ARCH + e.type + '-64.png'), e.x, e.y, sz); ctx.globalAlpha = 1;
+    bar(e.x, e.y - sz / 2 - 6, e.type === 'sentry' ? 44 : 26, e.hp, e.max, e.type === 'sentry' ? '#ff9f0a' : '#ff4d6d');
+  });
+  // shots
+  S.shots.forEach(function (s) { ctx.fillStyle = '#9ff'; ctx.shadowColor = '#0ff'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, 7); ctx.fill(); ctx.shadowBlur = 0; });
+  // player
+  ctx.globalAlpha = p.inv > 0 && Math.floor(S.t * 20) % 2 ? .4 : 1; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 13, 5, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = p.hit > 0 ? '#ff4d6d' : 'rgba(0,229,255,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 17, 0, 7); ctx.stroke();
+  drawIcon(evoIcon(), p.x, p.y - 2, 36); ctx.globalAlpha = 1;
+  // fx
+  S.rings.forEach(function (r) { ctx.strokeStyle = r.c; ctx.globalAlpha = Math.max(0, r.a); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; });
+  S.fx.forEach(function (f) { const a = Math.min(1, f.t * 3); ctx.globalAlpha = a; if (f.k === 'txt') { ctx.fillStyle = '#ffd740'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(f.text, f.x, f.y - (0.8 - f.t) * 30); } else if (f.k === 'burst') { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(f.x, f.y, Math.max(1, 10 + (.5 - f.t) * 40), 0, 7); ctx.fill(); } else { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(f.x, f.y, 5, 0, 7); ctx.fill(); } ctx.globalAlpha = 1; });
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+function roomLess(tx, ty) { return L.roomIndexAt(S.map, tx, ty) < 0; }
+function renderBossScene() {
+  const t = S.t; cover(img(ASSET + 'web/w01/boss.jpg'), 0, 0, VW, VH, .9);
+  const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, 'rgba(2,4,12,.35)'); g.addColorStop(1, 'rgba(2,4,12,.8)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+  const bob = Math.sin(t * 2) * 6, hit = bossState.turn === 'boss' && bossState.busy ? 0 : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.ellipse(740, 380, 120, 20, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(220, 400, 90, 16, 0, 0, 7); ctx.fill();
+  drawIcon(img(ARCH + 'elite-256.png'), 740, 250 + bob, 300);
+  drawIcon(S.iconCard ? img('/' + S.iconCard.files['256']) : null, 220, 300 - bob * .6, 220);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+let last = 0;
+function frame(ts) {
+  const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts;
+  if (S.mode === 'play' && !S.quizOpen) update(dt); else if (S.mode === 'boss' || S.mode === 'cut' || S.mode === 'menu') S.t += dt;
+  if (S.mode === 'play' || S.mode === 'boss' || S.mode === 'cut' || S.mode === 'end') render(); else { ctx.fillStyle = '#02040a'; ctx.fillRect(0, 0, VW, VH); cover(img(ASSET + 'web/void.jpg'), 0, 0, VW, VH, .5); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ── Test hooks (only with ?test=1) ──
+if (TEST) window.__nf = {
+  S: S, L: L, bossState: bossState,
+  tp: function (x, y) { S.p.x = x; S.p.y = y; }, mode: function () { return S.mode; }, skipCut: function () { cutAdvance(true); },
+  stepFor: function (sec) { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) { if (S.mode === 'cut') cutAdvance(true); if (S.mode === 'play' && !S.quizOpen) update(1 / 60); } },
+  breakAll: function () { S.mats.forEach(function (m2) { damageMat(m2, 99); }); }, awardRun: awardRun, godmode: function () { S.p.maxVit = 1e6; S.p.vit = 1e6; },
+  answerCorrect: function () { if (!S.quizOpen) return null; const a = curAttempt; const r = S.quiz.answer(a.id, a._correctId, 5); S.p.charge = S.quiz.charge; closeQuiz(); return r; },
+  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossAct: bossAct, bossWin: bossWin
+};
+})();
+</script>
+</body>
+</html>

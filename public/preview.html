@@ -3761,9 +3761,11 @@ window.addEventListener('message', function (e) {
     if (arenaGame.opts && arenaGame.opts.liveId) {
       try { baLiveReportScore(arenaGame.opts.liveId, m.score || 0, !!m.won); } catch (e) {}
     }
-    const xc = exoApplyPower(arenaGameXcFor(m.score), state.player && state.player.id);
+    const xcBase = (typeof m.xc === 'number' && isFinite(m.xc)) ? Math.max(0, Math.min(arenaGame.xcMax, Math.round(m.xc))) : arenaGameXcFor(m.score); // explicit amount (Nexus Frontiers): capped, 0 allowed
+    const xc = exoApplyPower(xcBase, state.player && state.player.id);
     const note = document.getElementById('arenaGameXcNote');
-    if (window.parent !== window && state.player) {
+    if (xc <= 0) { /* nothing earned: no award proposal */ }
+    else if (window.parent !== window && state.player) {
       arenaPostAward(state.player.id, { xc: xc, reason: 'arena.duel.' + (m.deckId || 'deck') + (m.won ? '.win' : '.loss') });
       if (note) note.textContent = '⚡ +' + xc + ' XC PROPOSED — SCORE ' + (m.score || 0);
     } else {
@@ -3875,6 +3877,9 @@ function renderDecks() {
 // createdByName, createdAt, plays } in Supabase row `pflx_ba_games`.
 // ═══════════════════════════════════════════════════════════════════
 const STUDIO_TEMPLATES = [
+  { id: 'nexus-frontiers', name: 'PFLX: Nexus Frontiers', icon: '🌐', file: 'games/nexus-frontiers.html', ready: true,
+    img: 'games/covers/nexus-frontiers.png',
+    desc: 'Top-down Archive defense: clear sealed sections, answer LINK quizzes to charge your Evo, break materials for a little X-Coin, then face the turn-based Elite boss. Server 01 playable; solo.' },
   { id: 'exo-clash', name: 'EXO Clash', icon: '🤖', file: 'games/exo-clash.html', ready: true,
     img: 'games/covers/exo-clash.png',
     desc: 'The EXO showcase brawler: your EXO and three rival EXOs on one platform — correct answers land strikes, gear stats are live (max 12% swing), OVERDRIVE hits everyone.' },
