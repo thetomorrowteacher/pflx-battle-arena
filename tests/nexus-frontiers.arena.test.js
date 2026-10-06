@@ -13,9 +13,9 @@ function harness() {
     state: { player: { id: 'p1', xc: 100 } }, arenaGame: { open: true, frame: { contentWindow: { postMessage: m => sent.push(m) } }, opts: { sessionId: 's1' } },
     baSessions: { byId: id => id === 's1' ? { id: 's1', seasonMode: true, seasonId: 'fall', config: env.sessCfg || {} } : (id === 'sx' ? { id: 'sx', config: env.sessCfg || {} } : null) },
     supabaseLoad: async k => db[k] === undefined ? null : JSON.parse(JSON.stringify(db[k])), supabaseSave: async (k, v) => { if (env.failSave) return false; db[k] = JSON.parse(JSON.stringify(v)); return true; },
-    exoGamePayloadFor: () => ({ level: env.level || 5 }), PFLX_BADGES: [], exoSpend: (amt) => { if (env.state.player.xc < amt) return false; env.state.player.xc -= amt; return true; }, arenaPostAward: (pid, a) => awards.push(a), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_KEY: 'anon-key'
+    exoGamePayloadFor: () => ({ level: env.level || 5 }), PFLX_BADGES: [], isHostUser: () => !!env.host, exoSpend: (amt) => { if (env.state.player.xc < amt) return false; env.state.player.xc -= amt; return true; }, arenaPostAward: (pid, a) => awards.push(a), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_KEY: 'anon-key'
   };
-  const f = new Function('env', 'with (env) {' + block + '\n return { NF_MARKET, nfMergeTeam, nfApplyConsumed, nfScopeFor, nfHandleBuy, nfHandleSave, nfLoadState, nfClamp, nfHandleWager, nfHandleEvolve, nfHandleArm, nfHandleSettle, nfHandleClaim, nfReleaseStale, nfEvalWindows, nfWindowFor, nfMergeCats, nfPickWinner, nfCleanCatalog, nfPriceOf, nfWagerCap, nfClampWager, NF_ORB_COST, NF_BADGES, NF_MIN_ROUND_SEC, NF_BANK_CAP_DEFAULT, NF_STATS, nfCoopRules, nfSquadFor, nfCoopContext, nfHandleScope, nfSessionTagsHtml }; }')(env);
+  const f = new Function('env', 'with (env) {' + block + '\n return { NF_MARKET, nfMergeTeam, nfApplyConsumed, nfScopeFor, nfHandleBuy, nfBuyCore, nfMarketItems, nfPublishMarket, nfEnsureMarketPublished, NF_DESC, nfHandleSave, nfLoadState, nfClamp, nfHandleWager, nfHandleEvolve, nfHandleArm, nfHandleSettle, nfHandleClaim, nfReleaseStale, nfEvalWindows, nfWindowFor, nfMergeCats, nfPickWinner, nfCleanCatalog, nfPriceOf, nfWagerCap, nfClampWager, NF_ORB_COST, NF_BADGES, NF_MIN_ROUND_SEC, NF_BANK_CAP_DEFAULT, NF_STATS, nfCoopRules, nfSquadFor, nfCoopContext, nfHandleScope, nfSessionTagsHtml }; }')(env);
   return { f, db, sent, awards, env };
 }
 (async () => {
@@ -208,6 +208,38 @@ function harness() {
     assert.ok(/orbs: st\.orbs, catalog: st\.catalog/.test(arena) && /net: \{ url: SUPABASE_URL, key: SUPABASE_KEY \}/.test(arena) && /nfReleaseStale\(\)/.test(arena));
     ['pflx_arena_nf_wager', 'pflx_arena_nf_evolve', 'pflx_arena_nf_arm', 'pflx_arena_nf_settle', 'pflx_arena_nf_claim'].forEach(k => assert.ok(game.includes(k), 'cartridge posts ' + k));
     ['nfGoalCorrect', 'nfGoalKeys', 'nfGoalClear', 'nfBankCap', 'nfAwardMinTeams'].forEach(k => assert.ok(arena.includes(k), k)); assert.ok(/onclick="nfCatalogToggle\(\)"/.test(arena) && /function nfCatImage/.test(arena) && /type="file" accept="image\/\*"/.test(arena));
+  });
+
+  // ── Marketplace (Oct 2026): the Arena owns game upgrades and publishes them for X-Coin / X-Live / the Console ──
+  await t('marketplace: published game items cover all 27 keys and match the cartridge (names, descriptions, prices, which ones fire)', () => {
+    const h = harness(), items = h.f.nfMarketItems({}); assert.strictEqual(items.length, 27);
+    items.forEach(i => { const u = L.UPGRADES[i.id], tr = u.tiers[i.tier - 1]; assert.strictEqual(i.desc, tr.d, i.key); assert.strictEqual(i.price, tr.p, i.key); assert.strictEqual(i.fires, !!u.trigger, i.key); assert.ok(i.effect && i.icon === u.icon, i.key); assert.strictEqual(i.name, u.name + (i.tier > 1 ? ' Mk ' + ['I', 'II', 'III'][i.tier - 1] : ''), i.key); });
+    const o = h.f.nfMarketItems({ aegis: { name: 'Big Shield', desc: 'Hosted text', price: 35, image: 'https://x/y.png' } }).find(i => i.key === 'aegis');
+    assert.deepStrictEqual([o.name, o.desc, o.price, o.image], ['Big Shield', 'Hosted text', 35, 'https://x/y.png']);
+  });
+  await t('marketplace: only a host publishes; a player never writes pflx_market_game', async () => {
+    const h = harness(); h.env.host = false; assert.strictEqual(await h.f.nfPublishMarket({}, 0), false); assert.ok(!h.db.pflx_market_game);
+    h.env.host = true; assert.strictEqual(await h.f.nfPublishMarket({}, 123), true); assert.strictEqual(h.db.pflx_market_game.items.length, 27); assert.strictEqual(h.db.pflx_market_game.catAt, 123); assert.strictEqual(h.db.pflx_market_game.v, 1);
+  });
+  await t('marketplace: an oversized catalog (big pictures) is published without the pictures instead of bloating the row', async () => {
+    const h = harness(); h.env.host = true; const big = 'data:image/png;base64,' + 'A'.repeat(39000), cat = {}; Object.keys(h.f.NF_MARKET).forEach(k => cat[k] = { image: big });
+    await h.f.nfPublishMarket(cat, 1); assert.ok(h.db.pflx_market_game.imagesStripped); assert.ok(h.db.pflx_market_game.items.every(i => i.image === '')); assert.ok(JSON.stringify(h.db.pflx_market_game).length < 700000);
+  });
+  await t('marketplace: a host opening the Marketplace publishes when the row is missing or older than the catalog, and leaves a fresh row alone', async () => {
+    const h = harness(); h.env.host = true; await h.f.nfEnsureMarketPublished(); assert.strictEqual(h.db.pflx_market_game.items.length, 27); const t1 = h.db.pflx_market_game.updatedAt;
+    h.db.pflx_market_game.updatedAt = 1; await h.f.nfEnsureMarketPublished(); assert.strictEqual(h.db.pflx_market_game.updatedAt, 1);
+    h.db.pflx_nf_catalog = { v: 1, items: { aegis: { price: 25 } }, updatedAt: 5000 }; await h.f.nfEnsureMarketPublished(); assert.ok(h.db.pflx_market_game.updatedAt > 1); assert.strictEqual(h.db.pflx_market_game.items.find(i => i.key === 'aegis').price, 25); assert.strictEqual(h.db.pflx_market_game.catAt, 5000);
+    const p = harness(); p.env.host = false; await p.f.nfEnsureMarketPublished(); assert.ok(!p.db.pflx_market_game);
+  });
+  await t('marketplace: buying from the Marketplace screen uses the same path as the cartridge but never posts to a game frame', async () => {
+    const h = harness(); const r = await h.f.nfBuyCore('aegis'); assert.strictEqual(r.xc, 80); assert.deepStrictEqual(r.owned, { aegis: 1 }); assert.strictEqual(h.sent.length, 0);
+    const bad = await h.f.nfBuyCore('hax'); assert.ok(bad.error); assert.strictEqual(h.env.state.player.xc, 80); assert.strictEqual(h.sent.length, 0);
+  });
+  await t('marketplace: wiring — screen, nav links, publish on catalog save, message hook, and the inlined card module is byte-identical to the shared copy', () => {
+    assert.ok(/state\.screen === "market"/.test(arena) && /goMarket\(\);togglePanel\(\)/.test(arena) && /onclick="goMarket\(\)"/.test(arena) && /marketAttach\(\)/.test(arena));
+    assert.ok(/await nfPublishMarket\(clean, catAt\)/.test(arena) && /pflx_market_open/.test(arena) && /type: 'pflx_open_app'/.test(arena) && /buy: \{ game: marketBuyGame \}/.test(arena));
+    const shared = fs.readFileSync(path.join(__dirname, '..', '..', 'pflx-market', 'pflx-market.js'), 'utf8').trim(), m0 = arena.indexOf('/* ═══ PflxMarket BEGIN'), m1 = arena.indexOf('/* ═══ PflxMarket END');
+    assert.ok(m0 > 0 && m1 > m0); assert.strictEqual(arena.slice(arena.indexOf('\n', m0) + 1, m1).trim(), shared);
   });
 
   console.log('\n' + n + ' arena-side tests passed');
