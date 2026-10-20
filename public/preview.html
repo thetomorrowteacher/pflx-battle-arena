@@ -11,6 +11,31 @@
      so the legacy login form never appears on screen, even for a frame.
 ═══════════════════════════════════════════════════════════════════ -->
 <script>
+// v295 -- shared PFLX server login (pflx-auth) + message guard. Apps hold a
+// signed sign-in pass, never the PIN; identity messages are only accepted
+// from PFLX pages.
+window.pflxAuth = window.pflxAuth || (function () {
+  var EP = 'https://hyxiagexyptzvetqjmnj.supabase.co/functions/v1/pflx-auth', ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eGlhZ2V4eXB0enZldHFqbW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODM4MTYsImV4cCI6MjA4OTY1OTgxNn0.hqHVlRu775dZfJrKxSFMNEPhANu5EFm7gJpaJ3RnbnY', TK = 'pflx_auth_v1';
+  function call(b) { return fetch(EP, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: 'Bearer ' + ANON }, body: JSON.stringify(b) })
+    .then(function (r) { return r.json().catch(function () { return { ok: false }; }); }, function () { return { ok: false, error: 'offline' }; }); }
+  function save(tok, p) { try { var exp = Date.now() + 2592000000; try { exp = JSON.parse(atob(tok.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))).exp || exp; } catch (e) {} localStorage.setItem(TK, JSON.stringify({ token: tok, pid: p.id, brand: p.brand, role: p.role, exp: exp })); } catch (e) {} }
+  function cur() { try { var t = JSON.parse(localStorage.getItem(TK) || 'null'); if (t && t.token && t.exp > Date.now()) return t; } catch (e) {} return null; }
+  return {
+    login: function (who, pin) { return call({ action: 'login', who: who, pin: pin }).then(function (r) { if (r && r.ok) save(r.token, r.player); return r || { ok: false }; }); },
+    verify: function (tok) { tok = tok || (cur() || {}).token; if (!tok) return Promise.resolve(null); return call({ action: 'verify', token: tok }).then(function (r) { if (r && r.ok) { save(tok, r.player); return r.player; } return null; }); },
+    token: function () { var c = cur(); return c ? c.token : ''; }
+  };
+})();
+window.pflxIsPflxOrigin = function (o) { return o === window.location.origin || /^https:\/\/(www\.)?prototypeflx\.com$/.test(o) || /^https:\/\/pflx-[a-z0-9-]+\.vercel\.app$/.test(o) || /^https:\/\/x-live[a-z0-9-]*\.vercel\.app$/.test(o) || /^https:\/\/thetomorrowteacher\.github\.io$/.test(o) || /^http:\/\/localhost(:\d+)?$/.test(o); };
+window.addEventListener('message', function (e) {
+  try {
+    if (window.pflxIsPflxOrigin(e.origin || '')) return;
+    var m = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    if (m && typeof m.type === 'string' && /^pflx/i.test(m.type)) e.stopImmediatePropagation();
+  } catch (x) {}
+}, true);
+</script>
+<script>
   (function () {
     try {
       var inIframe = window.parent !== window;
@@ -2472,8 +2497,8 @@ function exoGameRivals(excludeId) {
 
 // Fallback roster in case fetch fails
 const FALLBACK_ROSTER = [
-  { id: "admin-0", name: "PrototypeFLX", brandName: "PrototypeFLX", role: "admin", avatar: "PF", cohort: "N/A", pathway: "Host", email: "host@prototypeflx.com", pin: "0000", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
-  { id: "admin-1", name: "Mr. Johnson", brandName: "TheTomorrowTeacher", role: "admin", avatar: "MJ", cohort: "N/A", pathway: "Host", email: "ennisjohnsonjr@thetomorrowteacher.org", pin: "1111", claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
+  { id: "admin-0", name: "PrototypeFLX", brandName: "PrototypeFLX", role: "admin", avatar: "PF", cohort: "N/A", pathway: "Host", email: "host@prototypeflx.com", pin: '', claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
+  { id: "admin-1", name: "Mr. Johnson", brandName: "TheTomorrowTeacher", role: "admin", avatar: "MJ", cohort: "N/A", pathway: "Host", email: "ennisjohnsonjr@thetomorrowteacher.org", pin: '', claimed: true, isHost: false, digitalBadges: 0, xcoin: 0, totalXcoin: 0, level: 99, rank: 10 },
 ];
 
 // Host/Player view toggle — when playerViewMode is true, isHostUser always returns false
@@ -2524,7 +2549,7 @@ function buildPlayers(roster) {
       level: u.level || 1, rank: u.rank || 1,
       cohort: u.cohort || "N/A", pathway: u.pathway || "Unknown",
       studioId: u.studioId || '',
-      email: u.email || "", pin: u.pin || "0000",
+      email: u.email || "", pin: "",
       claimed: u.claimed || false, isHost: u.isHost || false,
       image: img,
       bc: u.badgeCounts || { sig:0, exe:0, pre:0, pri:0 },
@@ -3358,7 +3383,7 @@ let state = {
   // succeeds; PflxBridge refreshes it again when real identity arrives.
   player: {
     id: 'pending', brand: 'Player', brandName: 'Player', name: 'Player',
-    role: 'player', pin: '0000', cohort: 'PlayerPool',
+    role: 'player', pin: '', cohort: 'PlayerPool',
     xc: 0, xcoin: 0, totalXcoin: 0, digitalBadges: 0,
     image: '', level: 1, rank: 1,
     avatar: 'PL', avatarText: 'PL', isHost: false, claimed: true,
@@ -7594,7 +7619,12 @@ function bindEvents() {
     playBtn.onclick = () => {
       const p = state.selectedLoginPlayer;
       if (!p) return;
-      if (state.pinValue === p.pin) {
+      // v295: PIN checked by the server (pflx-auth).
+      var __pv = state.pinValue;
+      window.pflxAuth.login(p.id || p.brand, __pv).then(function (r) { __arenaPinResult(!!(r && r.ok), r && r.error); });
+      return;
+      function __arenaPinResult(__ok, __err) {
+      if (__ok) {
         // Successful login
         login(p.id);
       } else {
@@ -7606,6 +7636,7 @@ function bindEvents() {
           const pi = document.getElementById("pinInput");
           if (pi) pi.focus();
         }, 50);
+      }
       }
     };
   }
@@ -12864,19 +12895,31 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
   // trapped. The new behavior synthesizes a brand from user / id / "Player"
   // when the param is empty. PflxBridge will refresh it with the real value
   // once it lands. sso=pflx alone is identity enough for us to render.
+  // v295: a Platform link only signs you in once its sign-in pass is
+  // verified by pflx-auth; identity and role come from the pass.
+  var __ssoState = 'none', __ssoWho = null;
+  (function () {
+    var p = new URLSearchParams(window.location.search);
+    if (p.get('sso') !== 'pflx') return;
+    var t = p.get('token') || '';
+    if (!t) { __ssoState = 'denied'; return; }
+    __ssoState = 'pending';
+    window.pflxAuth.verify(t).then(function (w) { __ssoWho = w; __ssoState = w ? 'ok' : 'denied'; });
+  })();
   function adoptFromUrlParams() {
     try {
       var p = new URLSearchParams(window.location.search);
       if (p.get('sso') !== 'pflx') return false;
-      var brand = p.get('brand') || p.get('user') || p.get('id') || 'Player';
+      if (__ssoState !== 'ok' || !__ssoWho) return false;
+      var brand = __ssoWho.brand || 'Player';
       var user = {
-        id: p.get('id') || null,
+        id: __ssoWho.id,
         brand: brand,
-        name: p.get('user') || brand,
-        role: p.get('role') || 'Student',
+        name: __ssoWho.name || brand,
+        role: __ssoWho.role || 'Student',
         cohort: p.get('cohort') || 'PlayerPool',
         xc: parseInt(p.get('xc'), 10) || 0,
-        pin: p.get('pin') || ''
+        pin: ''
       };
       return adoptAndLogin(user);
     } catch (e) { return false; }
@@ -12891,12 +12934,14 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
   var __adoptIv = setInterval(function () {
     __adoptTries++;
     if (adoptFromUrlParams()) { clearInterval(__adoptIv); return; }
+    if (__ssoState === 'pending') return; // still checking the sign-in pass
     // Hard fallback after 1.2s — synthesize a bare-minimum identity and
     // force state.screen = 'home' so the player isn't trapped on the
     // spinner. PflxBridge will overwrite this when the real identity
     // arrives over postMessage.
     if (__adoptTries >= 12) {
       clearInterval(__adoptIv);
+      if (__ssoState === 'denied') { try { hideBlock(); } catch (e) {} return; } // invalid link -> normal login
       try {
         adoptAndLogin({ brand: 'Player', name: 'Player', role: 'Student', cohort: 'PlayerPool', xc: 0, pin: '' });
       } catch (e) {}
@@ -12944,7 +12989,7 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
         role: user.role || 'Student', cohort: user.cohort || 'PlayerPool',
         xcoin: user.xc || 0, totalXcoin: user.totalXcoin || user.xc || 0,
         digitalBadges: user.digitalBadges || 0, image: user.image || '',
-        level: user.level || 1, pin: user.pin || '', __pflxFromPlatform: true
+        level: user.level || 1, pin: '', __pflxFromPlatform: true
       }));
     } catch (e) {}
 
@@ -13010,7 +13055,7 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
         brandName: user.brand,
         name: user.name || user.brand,
         role: isHost ? 'admin' : 'player',
-        pin: user.pin || '0000',
+        pin: '',
         cohort: user.cohort || 'PlayerPool',
         // XC under both keys — different renderers read different ones.
         xc: _xc,
