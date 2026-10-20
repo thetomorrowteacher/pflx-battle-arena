@@ -169,27 +169,36 @@ function harness() {
     const w3 = f.nfWindowFor(doc, t0 + 600000, 'c', 'rc'); assert.notStrictEqual(w3, w1, 'a squad launched 10 minutes later is a new window');
     const w4 = f.nfWindowFor(doc, t0 + 70000, 'a', 'ra2'); assert.notStrictEqual(w4, w1, 'the same squad launching again starts a new window');
   });
-  await t('Champion is ALWAYS first place; Beacon needs first place AND beating the squad\'s own record; both need the host\'s minimum number of squads', async () => {
+  await t('Champion is ALWAYS first place and needs the host\'s minimum number of squads (v0.6: Beacon is no longer decided here)', async () => {
     const { f } = harness(), now = Date.now(), mk = () => ({ windows: [{ id: 'w', first: now, status: 'open', claims: {}, teams: { a: { name: 'A', members: ['a1', 'a2'], roundId: 'ra', res: { cs: 3000, at: 2 } }, b: { name: 'B', members: ['b1'], roundId: 'rb', res: { cs: 2000, at: 1 } } } }], rec: {}, cats: {} });
-    let d = mk(); assert.strictEqual(f.nfEvalWindows(d, 2, now), true); assert.strictEqual(d.windows[0].winner, 'a'); assert.deepStrictEqual(d.windows[0].claims, { a1: { champion: 1, beacon: 1 }, a2: { champion: 1, beacon: 1 } }); assert.strictEqual(d.rec.a.best, 3000); assert.strictEqual(d.rec.b.best, 2000);
+    let d = mk(); assert.strictEqual(f.nfEvalWindows(d, 2, now), true); assert.strictEqual(d.windows[0].winner, 'a'); assert.deepStrictEqual(d.windows[0].claims, { a1: { champion: 1, beacon: 0 }, a2: { champion: 1, beacon: 0 } }, 'v0.6: the window only decides Champion; Beacon comes from the score on Veteran / Expert at settle'); assert.strictEqual(d.rec.a.best, 3000); assert.strictEqual(d.rec.b.best, 2000);
     assert.strictEqual(f.nfEvalWindows(d, 2, now), false, 'idempotent once closed');
-    d = mk(); d.rec.a = { best: 3000 }; f.nfEvalWindows(d, 2, now); assert.deepStrictEqual(d.windows[0].claims.a1, { champion: 1, beacon: 0 }, 'first place but no new record: Champion yes, Beacon no');
-    d = mk(); d.rec.a = { best: 2999 }; f.nfEvalWindows(d, 2, now); assert.strictEqual(d.windows[0].claims.a1.beacon, 1);
     d = mk(); delete d.windows[0].teams.b; f.nfEvalWindows(d, 2, now); assert.strictEqual(d.windows[0].winner, null, 'one squad alone does not win when the host needs two'); f.nfEvalWindows(Object.assign(mk(), {}), 1, now);
     d = mk(); delete d.windows[0].teams.b; f.nfEvalWindows(d, 1, now); assert.strictEqual(d.windows[0].winner, 'a');
     d = mk(); d.windows[0].teams.b.res = null; assert.strictEqual(f.nfEvalWindows(d, 2, now), false, 'waits for every squad'); assert.strictEqual(f.nfEvalWindows(d, 2, now + 16 * 60000), true, 'a squad that never reports does not block the window forever'); assert.strictEqual(d.windows[0].winner, 'a');
   });
-  await t('end to end: two squads settle, the winner claims Champion + Beacon exactly once, the other squad gets neither, session-best stats are tracked', async () => {
+  await t('end to end: two squads settle, the winner claims Champion exactly once (v0.6: Beacon is score-based at settle), the other squad gets neither, session-best stats are tracked', async () => {
     const h = harness(); h.env.state.player.xc = 1000; h.env.level = 5; h.env.sessCfg = { nfAwardMinTeams: 2 };
     await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg());
     // a second squad (other players) registers + settles directly in the shared session doc
     h.db.pflx_nf_sess_sx = JSON.parse(JSON.stringify(h.db.pflx_nf_sess_sx)); const w = h.db.pflx_nf_sess_sx.windows[0]; w.teams.bravo = { name: 'Bravo', members: ['q1', 'q2'], roundId: 'rq', startedAt: w.first, res: { cs: 1500, goalMet: false, at: Date.now() } };
     await h.f.nfHandleSettle(settleMsg({ cs: 2600 }));
-    let sess = h.db.pflx_nf_sess_sx; assert.strictEqual(sess.windows[0].status, 'done'); assert.strictEqual(sess.windows[0].winner, 'alpha'); assert.deepStrictEqual(sess.windows[0].claims.p1, { champion: 1, beacon: 1 }); assert.strictEqual(sess.cats.correct.value, 22); assert.strictEqual(sess.cats.fastest.value, 380);
-    h.awards.length = 0; await h.f.nfHandleClaim({ scope: 'sx', team: 'alpha' }); const names = h.awards.filter(a => a.badge).map(a => a.badge.name).sort(); assert.deepStrictEqual(names, ['Battle Arena Champion', 'Beacon of Collaboration']);
-    const r = lastState(h); assert.deepStrictEqual(r.award.map(a => a.name).sort(), ['Battle Arena Champion', 'Beacon of Collaboration']); assert.strictEqual(r.sessStats.cats.correct.mine, true);
+    let sess = h.db.pflx_nf_sess_sx; assert.strictEqual(sess.windows[0].status, 'done'); assert.strictEqual(sess.windows[0].winner, 'alpha'); assert.deepStrictEqual(sess.windows[0].claims.p1, { champion: 1, beacon: 0 }); assert.strictEqual(sess.cats.correct.value, 22); assert.strictEqual(sess.cats.fastest.value, 380);
+    h.awards.length = 0; await h.f.nfHandleClaim({ scope: 'sx', team: 'alpha' }); const names = h.awards.filter(a => a.badge).map(a => a.badge.name).sort(); assert.deepStrictEqual(names, ['Battle Arena Champion']);
+    const r = lastState(h); assert.deepStrictEqual(r.award.map(a => a.name).sort(), ['Battle Arena Champion']); assert.strictEqual(r.sessStats.cats.correct.mine, true);
     h.awards.length = 0; await h.f.nfHandleClaim({ scope: 'sx', team: 'alpha' }); assert.strictEqual(h.awards.length, 0, 'claimed once');
     assert.strictEqual(sess.rec.alpha.best, 2600);
+  });
+  await t('v0.6 settle badges: Positive Participant only in a session round; Beacon of Collaboration for every member with a high score on Veteran / Expert', async () => {
+    let h = harness(); h.env.state.player.xc = 1000; h.env.arenaGame.opts = { sessionId: 's1', config: { nfDifficulty: 'veteran' } }; await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg({ roundId: 'rv1' }));
+    await h.f.nfHandleSettle(settleMsg({ roundId: 'rv1', badges: ['participant', 'collaborator', 'resilient', 'beacon'], cs: 3200 }));
+    assert.deepStrictEqual(h.awards.filter(a => a.badge).map(a => a.badge.name).sort(), ['Beacon of Collaboration', 'Master Collaborator', 'Positive Participant', 'Resilient Learner']);
+    h = harness(); h.env.state.player.xc = 1000; h.env.arenaGame.opts = { sessionId: 's1', config: { nfDifficulty: 'veteran' } }; await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg({ roundId: 'rv2' }));
+    await h.f.nfHandleSettle(settleMsg({ roundId: 'rv2', badges: ['participant', 'beacon'], cs: 2900 }));
+    assert.deepStrictEqual(h.awards.filter(a => a.badge).map(a => a.badge.name), ['Positive Participant'], 'score under the Veteran bar: no Beacon');
+    h = harness(); h.env.state.player.xc = 1000; h.env.arenaGame.opts = { sessionId: 's1', config: { nfDifficulty: 'ranger' } }; await h.f.nfHandleWager({ amount: 100 }); await h.f.nfHandleArm(armMsg({ roundId: 'rv3', scope: '' }));
+    await h.f.nfHandleSettle(settleMsg({ roundId: 'rv3', scope: '', team: 'solo', badges: ['participant', 'beacon', 'collaborator'], cs: 99999 }));
+    assert.deepStrictEqual(h.awards.filter(a => a.badge).map(a => a.badge.name), ['Master Collaborator'], 'solo round: no Participant; Ranger: no Beacon');
   });
   await t('session-best stats: higher wins, except fastest clear where lower wins; zero never counts', () => {
     const { f } = harness(), d = {}; f.nfMergeCats(d, 'a', 'A', { archives: 10, fastest: 400, keys: 0 }); f.nfMergeCats(d, 'b', 'B', { archives: 8, fastest: 380, keys: 2 }); f.nfMergeCats(d, 'c', 'C', { archives: 12, fastest: 0 });
@@ -205,7 +214,7 @@ function harness() {
   });
   await t('wiring: the router handles wager / evolve / arm / settle / claim; the deck carries orbs, catalog and net; host settings and catalog editor exist', () => {
     ['wager', 'evolve', 'arm', 'settle', 'claim'].forEach(k => assert.ok(new RegExp("pflx_arena_nf_" + k + "' && arenaGame\\.open").test(arena), k));
-    assert.ok(/orbs: st\.orbs, catalog: st\.catalog/.test(arena) && /net: \{ url: SUPABASE_URL, key: SUPABASE_KEY \}/.test(arena) && /nfReleaseStale\(\)/.test(arena));
+    assert.ok(/orbs: st\.orbs, perks: st\.perks, catalog: st\.catalog/.test(arena) && /net: \{ url: SUPABASE_URL, key: SUPABASE_KEY \}/.test(arena) && /nfReleaseStale\(\)/.test(arena));
     ['pflx_arena_nf_wager', 'pflx_arena_nf_evolve', 'pflx_arena_nf_arm', 'pflx_arena_nf_settle', 'pflx_arena_nf_claim'].forEach(k => assert.ok(game.includes(k), 'cartridge posts ' + k));
     ['nfGoalCorrect', 'nfGoalKeys', 'nfGoalClear', 'nfBankCap', 'nfAwardMinTeams'].forEach(k => assert.ok(arena.includes(k), k)); assert.ok(/onclick="nfCatalogToggle\(\)"/.test(arena) && /function nfCatImage/.test(arena) && /type="file" accept="image\/\*"/.test(arena));
   });

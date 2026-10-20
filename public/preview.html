@@ -4013,7 +4013,7 @@ function nfReply(extra) {
 }
 async function nfLoadState(scope, pid) {
   const own = await supabaseLoad('pflx_nf_p_' + pid), team = await supabaseLoad('pflx_nf_team_' + scope);
-  return { owned: (own && own.owned) || {}, orbs: (own && own.orbs) | 0, catalog: await nfLoadCatalog(), progress: { cleared: nfClamp(team && team.cleared, 0, 6), clears: (team && team.clears) | 0, runs: (team && team.runs) | 0, best: (team && team.best) | 0 } };
+  return { owned: (own && own.owned) || {}, orbs: (own && own.orbs) | 0, perks: (own && own.perks) || {}, catalog: await nfLoadCatalog(), progress: { cleared: nfClamp(team && team.cleared, 0, 6), clears: (team && team.clears) | 0, runs: (team && team.runs) | 0, best: (team && team.best) | 0 } };
 }
 function nfBuyCore(id) { // shared by the cartridge's shop and the Arena Marketplace; resolves the reply object (or undefined when there is no player)
   return nfSerial(async function () {
@@ -4030,6 +4030,23 @@ function nfBuyCore(id) { // shared by the cartridge's shop and the Arena Marketp
   });
 }
 function nfHandleBuy(id) { return nfBuyCore(id).then(function (r) { if (r) nfReply(r); }); }
+// Nexus Frontiers v0.6 earned perks (Double/Triple Dash, Ammo Extension Mk I–III): permanent, unlocked by beating the Elite with the
+// squad goal met and 90%+ of your own LINK answers correct. Once per round id; NF_PERK_MAX must agree with NFLogic.PERK_MAX.
+const NF_PERK_MAX = { dash: 2, ammo: 3 };
+function nfHandlePerk(m) {
+  return nfSerial(async function () {
+    const p = state.player; if (!p) return;
+    const rid = String(m.roundId || '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 60); if (!rid) return;
+    const own = (await supabaseLoad('pflx_nf_p_' + p.id)) || { v: 1, owned: {} }; own.owned = own.owned || {};
+    const pk = { dash: nfClamp(own.perks && own.perks.dash, 0, NF_PERK_MAX.dash), ammo: nfClamp(own.perks && own.perks.ammo, 0, NF_PERK_MAX.ammo) };
+    own.perkRounds = Array.isArray(own.perkRounds) ? own.perkRounds : [];
+    if (own.perkRounds.indexOf(rid) >= 0) { nfReply({ perks: pk }); return; }
+    own.perks = { dash: Math.min(NF_PERK_MAX.dash, pk.dash + 1), ammo: Math.min(NF_PERK_MAX.ammo, pk.ammo + 1) };
+    own.perkRounds = own.perkRounds.concat([rid]).slice(-30); own.updatedAt = Date.now();
+    if (!(await supabaseSave('pflx_nf_p_' + p.id, own))) { nfReply({ perks: pk, error: 'The perk could not be saved — try another victory.' }); return; }
+    nfReply({ perks: own.perks });
+  });
+}
 function nfHandleSave(m) {
   return nfSerial(async function () {
     const p = state.player; if (!p) return;
@@ -4063,6 +4080,9 @@ const NF_BADGES = {
   beacon: { id: 'beacon_collaboration', name: 'Beacon of Collaboration', xc: 500, category: 'premium' }
 };
 const NF_COMPLETION = ['participant', 'collaborator', 'resilient'];
+// v0.6: Positive Participant only for SESSION-launched rounds (the game also requires 5+ answers and staying to the end);
+// Beacon of Collaboration goes to every squad member with a high squad score on Veteran / Expert. Must agree with NFLogic.BEACON_MIN.
+const NF_BEACON_MIN = { veteran: 3000, expert: 2500 };
 const NF_STATS = ['archives', 'correct', 'accuracy', 'keys', 'bank', 'revives', 'fastest'];
 function nfTierOf(key) { const m = /^([a-z]+)(?:#([23]))?$/.exec(String(key)); return (m && NF_MARKET[key] != null) ? { id: m[1], tier: m[2] ? +m[2] : 1 } : null; }
 function nfNextKey(key) { const t = nfTierOf(key); return (t && t.tier < 3) ? t.id + '#' + (t.tier + 1) : null; }
@@ -4146,8 +4166,8 @@ function nfEvalWindows(doc, minTeams, now) {
     const pick = nfPickWinner(results); w.ranking = pick.ranking; w.winner = null;
     if (pick.winner && keys.length >= Math.max(1, minTeams | 0)) { // squads that LAUNCHED count, even one that never reported (it forfeits)
       w.winner = pick.winner; const win = w.teams[pick.winner], prev = (doc.rec[pick.winner] && doc.rec[pick.winner].best) | 0, cs = win.res.cs | 0;
-      (win.members || []).forEach(function (id) { w.claims[id] = { champion: 1, beacon: cs > 0 && cs > prev ? 1 : 0 }; });
-      w.beacon = cs > 0 && cs > prev;
+      (win.members || []).forEach(function (id) { w.claims[id] = { champion: 1, beacon: 0 }; }); // v0.6: Beacon is earned by score on Veteran/Expert at settle time
+      w.beacon = false; void prev; void cs;
     }
     Object.keys(results).forEach(function (k) { const r = doc.rec[k] = Object.assign({ name: w.teams[k].name, best: 0, runs: 0 }, doc.rec[k] || {}); r.best = Math.max(r.best | 0, results[k].score); r.runs = (r.runs | 0) + 1; r.name = w.teams[k].name; });
   });
@@ -4238,7 +4258,8 @@ function nfHandleSettle(m) {
     const st = own.stake, armed = !!st && st.round === roundId, scope = nfCleanId(m.scope, 80), teamKey = nfCleanId(m.team, 60) || 'solo';
     const cfg = (arenaGame.opts && arenaGame.opts.config) || {}, goalMet = armed && m.goalMet === true;
     const pay = goalMet ? nfClamp(m.payout, 0, nfBankCap(cfg)) : 0;
-    const badges = (armed && (Number(m.t) || 0) >= NF_MIN_ROUND_SEC) ? NF_COMPLETION.filter(function (k) { return Array.isArray(m.badges) && m.badges.indexOf(k) >= 0; }) : [];
+    const sessRound = !!scope && teamKey !== 'solo', nfDiff = String(cfg.nfDifficulty || m.diff || ''), beaconOk = !!NF_BEACON_MIN[nfDiff] && nfClamp(m.cs, 0, 1000000) >= NF_BEACON_MIN[nfDiff];
+    const badges = (armed && (Number(m.t) || 0) >= NF_MIN_ROUND_SEC) ? NF_COMPLETION.concat(['beacon']).filter(function (k) { return Array.isArray(m.badges) && m.badges.indexOf(k) >= 0 && (k !== 'participant' || sessRound) && (k !== 'beacon' || beaconOk); }) : [];
     own.stake = null; own.settled.push(roundId); if (own.settled.length > 40) own.settled = own.settled.slice(-40); own.updatedAt = Date.now();
     if (!(await supabaseSave(nfOwnKey(p.id), own))) { nfReply({ error: 'The round could not be settled right now — it will be retried.' }); return; } // saved first, paid after: a failure can never double-pay
     if (pay > 0) arenaPostAward(p.id, { xc: pay, reason: 'arena.nf.payout.' + roundId, noMultiplier: true }), p.xc = (p.xc || 0) + pay;
@@ -4422,7 +4443,7 @@ window.addEventListener('message', function (e) {
       const scope = nfScopeFor(arenaGame.opts, state.player.id), o = arenaGame.opts || {};
       const sessCo = (o.coop && o.sessionId) ? baSessions.byId(o.sessionId) : null;
       const coopP = sessCo ? Promise.resolve(supabaseLoad('pflx_lite_config')).catch(function () { return null; }).then(function (lite) { return nfCoopContext(o, sessCo, state.player, lite); }) : Promise.resolve(null);
-      const stP = nfReleaseStale().catch(function () {}).then(function () { return nfLoadState(scope, state.player.id); }).then(function (st) { return { scope: scope, market: true, xc: state.player.xc || 0, owned: st.owned, orbs: st.orbs, catalog: st.catalog, progress: st.progress, net: { url: SUPABASE_URL, key: SUPABASE_KEY } }; })
+      const stP = nfReleaseStale().catch(function () {}).then(function () { return nfLoadState(scope, state.player.id); }).then(function (st) { return { scope: scope, market: true, xc: state.player.xc || 0, owned: st.owned, orbs: st.orbs, perks: st.perks, catalog: st.catalog, progress: st.progress, net: { url: SUPABASE_URL, key: SUPABASE_KEY } }; })
         .catch(function () { return { scope: scope, market: false, xc: state.player.xc || 0, owned: {}, progress: { cleared: 0 } }; });
       Promise.all([stP, coopP]).then(function (r) { sendDeck(r[0], r[1]); });
     } else sendDeck(null);
@@ -4430,6 +4451,8 @@ window.addEventListener('message', function (e) {
     nfHandleBuy(String(m.id || ''));
   } else if (m.type === 'pflx_arena_nf_wager' && arenaGame.open) {
     nfHandleWager(m);
+  } else if (m.type === 'pflx_arena_nf_perk' && arenaGame.open) {
+    nfHandlePerk(m);
   } else if (m.type === 'pflx_arena_nf_evolve' && arenaGame.open) {
     nfHandleEvolve(String(m.id || ''));
   } else if (m.type === 'pflx_arena_nf_arm' && arenaGame.open) {

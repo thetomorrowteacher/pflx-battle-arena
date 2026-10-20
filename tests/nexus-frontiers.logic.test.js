@@ -168,22 +168,22 @@ t('quiz deck + meter: correct fills the meter, wrong does not, charge mirrors pi
   a = q.open(); r = q.answer(a.id, a.options.find(o => o.id !== a._correctId).id); assert.ok(!r.correct && r.charge === 0); assert.strictEqual(q.charge, 1);
   assert.ok(q.spend(1)); assert.strictEqual(q.charge, 0); assert.ok(!q.spend(1));
 });
-t('difficulty: EXPERT area 1 is exactly the stage-5 wave distribution; every new stage is bigger or tougher', () => {
-  assert.deepStrictEqual(Object.assign({}, L.encounterFor('expert', 0, 1), { escort: undefined }), Object.assign({}, L.W01_ENCOUNTERS[4], { escort: undefined })); // escorts are additive
+t('difficulty (v0.6 harder): EXPERT area 1 is exactly the stage-6 wave distribution; every new stage is bigger or tougher', () => {
+  assert.deepStrictEqual(Object.assign({}, L.encounterFor('expert', 0, 1), { escort: undefined }), Object.assign({}, L.W01_ENCOUNTERS[5], { escort: undefined })); // escorts are additive
   for (const d of Object.keys(L.DIFFS)) { let prevPop = 0, prevHp = 0; for (let a = 0; a < 6; a++) { const e = L.encounterFor(d, a, 1), pop = e.waves * e.size, hp = L.hpMul(L.stageScale(d, a), 1); assert.ok(pop >= prevPop, d + ' pop'); assert.ok(hp > prevHp, d + ' hp'); prevPop = pop; prevHp = hp; } }
   for (let a = 0; a < 6; a++) { const p = ['cadet', 'ranger', 'veteran', 'expert'].map(d => { const e = L.encounterFor(d, a, 1); return e.waves * e.size; }); for (let i = 1; i < 4; i++) assert.ok(p[i] >= p[i - 1], 'harder difficulty never has fewer Archives (area ' + (a + 1) + ')'); }
-  assert.deepStrictEqual(Object.assign({}, L.encounterFor('cadet', 0, 1), { escort: undefined }), Object.assign({}, L.W01_ENCOUNTERS[0], { escort: undefined })); // Cadet keeps the learning room
+  assert.deepStrictEqual(Object.assign({}, L.encounterFor('cadet', 0, 1), { escort: undefined }), Object.assign({}, L.W01_ENCOUNTERS[1], { escort: undefined })); // v0.6: even Cadet starts one stage up
   assert.ok(L.encounterFor('expert', 5, 1).waves <= 10 && L.encounterFor('expert', 5, 4).size <= 30);
 });
 t('team of 4: more Archives and tougher bars, scaled per difficulty; the cap grows too', () => {
   for (const d of Object.keys(L.DIFFS)) for (let a = 0; a < 6; a++) { const s1 = L.encounterFor(d, a, 1), s4 = L.encounterFor(d, a, 4); assert.ok(s4.size > s1.size, d + ' a' + a); assert.strictEqual(s4.waves, s1.waves); assert.ok(L.hpMul(3, 4) > L.hpMul(3, 1)); }
   const g = d => L.encounterFor(d, 0, 4).size / L.encounterFor(d, 0, 1).size; assert.ok(g('expert') >= g('veteran') && g('veteran') >= g('ranger') && g('ranger') >= g('cadet'));
-  assert.strictEqual(L.activeCap(1), 9); assert.strictEqual(L.activeCap(4), 18); assert.strictEqual(L.teamSizeFrom({}), 4); assert.strictEqual(L.teamSizeFrom({ nfTeam: 2 }), 2); assert.strictEqual(L.teamSizeFrom({ nfTeam: 99 }), 4);
-  assert.ok(L.bossHp(60, 'expert', 4) > L.bossHp(60, 'cadet', 1)); assert.strictEqual(L.bossHp(60, 'cadet', 1), 60);
+  assert.strictEqual(L.activeCap(1), 9); assert.strictEqual(L.activeCap(4), 18); assert.strictEqual(L.activeCap(4, 'expert'), 24); assert.ok(L.activeCap(1, 'cadet') > L.activeCap(1)); assert.strictEqual(L.teamSizeFrom({}), 4); assert.strictEqual(L.teamSizeFrom({ nfTeam: 2 }), 2); assert.strictEqual(L.teamSizeFrom({ nfTeam: 99 }), 4);
+  assert.ok(L.bossHp(60, 'expert', 4) > L.bossHp(60, 'cadet', 1)); assert.strictEqual(L.bossHp(60, 'cadet', 1), 78); // v0.6: Cadet Elite ×1.3
 });
 t('config mapping: host difficulty, legacy difficulty, meter target', () => {
   assert.strictEqual(L.diffFromConfig({ nfDifficulty: 'expert' }), 'expert'); assert.strictEqual(L.diffFromConfig({ difficulty: 'easy' }), 'cadet'); assert.strictEqual(L.diffFromConfig({ difficulty: 'hard' }), 'veteran'); assert.strictEqual(L.diffFromConfig(null), 'ranger'); assert.strictEqual(L.diffFromConfig({ nfDifficulty: 'zzz' }), 'ranger');
-  assert.strictEqual(L.meterTargetFrom({}, 'expert'), 10); assert.strictEqual(L.meterTargetFrom({ nfMeter: 8 }, 'cadet'), 8); assert.strictEqual(L.meterTargetFrom({ nfMeter: 100 }, 'cadet'), 12);
+  assert.strictEqual(L.meterTargetFrom({}, 'expert'), 11); assert.strictEqual(L.meterTargetFrom({ nfMeter: 8 }, 'cadet'), 8); assert.strictEqual(L.meterTargetFrom({ nfMeter: 100 }, 'cadet'), 12);
 });
 t('loadout slots by Evo level: 1-2 → 3, 3-4 → 4, 5-6 → 5, 7-8 → 6, 9-10 → 7; only owned game items fit; a passive family fits once', () => {
   const want = { 1: 3, 2: 3, 3: 4, 4: 4, 5: 5, 6: 5, 7: 6, 8: 6, 9: 7, 10: 7 }; for (let l = 1; l <= 10; l++) assert.strictEqual(L.slotsFor(l), want[l], 'level ' + l);
@@ -268,11 +268,63 @@ t('revives: only the Evo-level ability (Lv5+ once, Lv10 twice) or a ChronoRespaw
   assert.strictEqual(L.reviveCharges(1), 0); assert.strictEqual(L.reviveCharges(4), 0); assert.strictEqual(L.reviveCharges(5), 1); assert.strictEqual(L.reviveCharges(9), 1); assert.strictEqual(L.reviveCharges(10), 2);
   assert.strictEqual(L.reviveSource(1, 1), 'ability'); assert.strictEqual(L.reviveSource(0, 1), 'item'); assert.strictEqual(L.reviveSource(0, 0), null);
 });
-t('boosters: 10 s, triple / nova / star; drop odds by enemy, Star Seeker doubles, sentry always drops', () => {
-  assert.deepStrictEqual(Object.keys(L.BOOSTERS).sort(), ['nova', 'star', 'triple']); Object.values(L.BOOSTERS).forEach(b => assert.strictEqual(b.dur, 10));
+t('boosters: 10 s, triple / nova / OVERDRIVE (Star Power removed in v0.6); drop odds by enemy, Star Seeker doubles, sentry always drops', () => {
+  assert.deepStrictEqual(Object.keys(L.BOOSTERS).sort(), ['nova', 'overdrive', 'triple']); Object.values(L.BOOSTERS).forEach(b => assert.strictEqual(b.dur, 10));
   let hits = { scout: 0, interceptor: 0 }, seek = 0; const r = L.mulberry32(11); for (let i = 0; i < 20000; i++) { if (L.boosterDrop('scout', r, false)) hits.scout++; if (L.boosterDrop('interceptor', r, false)) hits.interceptor++; if (L.boosterDrop('scout', r, true)) seek++; }
   assert.ok(Math.abs(hits.scout / 20000 - .04) < .01 && Math.abs(hits.interceptor / 20000 - .15) < .015 && Math.abs(seek / 20000 - .08) < .012);
   for (let i = 0; i < 50; i++) assert.ok(L.boosterDrop('sentry', r, false)); assert.strictEqual(L.boosterDrop('boss', r, false), null);
+});
+
+// ───────── v0.6 (Ennis, 20–21 Oct): harder levels, ammo, breach, kits, perks, Elite outcomes, LINK mini-games, badges, art walls ─────────
+t('v0.6 difficulty: every level is harder than the one below on damage, speed, Archives on the field and ammo', () => {
+  const o = ['cadet', 'ranger', 'veteran', 'expert'].map(d => L.DIFFS[d]);
+  for (let i = 1; i < 4; i++) { assert.ok(o[i].dmgMul > o[i - 1].dmgMul && o[i].spdMul > o[i - 1].spdMul && o[i].capAdd > o[i - 1].capAdd && o[i].clip < o[i - 1].clip && o[i].bossMul > o[i - 1].bossMul && o[i].bossHit > o[i - 1].bossHit && o[i].dodge < o[i - 1].dodge && o[i].startAmmo < o[i - 1].startAmmo); }
+  assert.ok(o[0].dmgMul > 1 && o[0].offset >= 1, 'even Cadet is harder than v0.5'); assert.strictEqual(L.DIFFS.cadet.bolt, 0); assert.strictEqual(L.DIFFS.expert.bolt, 1);
+});
+t('v0.6 ammo: the clip shrinks with difficulty and grows 25% per Ammo Extension tier; dash charges 1 / 2 / 3', () => {
+  assert.strictEqual(L.clipFor('ranger', {}), 38); assert.strictEqual(L.clipFor('ranger', { ammo: 1 }), 48); assert.strictEqual(L.clipFor('expert', { ammo: 3 }), Math.round(26 * 1.75)); assert.strictEqual(L.clipFor('expert', { ammo: 9 }), Math.round(26 * 1.75));
+  assert.strictEqual(L.dashCharges({}), 1); assert.strictEqual(L.dashCharges({ dash: 1 }), 2); assert.strictEqual(L.dashCharges({ dash: 2 }), 3); assert.strictEqual(L.dashCharges({ dash: 7 }), 3);
+});
+t('v0.6 sprint: a custom "full" test can end the sprint (ammo bar)', () => {
+  const m = new L.Meter(5), sp = new L.Sprint(m); sp.isFull = () => false; m.setFill(1); sp.record(true); assert.strictEqual(sp.over, false); sp.isFull = () => true; sp.record(true); assert.strictEqual(sp.reason, 'full');
+});
+t('v0.6 bank fine: never below zero, counted with tax', () => {
+  const b = new L.Bank(0, 2000); b.grant(15); assert.strictEqual(b.fine(10), 10); assert.strictEqual(b.value(), 5); assert.strictEqual(b.fine(10), 5); assert.strictEqual(b.value(), 0); assert.strictEqual(b.fine(10), 0);
+});
+t('v0.6 kits: every studio has its own weapon, special and overdrive; Mythweaver Ink Step at level 5', () => {
+  const ks = L.STUDIO_IDS.map(id => L.KITS[id]); assert.strictEqual(new Set(ks.map(k => k.weapon.style)).size, 4); assert.strictEqual(new Set(ks.map(k => k.special.name)).size, 4); assert.strictEqual(new Set(ks.map(k => k.over.name)).size, 4);
+  assert.strictEqual(L.KITS.gentech.special.name, 'Nanobot Fighters'); assert.strictEqual(L.KITS.mindforge.special.name, 'Hardlight Wall'); assert.strictEqual(L.KITS.emagination.dashUp.lvl, 5); assert.strictEqual(L.kitFor('nope'), L.KITS.gentech);
+});
+t('v0.6 victory perks: squad goal met AND 90%+ personal accuracy over 5+ answers; perks step up to their caps', () => {
+  assert.ok(L.victoryQualifies(20, 20, 9, 10)); assert.ok(!L.victoryQualifies(20, 19, 10, 10), 'squad goal missed'); assert.ok(!L.victoryQualifies(20, 25, 8, 10), '80%'); assert.ok(!L.victoryQualifies(0, 0, 4, 4), 'too few answers');
+  let p = {}; p = L.nextPerks(p); assert.deepStrictEqual(p, { dash: 1, ammo: 1 }); assert.deepStrictEqual(L.perkNames(p), ['Double Dash', 'Ammo Extension Mk I']);
+  p = L.nextPerks(L.nextPerks(L.nextPerks(p))); assert.deepStrictEqual(p, { dash: 2, ammo: 3 }); assert.deepStrictEqual(L.perkNames(p), ['Triple Dash', 'Ammo Extension Mk III']);
+});
+t('v0.6 Elite hits: each Evo rolls its own dodge / crit / hit; a guard is a block (no dodge, no crit)', () => {
+  const r = L.mulberry32(4), c = { dodge: 0, crit: 0, hit: 0, block: 0 };
+  for (let i = 0; i < 4000; i++) c[L.resolveElite({ raw: 20, rng: r, dodge: .1, crit: .1, guardStat: 0 }).result]++;
+  assert.ok(Math.abs(c.dodge / 4000 - .1) < .02 && Math.abs(c.crit / 4000 - .1) < .02 && c.block === 0);
+  assert.strictEqual(L.resolveElite({ raw: 20, rng: () => 0, dodge: .5, crit: .5, guarded: true, mitigate: .6 }).result, 'block'); assert.strictEqual(L.resolveElite({ raw: 20, rng: () => .5, dodge: .1, crit: .5 }).damage, 32);
+});
+t('v0.6 LINK mini-game: XC per correct answer, streak bonuses at 3/5/8, bonus every 5th question, small fines, bigger after a run of 3', () => {
+  assert.deepStrictEqual(L.linkReward(true, 1, 1, 0), { xc: 2, fine: 0, label: '' }); assert.strictEqual(L.linkReward(true, 3, 3, 0).xc, 4); assert.strictEqual(L.linkReward(true, 5, 5, 0).xc, 8); assert.strictEqual(L.linkReward(true, 5, 1, 0).label, 'BONUS ×2');
+  assert.strictEqual(L.linkReward(true, 9, 9, 0).xc, 4); assert.strictEqual(L.linkReward(false, 2, 0, 1).fine, 1); assert.strictEqual(L.linkReward(false, 3, 0, 3).fine, 0, 'the breach itself carries the fine'); assert.strictEqual(L.linkReward(false, 4, 0, 4).fine, 5);
+  assert.deepStrictEqual(L.BREACH, { run: 3, fine: 10, lock: 6 }); assert.strictEqual(L.bossTurnSec('cadet'), 60); assert.strictEqual(L.bossTurnSec('expert'), 30);
+});
+t('v0.6 badges: Positive Participant only for session rounds with effort; Beacon for a high score on Veteran / Expert', () => {
+  const base = { session: true, secPlayed: 300, present: true, answered: 6, diff: 'ranger', cs: 9999 };
+  assert.deepStrictEqual(L.roundBadges(base), ['participant', 'collaborator', 'resilient']);
+  assert.deepStrictEqual(L.roundBadges(Object.assign({}, base, { session: false })), ['collaborator', 'resilient']);
+  assert.deepStrictEqual(L.roundBadges(Object.assign({}, base, { answered: 4 })), ['collaborator', 'resilient']);
+  assert.deepStrictEqual(L.roundBadges(Object.assign({}, base, { present: false })), []); assert.deepStrictEqual(L.roundBadges(Object.assign({}, base, { secPlayed: 60 })), []);
+  assert.ok(L.roundBadges(Object.assign({}, base, { diff: 'veteran', cs: 3000 })).includes('beacon')); assert.ok(!L.roundBadges(Object.assign({}, base, { diff: 'veteran', cs: 2999 })).includes('beacon')); assert.ok(L.roundBadges(Object.assign({}, base, { diff: 'expert', cs: 2500 })).includes('beacon'));
+});
+t('v0.6 art walls: obstacles follow the painted sections, every section stays door-to-door connected, and the old random layout is still there with noArt', () => {
+  for (const seed of [1, 2, 3, 7, 11, 42, 99, 1234, 9999, 31337, 77777, 123456]) {
+    const m = L.buildWorldMap(seed); m.gateOpen.fill(true); assert.deepStrictEqual(L.reachable(m, m.start).rooms, [0, 1, 2, 3, 4, 5, 6], 'seed ' + seed);
+    m.rooms.forEach((r, i) => { if (i < 6) assert.ok(r.cells.length >= 12, 'seed ' + seed + ' room ' + i + ' needs spawn cells'); });
+    const m2 = L.buildWorldMap(seed, true); assert.notDeepStrictEqual(Array.from(m.grid), Array.from(m2.grid));
+  }
 });
 
 // ── Co-op (Oct 2026) ──
@@ -291,7 +343,7 @@ t('legacy cfg without escort still spawns a lone sentry (old behaviour preserved
   const e = new L.Encounter({ waves: 1, size: 1, interceptors: false, sentryAfter: [1] }, L.mulberry32(3)); e.begin('wave'); e.confirmSpawn(); e.onDefeat('scout'); e.begin('sentry'); assert.strictEqual(e.pending, 1);
 });
 t('encounterFor: escorts only where a sentry exists, grow with stage and team', () => {
-  assert.strictEqual(L.encounterFor('cadet', 0, 2).escort, 0);
+  assert.strictEqual(L.encounterFor('cadet', 0, 2).escort, L.encounterFor('cadet', 0, 2).sentryAfter.length ? L.encounterFor('cadet', 0, 2).escort : 0);
   for (const d of Object.keys(L.DIFFS)) for (let a = 1; a < 6; a++) { const e = L.encounterFor(d, a, 4); if (e.sentryAfter.length) assert.ok(e.escort >= 2 && e.escort <= 16); else assert.strictEqual(e.escort, 0); }
   assert.ok(L.encounterFor('veteran', 2, 4).escort > L.encounterFor('veteran', 2, 2).escort);
 });
