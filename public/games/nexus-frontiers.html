@@ -60,6 +60,17 @@
   #menu { background:radial-gradient(ellipse at 50% 0, rgba(20,10,60,.55), rgba(2,4,10,.96) 70%); flex-direction:column; align-items:center; justify-content:center; text-align:center; }
   #menu h1 { font-size:2.6em; font-weight:900; letter-spacing:.2em; color:#fff; text-shadow:0 0 .8em #00e5ff; }
   #menu .sub { color:#8fb8dd; letter-spacing:.3em; font-size:.8em; margin:.4em 0 1.2em; }
+  #drPanel { display:none; width:min(760px,94vw); text-align:left; background:rgba(8,12,28,.85); border:1px solid rgba(255,77,109,.45); border-radius:14px; padding:1em 1.2em; box-shadow:0 0 2em rgba(255,77,109,.18) inset; }
+  #drPanel .drrow { display:flex; align-items:center; gap:.5em; flex-wrap:wrap; margin:.55em 0; }
+  #drPanel .drlbl { width:9.5em; color:#8fb8dd; font-size:.72em; letter-spacing:.18em; }
+  #drPanel .drbtn { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.16); color:#dfe9ff; border-radius:8px; padding:.35em .8em; cursor:pointer; font:inherit; font-size:.85em; }
+  #drPanel .drbtn.on { background:rgba(255,77,109,.2); border-color:#ff4d6d; color:#fff; }
+  #drPanel .drnote { color:#9bb8d6; font-size:.8em; line-height:1.45; margin-top:.6em; }
+  body.practice #menu h1 { color:#ffd0d8; text-shadow:0 0 .8em #ff4d6d; }
+  body.practice #worlds { display:none; }
+  body.practice #drPanel { display:block; }
+  .drtag { position:fixed; top:.6em; left:50%; transform:translateX(-50%); z-index:30; font:700 .7em monospace; letter-spacing:.25em; color:#ffd0d8; background:rgba(255,77,109,.18); border:1px solid rgba(255,77,109,.6); border-radius:999px; padding:.25em 1em; pointer-events:none; display:none; }
+  body.practice.inround .drtag { display:block; }
   #worlds { display:grid; grid-template-columns:repeat(5,1fr); gap:.6em; width:92%; margin:.4em 0 1em; }
   .wc { border:1px solid rgba(255,255,255,.15); border-radius:.7em; padding:.7em .4em; background:rgba(10,14,34,.8); font-size:.8em; }
   .wc b { display:block; font-size:1.3em; color:#7fd8ff; } .wc span { font-size:.85em; color:#9aa7c7; display:block; margin-top:.2em; min-height:2.2em; }
@@ -201,10 +212,12 @@
     <button class="btn" id="exitBtn">EXIT</button>
   </div>
 
+  <div class="drtag" id="drTag">⚠ DANGER ROOM · PRACTICE</div>
   <div class="ov" id="menu">
     <h1 class="mono">PFLX: NEXUS FRONTIERS</h1>
     <div class="sub mono">CHOOSE A SERVER</div>
     <div id="worlds"></div>
+    <div id="drPanel"></div>
     <div class="help">Move <kbd>WASD</kbd>/<kbd>Arrows</kbd> · Dash <kbd>Space</kbd> · Open a LINK quiz <kbd>Q</kbd> — every correct answer charges your Evo · Fire a charged SURGE <kbd>F</kbd>. Your Evo's spark fires automatically. Clear every wave to open the gate; defeat the boss to finish the server.</div>
     <div style="margin-top:1em"><button class="btn" id="menuExit">EXIT TO ARENA</button></div>
   </div>
@@ -230,7 +243,7 @@
   </div></div>
   <div class="ov" id="blocked"><div class="panel">
     <h2 class="mono">LAUNCH FROM AN X-LIVE SESSION</h2>
-    <p>Nexus Frontiers is a co-op game for squads of 2–4 Evos from different studios. Open it from a live X-Live session activity (or the host's Quick Launch) so your squad can join you.</p>
+    <p>Nexus Frontiers is a co-op game for squads of 2–4 Evos from different studios. Open it from a live X-Live session activity (or the host's Quick Launch) so your squad can join you. To practise alone, open <b>Side Quests ▸ Danger Room</b>.</p>
     <button class="btn" id="blkExit">EXIT TO ARENA</button>
   </div></div>
   <div class="ov" id="obs">
@@ -1121,11 +1134,54 @@ function applyDeck(m) {
   if (deckApplied) return; deckApplied = true;
   S.player = Object.assign(S.player, m.player || {}); S.config = m.config || {}; S.exo = m.exo || null;
   S.deck = m.deck || null; S.nf = m.nf || null; S.me = String(S.player.id || 'p'); if (S.nf && S.nf.catalog) L.applyCatalog(S.nf.catalog);
-  if (m.coop && m.coop.scope) { // launched from an X-Live session: squad lobby (players) or observation (host)
+  if (m.practice) { S.practice = Object.assign({ start: 1, roundMin: 0 }, typeof m.practice === 'object' ? m.practice : {}); S.nf = practiceNf(S.nf); }
+  if (m.coop && m.coop.scope && !S.practice) { // launched from an X-Live session: squad lobby (players) or observation (host)
     const c = m.coop; S.coop = { scope: String(c.scope).replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 60), base: (S.nf && S.nf.scope) || ('sess_' + c.scope), title: c.title || '', squad: c.squad || '', net: c.net || null, transport: c.transport || '', rules: L.coopRules(c.rules || {}), sessionId: c.sessionId || '' };
     S.role = c.role === 'host' ? 'host' : 'player';
   } else S.role = 'solo';
   start();
+}
+// DANGER ROOM (v0.5, Ennis 20 Oct): solo practice from Side Quests. A training simulation —
+// free training gear that refills every round, no wager, no X-Coin, no badges, no squad progress.
+function practiceNf(src) {
+  const owned = {}; L.marketKeys().forEach(function (k) { owned[k] = 2; });
+  return { scope: 'practice', standalone: true, practice: true, market: false, xc: 0, orbs: 0, owned: owned, progress: { cleared: 0 }, catalog: src && src.catalog };
+}
+function drSet(k, v) { S.practice[k] = v; renderDangerRoom(); }
+function renderDangerRoom() {
+  const p = S.practice, el = $('drPanel'); if (!p || !el) return;
+  const c = S.config = S.config || {};
+  if (!c.nfDifficulty) c.nfDifficulty = L.diffFromConfig(c);
+  if (!c.nfTeam) c.nfTeam = 1;
+  const B = function (k, v, label, on) { return '<button class="drbtn' + (on ? ' on' : '') + '" data-k="' + k + '" data-v="' + v + '">' + label + '</button>'; };
+  const diffs = ['cadet', 'ranger', 'veteran', 'expert'].map(function (d) { return B('diff', d, L.DIFFS[d].label, c.nfDifficulty === d); }).join('');
+  const team = [1, 2, 3, 4].map(function (n) { return B('team', n, n === 1 ? 'Solo (1)' : 'Squad of ' + n, (c.nfTeam | 0) === n); }).join('');
+  const start = [1, 2, 3, 4, 5, 6].map(function (n) { return B('start', n, 'Section ' + n, p.start === n); }).join('');
+  const clock = [[0, 'No clock'], [5, '5 min'], [10, '10 min']].map(function (a) { return B('clock', a[0], a[1], (p.roundMin | 0) === a[0]); }).join('');
+  const meter = [[0, 'Auto'], [4, '4'], [6, '6'], [8, '8'], [10, '10'], [12, '12']].map(function (a) { return B('meter', a[0], a[1], (c.nfMeter | 0) === a[0]); }).join('');
+  const shop = B('shop', 'on', 'On', c.nfShop !== false) + B('shop', 'off', 'Off', c.nfShop === false);
+  el.innerHTML =
+    '<div class="drrow"><span class="drlbl mono">DIFFICULTY</span>' + diffs + '</div>' +
+    '<div class="drrow"><span class="drlbl mono">ENEMY SCALE</span>' + team + '</div>' +
+    '<div class="drrow"><span class="drlbl mono">START AT</span>' + start + '</div>' +
+    '<div class="drrow"><span class="drlbl mono">ROUND CLOCK</span>' + clock + '</div>' +
+    '<div class="drrow"><span class="drlbl mono">LINK TARGET</span>' + meter + '</div>' +
+    '<div class="drrow"><span class="drlbl mono">FIELD SHOP</span>' + shop + '</div>' +
+    '<div class="drrow" style="justify-content:center;margin-top:.9em"><button class="btn gold" id="drGo">ENTER THE DANGER ROOM</button></div>' +
+    '<div class="drnote">Solo training on <b>' + escapeHtml((S.deck && S.deck.name) || 'your deck') + '</b>. Training gear is free and refills every run — try any upgrade. ' +
+    'Nothing here is real: <b>no X-Coin, no wager, no badges, and your squad\'s checkpoint is untouched.</b> “Enemy scale” sets how many Archives spawn, so you can rehearse a full squad\'s load alone.</div>';
+  el.querySelectorAll('[data-k]').forEach(function (b) {
+    b.onclick = function () {
+      const k = b.dataset.k, v = b.dataset.v;
+      if (k === 'diff') c.nfDifficulty = v; else if (k === 'team') c.nfTeam = v | 0; else if (k === 'meter') c.nfMeter = v | 0; else if (k === 'shop') c.nfShop = v === 'on';
+      else if (k === 'start') p.start = v | 0; else if (k === 'clock') p.roundMin = v | 0;
+      renderDangerRoom();
+    };
+  });
+  $('drGo').onclick = function () {
+    readCfg(); S.nf.owned = practiceNf().owned; S.nf.progress = { cleared: Math.max(0, (p.start | 0) - 1) }; S.wagerWant = 0;
+    openLoadout();
+  };
 }
 function readCfg() {
   const c = S.config || {}; let diff = L.diffFromConfig(c), team = L.teamSizeFrom(c);
@@ -1158,6 +1214,7 @@ function start() {
   fetch(ASSET + 'world-routes.json').then(function (r) { return r.json(); }).then(function (j) { (j.worlds || []).forEach(function (w) { S.worldNames[w.world] = w.name; }); buildMenu(); }).catch(buildMenu);
   if (S.role === 'host') { coopInit(); return; }
   if (S.role === 'player') { S.ready = false; coopInit(); setMode('lobby'); renderLobby(); return; }
+  if (S.practice) { document.body.classList.add('practice'); $('menu').querySelector('h1').textContent = 'DANGER ROOM'; $('menu').querySelector('.sub').textContent = 'NEXUS FRONTIERS · SOLO PRACTICE'; buildMenu(); renderDangerRoom(); setMode('menu'); return; }
   if (embedded() && !qs.get('dev') && !TEST) { setMode('blocked'); return; } // inside the Arena the game only opens from an X-Live session
   buildMenu(); setMode('menu');
   if (qs.get('autostart') === '1') beginWorld(1, { resume: TEST ? (qs.get('resume') | 0) : 0 });
@@ -1176,6 +1233,7 @@ img(ASSET + 'props/gate-forcefield-128.png'); img(ASSET + 'sprites/orb-energy-64
 img(ASSET + 'sprites/circuit-portal-open-256.png'); img(ASSET + 'web/void.jpg');
 
 function setMode(m) {
+  document.body.classList.toggle('inround', m === 'play' || m === 'boss' || m === 'quiz' || m === 'cut');
   S.mode = m;
   ['menu', 'cut', 'quiz', 'boss', 'end', 'loadout', 'lobby', 'blocked', 'observer'].forEach(function (k) { $(k === 'observer' ? 'obs' : k).classList.toggle('on', k === m || (k === 'quiz' && S.quizOpen)); });
   $('hud').classList.toggle('on', m === 'play');
@@ -1192,10 +1250,11 @@ function buildMenu() {
   }
 }
 $('blkExit').onclick = exitToArena; $('menuExit').onclick = exitToArena; $('endExit').onclick = exitToArena; $('exitBtn').onclick = exitToArena;
-$('endAgain').onclick = function () { awardRun(); openLoadout(); };
+$('endAgain').onclick = function () { awardRun(); if (S.practice) { renderDangerRoom(); setMode('menu'); return; } openLoadout(); };
 // X-Coin is the ONLY thing that leaves the game, as an explicit capped amount (the Arena turns it into a host-approved award proposal).
 // Hosts can switch it off with config.rewards === false. Orbs, score and charge never convert to anything.
 function awardRun() {
+  if (S.practice) return;
   if (S.awarded || (S.config && S.config.rewards === false)) return;
   if (!S.round && !S.xc) return; S.awarded = true;
   // Round X-Coin now flows through the joint team bank (settled by the Arena), so the old personal award is always 0 — this message only carries the result.
@@ -1298,9 +1357,10 @@ function evolveUpgrade(key) { // one Mk-N item + orbs → one Mk-(N+1) item
 }
 $('ldStart').onclick = function () {
   if (S.role === 'player') { S.ld.picks = L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()); sendHello(); setMode('lobby'); renderLobby(); return; }
+  if (S.practice) { S.nf.owned = practiceNf().owned; beginWorld(1, { resume: (S.nf.progress && S.nf.progress.cleared) | 0, roundSec: (S.practice.roundMin | 0) * 60 }); return; }
   armSoloWager(function () { beginWorld(1, { resume: (S.nf.progress && S.nf.progress.cleared) | 0 }); });
 };
-$('ldFresh').onclick = function () { armSoloWager(function () { beginWorld(1, { resume: 0 }); }); };
+$('ldFresh').onclick = function () { if (S.practice) { S.nf.owned = practiceNf().owned; beginWorld(1, { resume: 0, roundSec: (S.practice.roundMin | 0) * 60 }); return; } armSoloWager(function () { beginWorld(1, { resume: 0 }); }); };
 $('ldBack').onclick = function () { if (S.role === 'player') { setMode('lobby'); renderLobby(); } else setMode('menu'); };
 
 // ── In-round field shop: spend the TEAM BANK on game upgrades for yourself (uses a free slot; lasts until the round ends) ──
@@ -2271,7 +2331,7 @@ function onEnd(msg) {
   if (S.bank && msg.bank != null) { S.bankFinal = msg.bank; }
   const q = S.quiz.stats, mm = Math.floor(S.timeSec / 60), ss = String(S.timeSec % 60).padStart(2, '0');
   $('endT').textContent = msg.kind === 'clear' ? 'SERVER 01 CLEARED' : msg.kind === 'time' ? 'TIME UP' : 'ROUND OVER';
-  $('endS').textContent = (msg.kind === 'clear' ? 'Studio Defense Grid is secure.' : msg.kind === 'time' ? 'The round clock ran out.' : 'Every Evo in the squad went down with no revive left.') + ' Sections cleared are saved for your squad — the next launch continues from the checkpoint.';
+  $('endS').textContent = (msg.kind === 'clear' ? 'Studio Defense Grid is secure.' : msg.kind === 'time' ? 'The round clock ran out.' : 'Every Evo in the squad went down with no revive left.') + (S.practice ? ' Danger Room practice — nothing was earned, spent or saved.' : ' Sections cleared are saved for your squad — the next launch continues from the checkpoint.');
   const cells = [[S.score, 'SQUAD SCORE'], [mm + ':' + ss, 'TIME'], [S.secCleared + ' / 6', 'SECTIONS CLEARED'], [q.correct + '/' + q.answered, 'YOUR LINK ANSWERS'], [msg.bank != null ? msg.bank : S.xc, 'TEAM BANK']];
   $('endStats').innerHTML = cells.map(function (a) { return '<div><b>' + a[0] + '</b><span class="mono">' + a[1] + '</span></div>'; }).join('') + (msg.stats.length > 1 ? '<div style="grid-column:1/-1;text-align:left;font-size:.8em">' + msg.stats.map(function (x) { return '<span style="color:' + L.STUDIO_COLORS[x.s] + '">●</span> ' + escapeHtml(x.n) + ' — ' + x.k + ' defeated · ' + x.xc + ' X-Coin' + (x.d ? ' · down' : ''); }).join('<br>') + '</div>' : '');
   const coop = S.role !== 'solo'; $('endAgain').style.display = coop ? 'none' : ''; $('endNext').style.display = coop ? '' : 'none';
@@ -2280,6 +2340,7 @@ function onEnd(msg) {
 }
 // Team progress: posted to the Arena (which merges it into the shared squad record). Items used up leave the player's stock only when a round really started.
 function saveProgress(final) {
+  if (S.practice) { if (final) { S.consumedSent = true; S.runLive = false; } return; } // practice never touches stock or the squad checkpoint
   if (!S.runLive && !final) return;
   if (!final && S.secCleared <= S.lastSaved) return;
   S.lastSaved = Math.max(S.lastSaved, S.secCleared);
@@ -2655,7 +2716,10 @@ setInterval(function () { if (S.round && S.isLeader && !S.ended) pollSevs(false)
 // ── Wager (pre-match) ──
 function wagerMax() { return L.clampWager(1e9, evoLevel(), S.nf ? S.nf.xc : 0); }
 function renderWager(wcap) {
-  const box = $('ldWager'); if (!box) return; const mx = wagerMax(), have = S.nf.xc | 0;
+  const box = $('ldWager'); if (!box) return;
+  if (S.practice) { S.wagerWant = 0; box.innerHTML = '<div class="ldsum" style="color:#ffd0d8">DANGER ROOM — no wager, no team bank payout. Training gear below is free and refills every run.</div>';
+    const ls = $('ldSum'); if (ls) ls.innerHTML = ls.innerHTML.replace(/<br><span style="color:#ffb4c0">[\s\S]*?<\/span>/, '<br><span style="color:#ffd0d8">Danger Room practice: nothing is earned, spent or saved.</span>').replace('Team checkpoint:', 'Starting point:');
+    return; } const mx = wagerMax(), have = S.nf.xc | 0;
   S.wagerWant = Math.max(0, Math.min(mx, Math.floor((S.wagerWant | 0) / 5) * 5));
   const lock = !!S.ready || !!S.stakePending;
   box.innerHTML = '<div class="lbl mono">YOUR WAGER · UP TO ' + wcap + ' XC AT EVO LEVEL ' + evoLevel() + (have < wcap ? ' (you hold ' + have + ')' : '') + '</div>' +
@@ -2734,7 +2798,8 @@ $('rgShop').onclick = function () { if (S.rg) { S.shopOpen = false; openShop(); 
 function settleRound(msg) {
   S.lastEnd = msg; const mine = msg.stats.filter(function (x) { return x.i === S.me; })[0]; if (!mine) return;
   const badges = L.completionBadges(true, msg.t, !mine.aw), pay = msg.gm ? msg.pay : 0;
-  S.roundBadges = badges;
+  S.roundBadges = S.practice ? [] : badges;
+  if (S.practice) { S.stake = 0; return; }
   if (S.nf && S.nf.standalone) { S.nf.xc += pay; S.stake = 0; return; }
   post({ type: 'pflx_arena_nf_settle', game: 'nexus-frontiers', roundId: msg.id, scope: S.coop ? S.coop.scope : '', team: NET.teamKey || 'solo', teamName: NET.teamName || 'SOLO', payout: pay, wager: S.stake | 0, goalMet: !!msg.gm, badges: badges, kind: msg.kind, t: msg.t,
     members: msg.stats.map(function (x) { return x.i; }), cs: msg.cs, ts: msg.ts, tm: msg.tm, score: msg.sc, bank: msg.bank });

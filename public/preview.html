@@ -4413,10 +4413,12 @@ window.addEventListener('message', function (e) {
       exo: (state.player ? exoGamePayloadFor(state.player.id) : null),
       rivals: (state.player ? exoGameRivals(state.player.id) : []),
       nf: nf || null,
-      coop: coop || null
+      coop: coop || null,
+      practice: (arenaGame.opts && arenaGame.opts.practice) || null
     }, '*');
     };
-    if (isNf && state.player) {
+    if (isNf && arenaGame.opts && arenaGame.opts.practice) { sendDeck(null, null); }
+    else if (isNf && state.player) {
       const scope = nfScopeFor(arenaGame.opts, state.player.id), o = arenaGame.opts || {};
       const sessCo = (o.coop && o.sessionId) ? baSessions.byId(o.sessionId) : null;
       const coopP = sessCo ? Promise.resolve(supabaseLoad('pflx_lite_config')).catch(function () { return null; }).then(function (lite) { return nfCoopContext(o, sessCo, state.player, lite); }) : Promise.resolve(null);
@@ -5257,6 +5259,7 @@ function arenaStudioPlay(id) {
   if (!tpl || !tpl.ready) { alert('This game\'s template is unavailable.'); return; }
   if (!d) { alert('The Knowledge Deck behind this game was deleted.'); return; }
   try { baGames.bumpPlays(id); } catch (e) {}
+  if (g.template === 'nexus-frontiers') { arenaGameLaunch(g.deckId, tpl.file, { title: 'DANGER ROOM · ' + g.title, gameId: g.id, practice: { from: 'studio' }, config: Object.assign({ title: g.title }, g.config || {}) }); return; }
   arenaGameLaunch(g.deckId, tpl.file, { title: g.title, gameId: g.id, config: Object.assign({ title: g.title }, g.config || {}) });
 }
 
@@ -5931,6 +5934,41 @@ function renderHome() {
   </div>`;
 }
 
+// ═══ DANGER ROOM (Ennis, 20 Oct 2026): solo Nexus Frontiers practice from Side Quests.
+// Any Knowledge Deck with 4+ cards; no X-Coin, wager, badges or squad progress (the game enforces it).
+function dangerRoomCardHtml() {
+  return '<div class="mode-card glass-panel glass-panel-hover" style="cursor:pointer;border:1px solid rgba(255,77,109,0.55);box-shadow:0 0 24px rgba(255,77,109,0.12) inset" onclick="dangerRoomOpen()">' +
+    '<div class="mode-bg" style="background-image:url(games/covers/nexus-frontiers.png);opacity:0.35"></div><div class="mode-bg-overlay"></div>' +
+    '<div class="mode-content"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+    '<div class="mode-head" style="margin:0"><div class="mode-icon">⚠</div><div><div class="mode-name">Danger Room</div><div class="mode-meta">Solo practice · Nexus Frontiers · any time</div></div></div>' +
+    '<span class="cipher-status-badge active" style="font-size:0.5rem">practice</span></div>' +
+    '<div class="mode-desc">Train alone before your squad drops in. Pick a deck, difficulty, enemy scale and starting section; try any upgrade with free training gear. Practice only — no X-Coin, wagers or badges.</div>' +
+    '<div class="mode-tags" style="margin-top:12px"><span class="mode-tag team">Solo</span><span class="mode-tag ranked">PvE</span><span class="mode-tag beta">Training</span></div></div></div>';
+}
+function dangerRoomOpen() {
+  const decks = (baDecks.list || []).filter(function (d) { return (d.cards || []).length >= 4; });
+  if (!decks.length) { alert('The Danger Room needs a Knowledge Deck with at least 4 cards. Import one on the DECKS screen first.'); return; }
+  let last = ''; try { last = localStorage.getItem('pflx_dr_deck') || ''; } catch (e) {}
+  const pick = decks.find(function (d) { return d.id === last; }) || decks[0];
+  let ov = document.getElementById('drPick'); if (ov) ov.remove();
+  ov = document.createElement('div'); ov.id = 'drPick';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:390;background:rgba(2,5,10,0.85);display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML = '<div class="glass-panel" style="width:min(520px,100%);padding:22px;border:1px solid rgba(255,77,109,0.55);border-radius:14px">' +
+    '<div style="font-family:Orbitron,monospace;font-size:0.8rem;letter-spacing:0.18em;color:#ffd0d8;margin-bottom:6px">⚠ DANGER ROOM</div>' +
+    '<div style="font-size:0.8rem;color:#9bb8d6;margin-bottom:14px">Solo Nexus Frontiers practice. Choose the Knowledge Deck for the LINK questions — you set difficulty and the rest inside.</div>' +
+    '<select id="drDeck" style="width:100%;padding:10px;border-radius:8px;background:#0a1020;color:#e0e6ff;border:1px solid rgba(255,255,255,0.2);font-size:0.85rem">' +
+    decks.map(function (d) { return '<option value="' + d.id + '"' + (d.id === pick.id ? ' selected' : '') + '>' + dkEsc(d.name) + ' · ' + (d.cards || []).length + ' cards' + (d.subject ? ' · ' + dkEsc(d.subject) : '') + '</option>'; }).join('') +
+    '</select><div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">' +
+    '<button class="btn-arena" style="font-size:0.6rem;padding:9px 16px" onclick="document.getElementById(\'drPick\').remove()">CANCEL</button>' +
+    '<button class="btn-arena btn-arena-red" style="font-size:0.6rem;padding:9px 16px" onclick="dangerRoomGo()">⚠ ENTER</button></div></div>';
+  document.body.appendChild(ov);
+}
+function dangerRoomGo() {
+  const sel = document.getElementById('drDeck'), id = sel && sel.value; const ov = document.getElementById('drPick'); if (ov) ov.remove();
+  if (!id) return; try { localStorage.setItem('pflx_dr_deck', id); } catch (e) {}
+  const tpl = STUDIO_TEMPLATES.find(function (t) { return t.id === 'nexus-frontiers'; });
+  arenaGameLaunch(id, tpl ? tpl.file : 'games/nexus-frontiers.html', { title: 'DANGER ROOM', practice: { from: 'sidequests' }, config: { title: 'Danger Room', nfTeam: 1 } });
+}
 function renderSideQuests() {
   const allModes = getAllModes('side_quests');
   const modeCards = allModes.map(m => {
@@ -5976,7 +6014,7 @@ function renderSideQuests() {
       ${(function () { try { return isHostUser(state.player) ? '<button class="btn-arena btn-arena-red" style="font-size:0.55rem;padding:8px 16px;margin-left:auto" onclick="goScreen(\'host_modes\')">🎛 HOST LAUNCHPAD</button>' : ''; } catch (e) { return ''; } })()}
     </div>
     <div class="sq-grid">
-      ${modeCards}
+      ${(function () { try { return dangerRoomCardHtml(); } catch (e) { return ''; } })()}${modeCards}
     </div>
     ${(function () { try { return arenaLiveSessionsHtml(); } catch (e) { console.warn('[sq] live sessions render failed', e); return ''; } })()}
     ${(function () { try { return arenaStudioCardsHtml(); } catch (e) { console.warn('[sq] player games render failed', e); return ''; } })()}
@@ -13240,6 +13278,60 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
 
   // Safety: if no identity arrives in 12s, hide the spinner so the user can see the app.
   setTimeout(function () { hideBlock(); }, 12000);
+})();
+
+// ═══ X-LIVE NEXUS FRONTIERS ACTIVITY (v0.5, 20 Oct 2026) ═══
+(function () {
+  var p; try { p = new URLSearchParams(window.location.search); } catch (e) { return; }
+  if (p.get('nf') !== 'xl') return;
+  var key = String(p.get('nfs') || '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 50); if (!key) return;
+  var sid = 'sess_xl_' + key, mins = Math.max(1, Math.min(10, parseInt(p.get('nfm'), 10) || 10));
+  var diff = ['cadet', 'ranger', 'veteran', 'expert'].indexOf(p.get('nfd')) >= 0 ? p.get('nfd') : 'ranger';
+  var solo = p.get('nfo') === '1', deckName = String(p.get('nfk') || '').trim().toLowerCase(), title = String(p.get('nft') || 'Nexus Frontiers').slice(0, 60);
+  var started = Date.now(), done = false, lastReload = 0;
+  function banner(t) {
+    var b = document.getElementById('nfXlWait');
+    if (!t) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('div'); b.id = 'nfXlWait'; b.style.cssText = 'position:fixed;inset:0;z-index:380;background:rgba(2,5,10,0.9);display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;font-family:Orbitron,monospace;color:#00e5ff;letter-spacing:0.12em;font-size:0.8rem;line-height:1.7'; document.body.appendChild(b); }
+    b.innerHTML = t;
+  }
+  function pickDeck() {
+    var ok = (baDecks.list || []).filter(function (d) { return (d.cards || []).length >= 4; });
+    if (!ok.length) return null;
+    if (deckName) { var m = ok.find(function (d) { return String(d.name || '').toLowerCase() === deckName; }) || ok.find(function (d) { return String(d.name || '').toLowerCase().indexOf(deckName) >= 0; }); if (m) return m; }
+    var last = ''; try { last = localStorage.getItem('pflx_dr_deck') || ''; } catch (e) {}
+    return ok.find(function (d) { return d.id === last; }) || ok[0];
+  }
+  async function hostStart() {
+    var cur = baSessions.byId(sid), now = Date.now();
+    if (cur && cur.endsAt > now) return cur;
+    var d = pickDeck();
+    if (!d) { banner('⚠ NEXUS FRONTIERS NEEDS A KNOWLEDGE DECK<br><span style="font-size:0.65rem;color:#9bb8d6;letter-spacing:0.05em">Import a deck with 4+ cards on the Arena DECKS screen, then reopen this activity.</span>'); return null; }
+    var sess = { id: sid, title: title, template: 'nexus-frontiers', deckId: d.id, xlive: key,
+      config: { nfDifficulty: diff, nfRoundMin: mins, nfAllowSolo: solo, nfStudioRule: 'strict', nfShop: true, nfGoalCorrect: 20, nfGoalKeys: 3, nfGoalClear: true, nfBankCap: 2000, nfAwardMinTeams: 2 },
+      launchedBy: (state.player && state.player.id) || 'host', launchedByName: (state.player && state.player.brand) || 'Host',
+      startsAt: now, endsAt: now + (mins + 20) * 60000, createdAt: now };
+    await baSessions.upsert(sess);
+    return baSessions.byId(sid) || sess;
+  }
+  async function tick() {
+    if (done) return;
+    if (Date.now() - started > 15 * 60000) { banner('NEXUS FRONTIERS — the host has not started the round.<br><span style="font-size:0.65rem;color:#9bb8d6">Ask your host, then reopen this activity.</span>'); return; }
+    if (typeof state === 'undefined' || !state.player || !baDecks.loaded || !baSessions.loaded) { banner('🌐 CONNECTING TO NEXUS FRONTIERS…'); setTimeout(tick, 600); return; }
+    try {
+      if (isHostUser(state.player)) {
+        banner('🌐 LAUNCHING NEXUS FRONTIERS…');
+        var s1 = await hostStart(); if (!s1) return;
+        done = true; banner(''); arenaSessionPlay(sid); return;
+      }
+      var s2 = baSessions.byId(sid);
+      if (s2 && s2.endsAt > Date.now()) { done = true; banner(''); arenaSessionPlay(sid); return; }
+      banner('🌐 NEXUS FRONTIERS<br><span style="font-size:0.65rem;color:#9bb8d6;letter-spacing:0.05em">Waiting for the host to start the round… your squad lobby opens by itself.</span>');
+      if (Date.now() - lastReload > 3000) { lastReload = Date.now(); await baSessions.load(); }
+    } catch (e) { console.warn('[nf-xl]', e); }
+    setTimeout(tick, 1500);
+  }
+  setTimeout(tick, 1200);
 })();
 </script>
 </body>
