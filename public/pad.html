@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#02040a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>PFLX Controller</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --c:#00e5ff; --g:#ffd740; --r:#ff4081; --ok:#69f0ae; --bg:#02040a; --panel:rgba(8,18,38,.92); --line:rgba(0,229,255,.35); --tx:#e6f0ff; --mu:#8fa6bf; --me:#00e5ff; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--tx); font-family:'Inter',system-ui,sans-serif; overflow:hidden; user-select:none; -webkit-user-select:none; touch-action:none; overscroll-behavior:none; }
+  body::before { content:''; position:fixed; inset:0; background:radial-gradient(ellipse at 20% 10%, rgba(0,229,255,.12), transparent 55%), radial-gradient(ellipse at 90% 90%, rgba(124,77,255,.14), transparent 55%), linear-gradient(rgba(0,229,255,.04) 1px, transparent 1px) 0 0/40px 40px, linear-gradient(90deg, rgba(0,229,255,.04) 1px, transparent 1px) 0 0/40px 40px; pointer-events:none; }
+  .scr { position:fixed; inset:0; display:none; padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .scr.on { display:flex; }
+  .card { margin:auto; width:min(420px,100%); background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:0 0 40px rgba(0,229,255,.12); }
+  h1 { font-family:'Orbitron',sans-serif; font-size:1.05rem; letter-spacing:.2em; color:var(--c); margin:0 0 4px; }
+  .sub { color:var(--mu); font-size:.85rem; margin-bottom:16px; line-height:1.45; }
+  label { display:block; font-size:.7rem; letter-spacing:.14em; color:var(--mu); margin:12px 0 6px; font-weight:700; }
+  input { width:100%; font:inherit; font-size:1.05rem; color:var(--tx); background:rgba(0,0,0,.45); border:1px solid var(--line); border-radius:10px; padding:12px 14px; outline:none; }
+  input:focus { border-color:var(--c); box-shadow:0 0 0 3px rgba(0,229,255,.15); }
+  input.pin { font-family:'Orbitron',monospace; font-size:1.8rem; letter-spacing:.4em; text-align:center; color:var(--g); }
+  .btn { display:block; width:100%; margin-top:16px; font-family:'Orbitron',sans-serif; font-weight:700; letter-spacing:.16em; font-size:.85rem; padding:14px; border-radius:12px; border:1px solid var(--c); background:rgba(0,229,255,.12); color:var(--c); }
+  .btn.gold { border-color:var(--g); color:var(--g); background:rgba(255,215,64,.1); }
+  .btn.ghost { border-color:rgba(255,255,255,.18); color:var(--mu); background:transparent; font-size:.72rem; }
+  .err { color:#ff6e6e; font-size:.85rem; min-height:1.2em; margin-top:10px; }
+  .who { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--line); border-radius:12px; background:rgba(0,0,0,.3); }
+  .who b { font-size:1.1rem; } .dot { width:12px; height:12px; border-radius:50%; background:var(--ok); box-shadow:0 0 10px var(--ok); flex:none; }
+  .spin { width:38px; height:38px; border:3px solid rgba(0,229,255,.2); border-top-color:var(--c); border-radius:50%; animation:sp 1s linear infinite; margin:10px auto; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+
+  /* ── controller ── */
+  #pad { padding:0; flex-direction:column; }
+  #top { display:flex; align-items:center; gap:12px; padding:max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left)); font-size:.72rem; position:relative; z-index:3; }
+  #top .nm { font-family:'Orbitron',sans-serif; font-weight:700; letter-spacing:.1em; color:var(--me); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:24vw; }
+  .bar { flex:1; min-width:60px; } .bar small { display:block; font-size:.58rem; letter-spacing:.14em; color:var(--mu); margin-bottom:3px; font-weight:700; }
+  .bar i { display:block; height:8px; border-radius:6px; background:rgba(255,255,255,.08); overflow:hidden; } .bar i u { display:block; height:100%; width:50%; border-radius:6px; transition:width .2s; }
+  #vitB u { background:linear-gradient(90deg,#ff5252,#ffd740,#69f0ae); } #ammoB u { background:linear-gradient(90deg,#ffab40,#ffd740); }
+  #net { width:10px; height:10px; border-radius:50%; background:var(--ok); box-shadow:0 0 8px var(--ok); flex:none; } #net.bad { background:#ff5252; box-shadow:0 0 8px #ff5252; }
+  #unl { border:1px solid rgba(255,255,255,.18); background:transparent; color:var(--mu); border-radius:8px; padding:6px 9px; font-size:.62rem; letter-spacing:.1em; font-weight:700; }
+  #stage { flex:1; position:relative; }
+  #stickZone { position:absolute; left:0; top:0; bottom:0; width:46%; }
+  #stickZone .hint { position:absolute; left:50%; top:55%; transform:translate(-50%,-50%); color:rgba(143,166,191,.5); font-size:.7rem; letter-spacing:.2em; font-weight:700; text-align:center; pointer-events:none; }
+  #base { position:absolute; width:140px; height:140px; margin:-70px 0 0 -70px; border-radius:50%; border:2px solid rgba(0,229,255,.45); background:radial-gradient(circle, rgba(0,229,255,.12), rgba(0,229,255,.03)); display:none; pointer-events:none; }
+  #nub { position:absolute; left:50%; top:50%; width:62px; height:62px; margin:-31px 0 0 -31px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #8ff7ff, var(--c)); box-shadow:0 0 22px rgba(0,229,255,.7); }
+  #btns { position:absolute; right:max(18px, env(safe-area-inset-right)); bottom:max(14px, env(safe-area-inset-bottom)); top:0; width:52%; }
+  .b { position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:50%; font-family:'Orbitron',sans-serif; font-weight:900; letter-spacing:.08em; border:2px solid; transition:transform .06s, filter .06s; text-align:center; line-height:1.1; }
+  .b small { font-family:'Inter',sans-serif; font-weight:700; font-size:.5rem; letter-spacing:.06em; opacity:.8; margin-top:2px; max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .b.dn { transform:scale(.9); filter:brightness(1.6); }
+  .b.off { opacity:.35; }
+  #bClaw { right:0; bottom:8%; width:clamp(96px, 30vh, 150px); height:clamp(96px, 30vh, 150px); font-size:1rem; color:#ff80ab; border-color:var(--r); background:radial-gradient(circle at 40% 35%, rgba(255,64,129,.4), rgba(255,64,129,.08)); box-shadow:0 0 26px rgba(255,64,129,.35); }
+  #bDash { right:calc(clamp(96px, 30vh, 150px) + 14px); bottom:3%; width:clamp(70px, 21vh, 104px); height:clamp(70px, 21vh, 104px); font-size:.72rem; color:var(--c); border-color:var(--c); background:rgba(0,229,255,.12); }
+  #bSpec { right:calc(clamp(96px, 30vh, 150px) - 4px); bottom:calc(8% + clamp(96px, 30vh, 150px) + 4px); width:clamp(70px, 21vh, 104px); height:clamp(70px, 21vh, 104px); font-size:.62rem; color:var(--g); border-color:var(--g); background:rgba(255,215,64,.1); }
+  #bLink { right:0; top:4%; width:auto; height:auto; border-radius:14px; padding:12px 18px; font-size:.78rem; color:var(--g); border-color:var(--g); background:rgba(255,215,64,.14); }
+  #bHack { right:calc(clamp(96px, 30vh, 150px) + clamp(70px, 21vh, 104px) + 26px); bottom:calc(3% + 10px); width:clamp(66px, 19vh, 92px); height:clamp(66px, 19vh, 92px); font-size:.62rem; color:var(--ok); border-color:var(--ok); background:rgba(105,240,174,.14); display:none; animation:pl .9s infinite; }
+  #bHack.on { display:flex; }
+  #bShop { left:0; top:4%; width:auto; height:auto; border-radius:12px; padding:9px 13px; font-size:.62rem; color:var(--mu); border-color:rgba(255,255,255,.2); background:transparent; }
+  @keyframes pl { 50% { box-shadow:0 0 24px rgba(105,240,174,.7); } }
+  #obj { position:absolute; left:max(14px, env(safe-area-inset-left)); bottom:max(10px, env(safe-area-inset-bottom)); font-size:.68rem; color:var(--mu); max-width:42%; pointer-events:none; }
+
+  /* context panels */
+  #ov { position:absolute; inset:0; display:none; padding:6px max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); flex-direction:column; background:rgba(2,4,10,.97); z-index:2; }
+  #ov.on { display:flex; }
+  #ovH { white-space:nowrap; overflow:hidden; font-family:'Orbitron',sans-serif; font-size:.72rem; letter-spacing:.16em; color:var(--g); margin-bottom:4px; display:flex; justify-content:space-between; gap:10px; }
+  #ovQ { font-size:clamp(.9rem, 4.2vh, 1.2rem); font-weight:700; margin:2px 0 8px; line-height:1.25; max-height:22vh; overflow:hidden; }
+  #ovBody { flex:1; display:grid; gap:10px; min-height:0; }
+  .opt { border:1px solid var(--line); border-radius:14px; background:rgba(0,229,255,.08); color:var(--tx); font:inherit; font-weight:600; font-size:clamp(.78rem, 3.6vh, 1rem); padding:8px 12px; text-align:left; display:flex; align-items:center; gap:10px; overflow:hidden; }
+  .opt b { font-family:'Orbitron',sans-serif; color:var(--c); flex:none; width:1.6em; height:1.6em; border-radius:50%; border:1px solid var(--c); display:grid; place-items:center; font-size:.8em; }
+  .opt.dn { background:rgba(0,229,255,.3); }
+  .opt.off { opacity:.4; }
+  .pzk { border-radius:12px; border:2px solid rgba(255,255,255,.15); font-family:'Orbitron',sans-serif; font-weight:900; font-size:1.2rem; color:var(--tx); background:rgba(0,229,255,.08); }
+  .pzk.s { outline:3px solid #fff; } .pzk.d { opacity:.28; } .pzk.l { filter:brightness(1.9); box-shadow:0 0 26px currentColor; }
+  #ovF { display:flex; gap:10px; margin-top:8px; align-items:center; }
+  #ovF .msg { flex:1; font-size:.8rem; color:var(--g); }
+  #ovF button { font-family:'Orbitron',sans-serif; font-size:.65rem; letter-spacing:.12em; font-weight:700; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.25); background:transparent; color:var(--mu); }
+  .big { margin:auto; text-align:center; font-family:'Orbitron',sans-serif; letter-spacing:.14em; }
+  .big b { display:block; font-size:1.1rem; color:var(--c); margin-bottom:8px; } .big small { color:var(--mu); font-family:'Inter',sans-serif; letter-spacing:0; font-size:.85rem; }
+
+  #aAl { position:absolute; left:23%; top:6%; transform:translateX(-50%); display:none; z-index:1; padding:8px 14px; border-radius:12px; border:2px solid #ffab40; background:rgba(20,10,4,.9); color:#ffd180; font-family:'Orbitron',sans-serif; font-size:.68rem; letter-spacing:.12em; font-weight:700; text-align:center; white-space:nowrap; pointer-events:none; }
+  #aAl.on { display:block; } #aAl.out { border-color:#ff1744; color:#ff8a80; animation:aS .5s ease-in-out infinite alternate; }
+  #aAl small { display:block; font-family:'Inter',sans-serif; letter-spacing:0; font-size:.72rem; color:var(--tx); margin-top:2px; font-weight:600; }
+  @keyframes aS { to { box-shadow:0 0 24px rgba(255,23,68,.7); } }
+  #bLink.urgent { animation:lu .55s ease-in-out infinite; box-shadow:0 0 22px rgba(255,215,64,.7); }
+  @keyframes lu { 50% { transform:scale(1.12); } }
+  #rot { position:fixed; inset:0; z-index:20; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; background:var(--bg); padding:30px; }
+  #rot .ph { width:64px; height:104px; border:3px solid var(--c); border-radius:12px; margin-bottom:22px; animation:rt 1.8s ease-in-out infinite; box-shadow:0 0 20px rgba(0,229,255,.4); }
+  @keyframes rt { 0%,25% { transform:rotate(0); } 60%,100% { transform:rotate(-90deg); } }
+  @media (orientation:portrait) { body.ctl #rot { display:flex; } }
+  #flash { position:fixed; inset:0; pointer-events:none; z-index:15; box-shadow:inset 0 0 80px rgba(255,23,68,0); transition:box-shadow .25s; }
+  #flash.on { box-shadow:inset 0 0 90px rgba(255,23,68,.75); transition:none; }
+</style>
+</head>
+<body>
+<!-- 1. PIN -->
+<div class="scr" id="sPin"><div class="card">
+  <h1>PFLX CONTROLLER</h1><div class="sub">Use your phone as the controller for <b>Nexus Frontiers</b>. Enter the 6-digit PIN shown on your game screen.</div>
+  <label>GAME PIN</label><input class="pin" id="pinIn" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">
+  <button class="btn" id="pinGo">LINK UP</button><div class="err" id="pinErr"></div>
+</div></div>
+<!-- 2. sign in -->
+<div class="scr" id="sAuth"><div class="card">
+  <h1>SIGN IN</h1><div class="sub">Sign in with your PFLX profile. The game only links to the player it belongs to.</div>
+  <div id="authKnown" style="display:none"><div class="who"><span class="dot"></span><div><small style="color:var(--mu);font-size:.7rem">SIGNED IN AS</small><br><b id="knownName"></b></div></div>
+    <button class="btn gold" id="authCont">CONTINUE</button><button class="btn ghost" id="authSwitch">NOT YOU? SIGN IN AS SOMEONE ELSE</button></div>
+  <div id="authForm"><label>BRAND NAME</label><input id="brandIn" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Your PFLX brand">
+    <label>PIN</label><input id="pfxPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••">
+    <button class="btn gold" id="authGo">SIGN IN</button></div>
+  <div class="err" id="authErr"></div>
+</div></div>
+<!-- 3. connecting -->
+<div class="scr" id="sConn"><div class="card" style="text-align:center">
+  <h1>LINKING…</h1><div class="spin"></div><div class="sub" id="connMsg">Looking for your game. Keep the game screen open.</div>
+  <div class="err" id="connErr"></div><button class="btn ghost" id="connBack">START OVER</button>
+</div></div>
+<!-- 4. ready -->
+<div class="scr" id="sReady"><div class="card" style="text-align:center">
+  <h1>LINKED ✓</h1><div class="sub">You're in control, <b id="readyName"></b>. Turn your phone sideways, then tap below.</div>
+  <button class="btn gold" id="startBtn">START CONTROLLER</button>
+</div></div>
+<!-- 5. controller -->
+<div class="scr" id="pad">
+  <div id="top"><span id="net"></span><span class="nm" id="meNm">PLAYER</span>
+    <div class="bar" id="vitB"><small>VITALITY</small><i><u></u></i></div>
+    <div class="bar" id="ammoB"><small id="ammoL">AMMO</small><i><u></u></i></div>
+    <button id="unl">UNLINK</button></div>
+  <div id="stage">
+    <div id="stickZone"><div class="hint">MOVE<br>touch &amp; drag</div><div id="base"><div id="nub"></div></div></div>
+    <div id="btns">
+      <div class="b" id="bShop" data-b="shop">SHOP</div>
+      <div class="b" id="bLink" data-b="link"><span id="linkT">LINK SPRINT</span></div>
+      <div class="b" id="bSpec" data-b="special">SPECIAL<small id="specN"></small></div>
+      <div class="b" id="bHack" data-b="hack"><span id="hackT">HACK</span></div>
+      <div class="b" id="bDash" data-b="dash">DASH<small id="dashN"></small></div>
+      <div class="b" id="bClaw" data-b="melee">CLAW<small>melee</small></div>
+    </div>
+    <div id="obj"></div><div id="aAl"><span id="aAlT">AMMO LOW</span><small id="aAlS">Tap LINK SPRINT to reload</small></div>
+    <div id="ov"><div id="ovH"><span id="ovT"></span><span id="ovK" style="color:var(--mu)"></span></div><div id="ovQ"></div><div id="ovBody"></div><div id="ovF"><span class="msg" id="ovM"></span><button id="ovX">BACK TO FIELD</button></div></div>
+  </div>
+</div>
+<div id="rot"><div class="ph"></div><h1>TURN YOUR PHONE SIDEWAYS</h1><div class="sub">The controller works in landscape.</div></div>
+<div id="flash"></div>
+
+<script>
+/*NET-START*/
+// NFNet — tiny broadcast transport for Nexus Frontiers co-op.
+//   'ws'    Supabase Realtime (Phoenix protocol) over one WebSocket, many topics. Anon key only, no schema change.
+//   'bc'    BroadcastChannel (same browser; used for local testing / dev)
+//   'local' loopback only (solo rounds, standalone)
+// Messages are {e: eventName, p: payload}; the sender never receives its own message.
+const NFNet = (function () {
+  function Chan(hub, topic) { this.hub = hub; this.topic = topic; this.fn = null; this.joined = false; this.q = []; this.refJoin = null; this.bc = null; }
+  Chan.prototype.on = function (fn) { this.fn = fn; return this; };
+  Chan.prototype.deliver = function (e, p) { if (this.fn) { try { this.fn(e, p); } catch (x) { if (typeof console !== 'undefined') console.error('[NFNet]', x); } } };
+  Chan.prototype.send = function (e, p, reliable) { this.hub._send(this, e, p, reliable); };
+  Chan.prototype.leave = function () { this.hub._leave(this); };
+
+  function Hub(o) {
+    o = o || {}; this.o = o; this.mode = o.transport || (o.url && o.key ? 'ws' : 'local'); this.chans = {}; this.ws = null; this.ref = 1; this.closed = false;
+    this.status = 'idle'; this.onStatus = o.onStatus || null; this.backoff = 500; this.hb = null; this.stats = { out: 0, inn: 0 };
+    this.WS = o.WebSocket || (typeof WebSocket !== 'undefined' ? WebSocket : null);
+    if (this.mode === 'ws' && !this.WS) this.mode = 'local';
+    if (this.mode === 'ws') this._open();
+    else this._setStatus(this.mode === 'bc' ? 'online' : 'local');
+  }
+  Hub.prototype._setStatus = function (s) { if (this.status !== s) { this.status = s; if (this.onStatus) { try { this.onStatus(s); } catch (x) {} } } };
+  Hub.prototype.channel = function (name) {
+    const topic = 'nf-' + String(name).replace(/[^A-Za-z0-9_\-:.]/g, '').slice(0, 90);
+    if (this.chans[topic]) return this.chans[topic];
+    const c = new Chan(this, topic); this.chans[topic] = c;
+    if (this.mode === 'bc' && typeof BroadcastChannel !== 'undefined') { c.bc = new BroadcastChannel(topic); c.bc.onmessage = function (ev) { const m = ev.data; if (m && m.e) { c.hub.stats.inn++; c.deliver(m.e, m.p); } }; c.joined = true; }
+    else if (this.mode === 'ws') this._join(c);
+    else c.joined = true;
+    return c;
+  };
+  Hub.prototype._open = function () {
+    const self = this; if (this.closed) return;
+    this._setStatus('connecting');
+    let ws; try { ws = new this.WS(this.o.url.replace(/^http/, 'ws').replace(/\/+$/, '') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(this.o.key) + '&vsn=1.0.0'); } catch (x) { this._retry(); return; }
+    this.ws = ws;
+    ws.onopen = function () { if (self.ws !== ws) return; self.backoff = 500; self._setStatus('online'); Object.keys(self.chans).forEach(function (k) { self._join(self.chans[k]); }); clearInterval(self.hb); self.hb = setInterval(function () { self._raw({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(self.ref++) }); }, 25000); };
+    ws.onmessage = function (ev) {
+      let m; try { m = JSON.parse(ev.data); } catch (x) { return; }
+      const c = self.chans[String(m.topic || '').replace(/^realtime:/, '')];
+      if (!c) return;
+      if (m.event === 'phx_reply' && m.ref && m.ref === c.refJoin) { c.joined = (m.payload && m.payload.status) === 'ok'; if (c.joined) { const q = c.q; c.q = []; q.forEach(function (x) { self._send(c, x[0], x[1], true); }); c.deliver('_joined', {}); } else c.deliver('_joinfail', m.payload); }
+      else if (m.event === 'broadcast' && m.payload) { self.stats.inn++; c.deliver(m.payload.event, m.payload.payload); }
+      else if (m.event === 'phx_error' || m.event === 'phx_close') { c.joined = false; }
+    };
+    ws.onclose = function () { if (self.ws !== ws) return; self.ws = null; clearInterval(self.hb); Object.keys(self.chans).forEach(function (k) { self.chans[k].joined = false; }); self._retry(); };
+    ws.onerror = function () { try { ws.close(); } catch (x) {} };
+  };
+  Hub.prototype._retry = function () { const self = this; if (this.closed) return; this._setStatus('offline'); const d = this.backoff; this.backoff = Math.min(6000, this.backoff * 2); setTimeout(function () { self._open(); }, d); };
+  Hub.prototype._raw = function (o) { if (this.ws && this.ws.readyState === 1) { try { this.ws.send(JSON.stringify(o)); return true; } catch (x) {} } return false; };
+  Hub.prototype._join = function (c) {
+    if (!this.ws || this.ws.readyState !== 1) return;
+    c.refJoin = String(this.ref++);
+    this._raw({ topic: 'realtime:' + c.topic, event: 'phx_join', payload: { config: { broadcast: { self: false, ack: false }, presence: { key: '' }, private: false } }, ref: c.refJoin, join_ref: c.refJoin });
+  };
+  Hub.prototype._send = function (c, e, p, reliable) {
+    this.stats.out++;
+    if (this.mode === 'bc') { if (c.bc) { try { c.bc.postMessage({ e: e, p: p }); } catch (x) {} } return; }
+    if (this.mode !== 'ws') return;
+    if (!c.joined) { if (reliable && c.q.length < 60) c.q.push([e, p]); return; }
+    this._raw({ topic: 'realtime:' + c.topic, event: 'broadcast', payload: { type: 'broadcast', event: e, payload: p }, ref: String(this.ref++) });
+  };
+  Hub.prototype._leave = function (c) {
+    delete this.chans[c.topic];
+    if (c.bc) { try { c.bc.close(); } catch (x) {} c.bc = null; }
+    if (this.mode === 'ws') this._raw({ topic: 'realtime:' + c.topic, event: 'phx_leave', payload: {}, ref: String(this.ref++) });
+  };
+  Hub.prototype.close = function () { this.closed = true; clearInterval(this.hb); Object.keys(this.chans).forEach(function (k) { const c = this.chans[k]; if (c.bc) { try { c.bc.close(); } catch (x) {} } }, this); this.chans = {}; if (this.ws) { try { this.ws.close(); } catch (x) {} this.ws = null; } this._setStatus('closed'); };
+  return { connect: function (o) { return new Hub(o); } };
+})();
+/*NET-END*/
+</script>
+<script>
+(function () { 'use strict';
+var SB = 'https://hyxiagexyptzvetqjmnj.supabase.co', ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eGlhZ2V4eXB0enZldHFqbW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODM4MTYsImV4cCI6MjA4OTY1OTgxNn0.hqHVlRu775dZfJrKxSFMNEPhANu5EFm7gJpaJ3RnbnY';
+var EP = SB + '/functions/v1/pflx-auth', TK = 'pflx_auth_v1';
+var $ = function (id) { return document.getElementById(id); };
+var qs = new URLSearchParams(location.search), BC = qs.get('padbc') === '1';
+var st = { pin: '', tok: '', brand: '', sid: Math.random().toString(36).slice(2, 10), hub: null, ch: null, linked: false, last: null, lastAt: 0, helloT: null, joy: { x: 0, y: 0 } };
+
+// ── PFLX sign-in pass (same as the Arena's pflxAuth; shared storage on this site)
+function call(b) { return fetch(EP, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: ANON, Authorization: 'Bearer ' + ANON }, body: JSON.stringify(b) }).then(function (r) { return r.json().catch(function () { return { ok: false }; }); }, function () { return { ok: false, error: 'offline' }; }); }
+function savePass(tok, p) { try { var exp = Date.now() + 2592000000; try { exp = JSON.parse(atob(tok.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))).exp || exp; } catch (e) {} localStorage.setItem(TK, JSON.stringify({ token: tok, pid: p.id, brand: p.brand, role: p.role, exp: exp })); } catch (e) {} }
+function curPass() { try { var t = JSON.parse(localStorage.getItem(TK) || 'null'); if (t && t.token && t.exp > Date.now()) return t; } catch (e) {} return null; }
+
+function show(id) { ['sPin', 'sAuth', 'sConn', 'sReady', 'pad'].forEach(function (s) { $(s).classList.toggle('on', s === id); }); document.body.classList.toggle('ctl', id === 'pad' || id === 'sReady'); }
+function buzz(n) { try { if (navigator.vibrate) navigator.vibrate(n); } catch (e) {} }
+
+// 1. PIN
+$('pinIn').value = (qs.get('pin') || '').replace(/\D/g, '').slice(0, 6);
+$('pinIn').addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 6); if (this.value.length === 6) $('pinGo').click(); });
+$('pinGo').onclick = function () { var v = $('pinIn').value; if (!/^\d{6}$/.test(v)) { $('pinErr').textContent = 'The PIN has 6 digits.'; return; } st.pin = v; $('pinErr').textContent = ''; toAuth(); };
+// 2. sign in
+function toAuth() {
+  var c = curPass(); $('authErr').textContent = '';
+  if (qs.get('tok')) { st.tok = qs.get('tok'); st.brand = qs.get('brand') || 'Tester'; return connect(); } // test hook
+  if (c) { $('authKnown').style.display = ''; $('authForm').style.display = 'none'; $('knownName').textContent = c.brand || 'your profile'; }
+  else { $('authKnown').style.display = 'none'; $('authForm').style.display = ''; }
+  show('sAuth');
+}
+$('authCont').onclick = function () { var c = curPass(); if (!c) return toAuth(); st.tok = c.token; st.brand = c.brand; connect(); };
+$('authSwitch').onclick = function () { try { localStorage.removeItem(TK); } catch (e) {} toAuth(); };
+$('authGo').onclick = function () {
+  var who = $('brandIn').value.trim(), pin = $('pfxPin').value.trim(); if (!who || !pin) { $('authErr').textContent = 'Enter your brand name and PIN.'; return; }
+  $('authGo').disabled = true; $('authErr').textContent = '';
+  call({ action: 'login', who: who, pin: pin }).then(function (r) {
+    $('authGo').disabled = false;
+    if (r && r.ok && r.token) { savePass(r.token, r.player || {}); st.tok = r.token; st.brand = (r.player && r.player.brand) || who; $('pfxPin').value = ''; connect(); }
+    else $('authErr').textContent = r && r.error === 'offline' ? 'No connection. Check your Wi-Fi.' : (r && /locked|too many/i.test(r.error || '') ? 'Too many tries. Wait 15 minutes.' : 'That brand and PIN don\'t match.');
+  });
+};
+$('pfxPin').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('authGo').click(); });
+// 3. connect
+function connect() {
+  show('sConn'); $('connErr').textContent = ''; $('connMsg').textContent = 'Looking for your game. Keep the game screen open.';
+  if (!st.hub) st.hub = NFNet.connect({ url: SB, key: ANON, transport: BC ? 'bc' : 'ws' });
+  if (st.ch) { try { st.ch.leave(); } catch (e) {} }
+  st.ch = st.hub.channel('pad-' + st.pin).on(onMsg); st.linked = false;
+  clearInterval(st.helloT); var tries = 0;
+  if (!st.ticket || st.ticketPin !== st.pin || Date.now() > st.ticketExp) {
+    if (qs.get('tok')) { st.ticket = qs.get('tok'); st.ticketPin = st.pin; st.ticketExp = Date.now() + 6e5; }
+    else return call({ action: 'padTicket', token: st.tok, pin: st.pin }).then(function (r) {
+      if (r && r.ok && r.ticket) { st.ticket = r.ticket; st.ticketPin = st.pin; st.ticketExp = Date.now() + 9 * 60000; if (r.player && r.player.brand) st.brand = r.player.brand; connect(); }
+      else if (r && r.error === 'invalid_token') { try { localStorage.removeItem(TK); } catch (e) {} toAuth(); $('authErr').textContent = 'Your sign-in expired. Sign in again.'; }
+      else { $('connErr').textContent = r && r.error === 'offline' ? 'No connection. Check your Wi-Fi.' : 'Could not start the link. Try again.'; }
+    });
+  }
+  function hello() { tries++; st.ch.send('hello', { sid: st.sid, tok: st.ticket, brand: st.brand }); if (tries === 8) $('connMsg').textContent = 'Still looking… check the PIN on the game screen matches ' + st.pin.replace(/(\d{3})(\d{3})/, '$1 $2') + '.'; }
+  hello(); st.helloT = setInterval(function () { if (!st.linked) hello(); }, 1500);
+}
+$('connBack').onclick = function () { clearInterval(st.helloT); if (st.ch) { try { st.ch.leave(); } catch (e) {} st.ch = null; } show('sPin'); };
+function onMsg(e, d) {
+  d = d || {}; if (d.sid !== st.sid) return;
+  if (e === 'welcome') {
+    if (!d.ok) { clearInterval(st.helloT); $('connErr').textContent = d.err || 'The game said no.'; $('connMsg').textContent = ''; if (/sign/i.test(d.err || '')) { try { localStorage.removeItem(TK); } catch (x) {} } return; }
+    var first = !st.linked; st.linked = true; st.lastAt = Date.now(); clearInterval(st.helloT);
+    if (d.color) document.documentElement.style.setProperty('--me', d.color);
+    $('meNm').textContent = d.name || st.brand; $('readyName').textContent = d.name || st.brand;
+    if (first && !$('pad').classList.contains('on')) { show('sReady'); buzz(40); }
+    return;
+  }
+  if (e === 'st') { st.lastAt = Date.now(); render(d); return; }
+  if (e === 'fx') { if (d.t === 'low') buzz([60, 80, 60]); if (d.t === 'out') buzz([120, 80, 120, 80, 120]); if (d.t === 'hit') { buzz(Math.min(120, 30 + (d.n | 0) * 4)); var f = $('flash'); f.classList.add('on'); setTimeout(function () { f.classList.remove('on'); }, 90); } return; }
+  if (e === 'bye') { st.linked = false; clearInterval(st.helloT); show('sPin'); $('pinErr').textContent = 'The game unlinked this phone. Enter the new PIN to link again.'; $('pinIn').value = ''; }
+}
+function send(e, p) { if (st.ch && st.linked) st.ch.send(e, Object.assign({ sid: st.sid }, p || {})); }
+// 4. start: fullscreen + landscape lock + keep awake
+$('startBtn').onclick = function () {
+  var de = document.documentElement;
+  try { var fs = de.requestFullscreen || de.webkitRequestFullscreen; if (fs) { var pr = fs.call(de); if (pr && pr.then) pr.then(function () { try { screen.orientation.lock('landscape').catch(function () {}); } catch (e) {} }, function () {}); } } catch (e) {}
+  try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function (w) { st.wake = w; }, function () {}); } catch (e) {}
+  show('pad'); buzz(30);
+};
+document.addEventListener('visibilitychange', function () { if (!document.hidden && $('pad').classList.contains('on') && navigator.wakeLock) { try { navigator.wakeLock.request('screen').then(function (w) { st.wake = w; }, function () {}); } catch (e) {} } });
+$('unl').onclick = function () { send('bye'); st.linked = false; show('sPin'); $('pinIn').value = ''; $('pinErr').textContent = 'Unlinked.'; };
+
+// ── joystick (floating: appears where your thumb lands on the left side)
+(function () {
+  var z = $('stickZone'), base = $('base'), nub = $('nub'), id = null, cx = 0, cy = 0, R = 60, sentAt = 0, lx = 9, ly = 9;
+  function out(x, y, force) { st.joy.x = x; st.joy.y = y; var now = Date.now(); if (force || now - sentAt > 45 && (Math.abs(x - lx) > .04 || Math.abs(y - ly) > .04)) { send('in', { x: +x.toFixed(2), y: +y.toFixed(2), f: 1 }); sentAt = now; lx = x; ly = y; } }
+  z.addEventListener('pointerdown', function (e) { if (id != null) return; id = e.pointerId; z.setPointerCapture(id); var r = z.getBoundingClientRect(); cx = e.clientX - r.left; cy = e.clientY - r.top; base.style.left = cx + 'px'; base.style.top = cy + 'px'; base.style.display = 'block'; nub.style.transform = ''; z.querySelector('.hint').style.display = 'none'; buzz(8); });
+  z.addEventListener('pointermove', function (e) { if (e.pointerId !== id) return; var r = z.getBoundingClientRect(), dx = e.clientX - r.left - cx, dy = e.clientY - r.top - cy, m = Math.hypot(dx, dy); if (m > R) { dx *= R / m; dy *= R / m; } nub.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; var x = dx / R, y = dy / R; if (Math.hypot(x, y) < .12) { x = 0; y = 0; } out(x, y); });
+  function up(e) { if (e.pointerId !== id) return; id = null; base.style.display = 'none'; out(0, 0, true); }
+  z.addEventListener('pointerup', up); z.addEventListener('pointercancel', up);
+  setInterval(function () { if (id != null) send('in', { x: +st.joy.x.toFixed(2), y: +st.joy.y.toFixed(2), f: 1 }); }, 400); // keep-alive while held
+})();
+// ── buttons (fire on press, not on release, for snappy combat)
+function wireBtn(el, fn) {
+  el.addEventListener('pointerdown', function (e) { e.preventDefault(); if (el.classList.contains('off')) { buzz(15); return; } el.classList.add('dn'); buzz(12); fn(); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) { el.addEventListener(t, function () { el.classList.remove('dn'); }); });
+}
+Array.prototype.forEach.call(document.querySelectorAll('#btns .b'), function (el) { wireBtn(el, function () { send('btn', { b: el.dataset.b }); }); });
+$('ovX').onclick = function () { send('btn', { b: 'leave' }); buzz(12); };
+setInterval(function () { if (!$('pad').classList.contains('on')) return; send('ping'); $('net').classList.toggle('bad', Date.now() - st.lastAt > 5000); }, 2000);
+
+// ── render game state
+var PZC = ['#ff5252', '#ffd740', '#00e5ff', '#69f0ae'];
+function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function render(d) {
+  $('vitB').querySelector('u').style.width = Math.max(0, Math.min(100, d.v)) + '%';
+  $('ammoB').querySelector('u').style.width = Math.max(0, Math.min(100, d.a)) + '%';
+  $('ammoL').textContent = d.a <= 2 ? 'OUT OF AMMO — USE CLAW / LINK' : 'AMMO';
+  $('linkT').textContent = d.l ? 'LINK ' + d.l + 's' : 'LINK SPRINT'; $('bLink').classList.toggle('off', !!d.l);
+  $('specN').textContent = d.sp || ''; $('dashN').textContent = d.d != null ? '×' + d.d : ''; $('bDash').classList.toggle('off', d.d === 0);
+  $('bHack').classList.toggle('on', !!d.h); $('hackT').textContent = (d.hl || 'HACK').toUpperCase();
+  $('obj').textContent = d.ob || '';
+  var al = d.c === 'field' ? (d.al | 0) : 0; $('aAl').classList.toggle('on', al > 0); $('aAl').classList.toggle('out', al === 2);
+  $('aAlT').textContent = al === 2 ? 'OUT OF AMMO' : 'AMMO LOW'; $('aAlS').textContent = d.l ? 'LINK in ' + d.l + ' s — CLAW up close' : 'Tap LINK SPRINT to answer questions and reload';
+  $('bLink').classList.toggle('urgent', al > 0 && !d.l);
+  var ov = $('ov'), body = $('ovBody'), key = d.c + '|' + (d.q || '') + '|' + (d.o || []).join('|') + '|' + (d.it ? JSON.stringify(d.it) : '') + '|' + (d.cards ? JSON.stringify(d.cards) + d.turn : '') + '|' + d.done + '|' + (d.w || '');
+  $('ovM').textContent = d.msg || ''; $('ovK').textContent = d.c === 'quiz' ? (d.qx === 'boss' ? (d.k || '').replace(/^BOSS LINK · /, '') : '') : d.c === 'boss' ? 'SUPER ENERGY ' + (d.e | 0) : (d.code ? d.code : '');
+  if (key === st.lastKey) return; st.lastKey = key;
+  if (d.c === 'field') { ov.classList.remove('on'); return; }
+  ov.classList.add('on'); body.innerHTML = ''; body.style.gridTemplateColumns = ''; body.style.gridTemplateRows = ''; $('ovQ').textContent = ''; $('ovX').style.display = 'none';
+  if (d.c === 'quiz') {
+    $('ovT').textContent = d.qx === 'boss' ? 'BOSS LINK — POWER YOUR MOVE' : 'LINK SPRINT — RELOAD'; $('ovQ').textContent = d.q || '';
+    $('ovX').style.display = ''; $('ovX').textContent = d.qx === 'boss' ? 'LOCK IN' : 'BACK TO FIELD';
+    body.style.gridTemplateColumns = '1fr 1fr';
+    (d.o || []).forEach(function (t, i) { var b = document.createElement('button'); b.className = 'opt' + (d.done ? ' off' : ''); b.innerHTML = '<b>' + (i + 1) + '</b><span>' + esc(t) + '</span>'; wireBtn(b, function () { send('btn', { b: 'opt' + i }); }); body.appendChild(b); });
+  } else if (d.c === 'boss') {
+    $('ovT').textContent = 'BOSS BATTLE'; body.style.gridTemplateColumns = '1fr 1fr';
+    if (!d.turn) { body.innerHTML = '<div class="big" style="grid-column:1/-1"><b>WAIT</b><small>Your move is in. Watch the big screen.</small></div>'; return; }
+    $('ovQ').textContent = 'Choose your move';
+    (d.cards || []).forEach(function (c, i) { var b = document.createElement('button'); b.className = 'opt' + (c[1] ? '' : ' off'); b.innerHTML = '<b>' + (i + 1) + '</b><span>' + esc(c[0]) + '</span>'; wireBtn(b, function () { send('btn', { b: 'card' + i }); }); body.appendChild(b); });
+  } else if (d.c === 'puz') {
+    $('ovT').textContent = d.ti || 'TERMINAL'; $('ovX').style.display = ''; $('ovX').textContent = 'BACK TO FIELD';
+    var its = d.it || [];
+    if (d.pt === 'wires') {
+      $('ovQ').textContent = 'Tap a wire on the left, then the same colour on the right.'; body.style.gridTemplateColumns = '1fr 1fr'; body.style.gridAutoFlow = 'column'; body.style.gridTemplateRows = 'repeat(' + Math.max(1, its.length / 2) + ',1fr)';
+    } else if (d.pt === 'signal') { $('ovQ').textContent = 'Watch the pads, then repeat the pattern.'; body.style.gridTemplateColumns = '1fr 1fr'; body.style.gridAutoFlow = ''; }
+    else { $('ovQ').textContent = d.code ? 'Code: ' + d.code : ''; body.style.gridTemplateColumns = 'repeat(6,1fr)'; body.style.gridAutoFlow = ''; }
+    its.forEach(function (it, i) { var b = document.createElement('button'); b.className = 'pzk ' + it[3].split('').join(' '); if (it[1]) { b.style.background = it[1]; b.style.color = it[1]; b.style.borderColor = 'rgba(255,255,255,.35)'; } else b.textContent = it[2]; if (it[3].indexOf('d') >= 0) b.disabled = true; wireBtn(b, function () { send('btn', { b: 'pz' + i }); }); body.appendChild(b); });
+  } else if (d.c === 'cut') {
+    $('ovT').textContent = 'STORY'; var b = document.createElement('button'); b.className = 'opt'; b.style.justifyContent = 'center'; b.innerHTML = '<span style="font-family:Orbitron;letter-spacing:.2em">TAP TO CONTINUE ▶</span>'; wireBtn(b, function () { send('btn', { b: 'cut' }); }); body.appendChild(b);
+  } else if (d.c === 'shop') {
+    $('ovT').textContent = 'SHOP'; $('ovX').style.display = ''; $('ovX').textContent = 'CLOSE SHOP'; body.innerHTML = '<div class="big"><b>SHOP IS OPEN</b><small>Pick upgrades on the big screen. Tap CLOSE SHOP when you are done.</small></div>';
+  } else {
+    $('ovT').textContent = 'NEXUS FRONTIERS'; body.innerHTML = '<div class="big"><b>STAND BY</b><small>' + esc(d.w || 'Waiting for the game') + '</small></div>';
+  }
+}
+setInterval(function () { if (st.linked && Date.now() - st.lastAt > 8000 && $('pad').classList.contains('on')) { st.linked = false; $('net').classList.add('bad'); connect(); show('pad'); } }, 2000);
+
+show('sPin'); if ($('pinIn').value.length === 6) $('pinGo').click();
+})();
+</script>
+</body>
+</html>

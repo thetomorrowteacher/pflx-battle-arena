@@ -52,6 +52,21 @@
   #linkBtn.pulse { animation:pl .9s infinite; }
   @keyframes pl { 50% { box-shadow:0 0 1.4em rgba(255,215,64,.9); } }
   #exitBtn { position:absolute; left:1.2%; bottom:2.5%; pointer-events:auto; opacity:.7; }
+  #actions .btn.claw { border-color:#ff4081; color:#ff80ab; box-shadow:0 0 14px rgba(255,64,129,.35) inset; }
+  #actions .btn.claw.cd { opacity:.45; }
+  #padBtn { position:fixed; left:1.2%; bottom:10%; z-index:60; pointer-events:auto; font-size:.72em; padding:.7em 1em; opacity:.85; }
+  #padBtn.on { border-color:#69f0ae; color:#69f0ae; box-shadow:0 0 12px rgba(105,240,174,.4); opacity:1; }
+  body.touch #padBtn { bottom:auto; top:9%; left:auto; right:1.5%; }
+  #padM { position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center; background:rgba(2,4,10,.82); backdrop-filter:blur(4px); }
+  #padM.on { display:flex; }
+  #padM .box { width:min(720px,92vw); background:rgba(6,14,30,.96); border:1px solid rgba(0,229,255,.4); border-radius:18px; padding:26px 28px; display:grid; grid-template-columns:auto 1fr; gap:26px; align-items:center; box-shadow:0 0 50px rgba(0,229,255,.18); }
+  #padM h3 { grid-column:1/-1; margin:0; font-family:'Orbitron',sans-serif; letter-spacing:.18em; color:#00e5ff; font-size:1.05em; }
+  #padM canvas#padQr { position:static !important; inset:auto !important; transform:none !important; display:block; width:220px; height:220px; background:#fff; border-radius:12px; padding:10px; image-rendering:pixelated; }
+  #padM .pin { font-family:'Orbitron',monospace; font-size:2.6em; letter-spacing:.28em; color:#ffd740; text-shadow:0 0 18px rgba(255,215,64,.4); margin:.15em 0 .3em; }
+  #padM .url { font-size:.8em; color:#9fb3c8; word-break:break-all; }
+  #padM ol { margin:.6em 0 0 1.1em; padding:0; color:#cfe3f5; font-size:.92em; line-height:1.55; }
+  #padM .st { margin-top:.9em; font-weight:700; color:#ffd740; } #padM .st.ok { color:#69f0ae; } #padM .st.bad { color:#ff5252; }
+  #padM .row { grid-column:1/-1; display:flex; gap:.6em; justify-content:flex-end; }
   #joy { position:absolute; left:3%; bottom:6%; width:16%; aspect-ratio:1; border-radius:50%; border:2px solid rgba(0,229,255,.35); background:rgba(0,229,255,.06); display:none; pointer-events:auto; }
   #joy i { position:absolute; left:50%; top:50%; width:42%; height:42%; margin:-21% 0 0 -21%; border-radius:50%; background:rgba(0,229,255,.35); border:1px solid #00e5ff; }
   body.touch #joy { display:block; } body.touch #exitBtn { bottom:auto; top:2%; left:auto; right:1.5%; } body.touch #hudR { top:14%; }
@@ -237,6 +252,28 @@
   @media (prefers-reduced-motion: reduce) { #cutin * { animation-duration:.01s !important; } }
   #qWarn { color:#ff9f0a; font-size:.75em; font-weight:700; letter-spacing:.08em; min-height:1.2em; margin-top:.4em; }
   @media (prefers-reduced-motion: reduce) { body.danger #vign, body.danger2 #vign { animation:none; opacity:.45; } #gameover b { animation:none; } }
+  /* v0.9 low-ammo alert: edge glow + centre call-to-action that sends the player into the LINK questions */
+  #ammoEdge { position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0; transition:opacity .3s; }
+  #ammoEdge.low { opacity:1; box-shadow:inset 0 0 6em rgba(255,171,64,.45); animation:aeP 1.4s ease-in-out infinite; }
+  #ammoEdge.out { opacity:1; box-shadow:inset 0 0 8em rgba(255,23,68,.6); animation:aeP .8s ease-in-out infinite; }
+  @keyframes aeP { 50% { opacity:.45; } }
+  #ammoAlert { position:absolute; left:50%; top:62%; transform:translateX(-50%); z-index:6; display:none; align-items:center; gap:1em; padding:.75em 1.1em .75em 1.3em; border-radius:1em; pointer-events:auto;
+    background:rgba(10,8,16,.86); border:2px solid #ffab40; box-shadow:0 0 2em rgba(255,171,64,.35); font-family:'Orbitron','Rajdhani',sans-serif; white-space:nowrap; }
+  #ammoAlert.on { display:flex; animation:aaIn .25s ease-out; }
+  #ammoAlert .ic { font-size:1.9em; line-height:1; }
+  #ammoAlert b { display:block; font-size:1.05em; letter-spacing:.14em; color:#ffd180; }
+  #ammoAlert small { display:block; font-family:'Rajdhani',sans-serif; font-size:.95em; color:#e6f0ff; letter-spacing:.04em; margin-top:.15em; }
+  #ammoAlert button { font-family:'Orbitron',sans-serif; font-weight:800; letter-spacing:.12em; font-size:.85em; padding:.8em 1.1em; border-radius:.7em; border:2px solid #ffd740; background:rgba(255,215,64,.18); color:#ffd740; cursor:pointer; animation:aaB .9s ease-in-out infinite; }
+  #ammoAlert button[disabled] { animation:none; opacity:.55; border-color:#8fa6bf; color:#8fa6bf; background:transparent; cursor:default; }
+  #ammoAlert.out { border-color:#ff1744; box-shadow:0 0 2.6em rgba(255,23,68,.5); animation:aaS .5s ease-in-out infinite alternate; }
+  #ammoAlert.out b { color:#ff8a80; }
+  @keyframes aaIn { from { transform:translate(-50%, 1em); opacity:0; } }
+  @keyframes aaS { to { box-shadow:0 0 3.6em rgba(255,23,68,.8); } }
+  @keyframes aaB { 50% { transform:scale(1.07); box-shadow:0 0 1.4em rgba(255,215,64,.6); } }
+  #linkBtn.urgent { animation:luP .55s ease-in-out infinite; border-color:#ffd740; box-shadow:0 0 1.6em rgba(255,215,64,.7); }
+  @keyframes luP { 50% { transform:scale(1.1); } }
+  #ammoBox.low #ammoF { animation:abF .7s step-end infinite; } @keyframes abF { 50% { opacity:.35; } }
+  @media (prefers-reduced-motion: reduce) { #ammoEdge.low, #ammoEdge.out, #ammoAlert.out, #ammoAlert button, #linkBtn.urgent, #ammoBox.low #ammoF { animation:none; } }
   @media (prefers-reduced-motion: reduce) { #clock.low { animation:none; } }
   @media (prefers-reduced-motion: reduce) { #banner.show { animation:none; opacity:1; } .btn.pulse, #linkBtn.pulse { animation:none; } }
 </style>
@@ -261,9 +298,12 @@
     <div id="clock" style="display:none"></div>
     <div id="squad"></div>
     <div id="banner" class="mono"></div>
+    <div id="ammoEdge"></div>
+    <div id="ammoAlert"><span class="ic">⚠</span><div><b id="aaT">AMMO LOW</b><small id="aaS">Answer LINK questions to reload</small></div><button id="aaBtn">RELOAD: LINK [Q]</button></div>
     <div id="toast"></div>
     <div id="joy"><i></i></div>
     <div id="actions">
+      <button class="btn claw" id="clawBtn">CLAW <small>[C]</small></button>
       <button class="btn" id="dashBtn">DASH <small>[SPACE]</small></button>
       <button class="btn gold" id="surgeBtn"><span id="surgeLbl">SPECIAL</span> <small>[F]</small></button>
       <button class="btn" id="shopBtn">SHOP <small>[B]</small></button>
@@ -273,6 +313,16 @@
     <button class="btn" id="exitBtn">EXIT</button>
   </div>
   <div id="gameover"><b id="goT">GAME OVER</b><small id="goS" class="mono"></small></div>
+  <button class="btn" id="padBtn">📱 PHONE CONTROLLER</button>
+  <div id="padM"><div class="box">
+    <h3>LINK YOUR PHONE AS A CONTROLLER</h3>
+    <canvas id="padQr" width="220" height="220"></canvas>
+    <div><div class="mono" style="color:#9fb3c8;font-size:.8em;letter-spacing:.12em">SCAN THE CODE, OR OPEN THE LINK AND ENTER THIS PIN</div>
+      <div class="pin" id="padPin">------</div><div class="url mono" id="padUrl"></div>
+      <ol><li>Scan the QR code with your phone camera.</li><li>Sign in with your PFLX brand and PIN.</li><li>Turn your phone sideways. The controller switches on.</li></ol>
+      <div class="st" id="padSt">Waiting for your phone…</div></div>
+    <div class="row"><button class="btn" id="padOff" style="display:none">UNLINK PHONE</button><button class="btn gold" id="padClose">DONE</button></div>
+  </div></div>
   <div class="ov" id="puz"><div class="panel"><h3 id="pzT"></h3><p class="pd" id="pzD"></p><div id="pzBody"></div><div id="pzMsg"></div><button class="btn" id="pzClose" style="margin-top:.6em">BACK TO FIELD [ESC]</button><div class="mono" style="font-size:.6em;color:#ffd740;margin-top:.6em;letter-spacing:.15em">YOUR EVO IS IN MAINTENANCE — THE ROOM KEEPS MOVING</div></div></div>
   <div id="cutin"><div class="ci-bg"></div><div class="ci-lines"></div><div class="ci-band"></div><img id="ciImg" alt=""><div class="ci-txt"><small id="ciWho"></small><b id="ciName"></b><i id="ciSub"></i></div></div>
 
@@ -1144,7 +1194,7 @@ const NFLogic = (function () {
     let n = 0; for (let i = Math.max(0, resume | 0); i < 6; i++) n += baseEncounter(stageScale(diff, i)).sentryAfter.length; return n;
   }
   // v0.8: Access Keys are locked in escape-room VAULTS (sections 2, 4 and 6): find the section's 3 code shards, then crack the vault.
-  const VAULT_ROOMS = [1, 3, 5], LINK_COOLDOWN = 20, MELEE = { reach: 24, dmg: 1.4, cd: .45, knock: 18 };
+  const VAULT_ROOMS = [1, 3, 5], LINK_COOLDOWN = 20, MELEE = { reach: 36, dmg: 1.4, cd: .45, knock: 18 };
   function vaultsFrom(resume) { return VAULT_ROOMS.filter(function (i) { return i >= (resume | 0); }).length; }
   function goalConfig(cfg, resume, diff) {
     cfg = cfg || {}; return { correct: clampInt(cfg.nfGoalCorrect, 0, 60, 20), keys: Math.min(clampInt(cfg.nfGoalKeys, 0, 6, 3), vaultsFrom(resume)), clear: cfg.nfGoalClear !== false };
@@ -1613,7 +1663,7 @@ addEventListener('keydown', function (e) {
   if (S.shopOpen) { if (k === 'escape' || k === 'b') closeShop(); return; }
   if (S.quizOpen) { if (k >= '1' && k <= '4') pickOption(+k - 1); if (k === 'escape' && S.quizContext === 'field') leaveSprint(); return; }
   if (S.puzOpen) { if (k === 'escape') closePuzzle(); else puzzleKey(k); return; }
-  if (S.mode === 'play') { if (k === 'e') useTerminal(); if (k === 'b') openShop(); if (k === 'q') openQuiz('field'); if (k === 'f') surge(); if (k === ' ') { dash(); e.preventDefault(); } }
+  if (S.mode === 'play') { if (k === 'c') melee(); if (k === 'e') useTerminal(); if (k === 'b') openShop(); if (k === 'q') openQuiz('field'); if (k === 'f') surge(); if (k === ' ') { dash(); e.preventDefault(); } }
   if (S.mode === 'boss' && k >= '1' && k <= '4' && bossState.turn === 'players' && !S.quizOpen) chooseCard(['strike', 'surge', 'guard', 'super'][+k - 1]);
 });
 addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
@@ -1629,7 +1679,29 @@ let joy = { x: 0, y: 0, id: null };
   addEventListener('touchstart', function () { document.body.classList.add('touch'); }, { once: true, passive: true });
 })();
 $('useBtn').onclick = function () { useTerminal(); }; $('pzClose').onclick = function () { closePuzzle(); };
-$('dashBtn').onclick = function () { dash(); }; $('surgeBtn').onclick = function () { surge(); }; $('linkBtn').onclick = function () { openQuiz('field'); };
+
+// ── v0.9 low-ammo alert: at 25% or less, the screen tells the player to go answer LINK questions
+function ammoAlert(p, fill, sl) {
+  const live = S.mode === 'play' && !p.down && !S.quizOpen && !S.shopOpen && !S.puzOpen && !S.rg && !S.ending;
+  const lvl = !live ? 0 : fill <= 1e-6 ? 2 : fill <= .25 ? 1 : 0;
+  const box = $('ammoAlert'), lcd = linkCdLeft(), lk = linkLocked();
+  $('ammoEdge').className = lvl === 2 ? 'out' : lvl === 1 ? 'low' : '';
+  $('ammoBox').classList.toggle('low', lvl === 1);
+  $('linkBtn').classList.toggle('urgent', lvl > 0 && !lcd && !lk);
+  box.classList.toggle('on', lvl > 0); box.classList.toggle('out', lvl === 2);
+  if (lvl) {
+    $('aaT').textContent = lvl === 2 ? 'OUT OF AMMO' : 'AMMO LOW — ' + sl + ' SHOT' + (sl === 1 ? '' : 'S') + ' LEFT';
+    const wait = lk || lcd;
+    $('aaS').textContent = wait ? 'LINK opens in ' + wait + ' s — CLAW [C] up close until then' : 'Answer LINK questions now to reload your Evo';
+    const b = $('aaBtn'); b.disabled = !!wait; b.textContent = wait ? 'LINK IN ' + wait + 's' : 'RELOAD: LINK [Q]';
+    const now = performance.now();
+    if (lvl !== S.aaLvl) { S.aaLvl = lvl; S.aaBeep = now; padAmmoBuzz(lvl); }
+    else if (lvl === 2 && !wait && now - (S.aaBeep || 0) > 4500) { S.aaBeep = now; SFX.play('low', 60, .7); }
+  } else S.aaLvl = 0;
+}
+function padAmmoBuzz(lvl) { if (typeof PAD !== 'undefined' && PAD.ok && PAD.ch) PAD.ch.send('fx', { sid: PAD.sid, t: lvl === 2 ? 'out' : 'low' }); }
+$('aaBtn').onclick = function () { openQuiz('field'); };
+$('clawBtn').onclick = function () { melee(); }; $('dashBtn').onclick = function () { dash(); }; $('surgeBtn').onclick = function () { surge(); }; $('linkBtn').onclick = function () { openQuiz('field'); };
 
 // ── Quiz: FIELD = a LINK sprint while the Evo is in MAINTENANCE (the room keeps moving); BOSS = one question per move ──
 // FIELD context = a 60-second LINK SPRINT: answer as many as you can, the timer bar drains while the ammo meter rises.
@@ -1830,6 +1902,7 @@ function handleAct(id, a) { // leader
   P.lastSeen = performance.now();
   switch (a.k) {
     case 'dash': P.inv = Math.max(P.inv, .3); if (a.ink) doInkStep(P, a); break;
+    case 'melee': meleeStrike(P, false); break;
     case 'surge': if (P.id !== S.me) setAmmo(P, ammoOf(P) - .2); doSpecial(P, a); break;
     case 'buy': doBuy(P, String(a.item || '')); break;
     case 'bossmove': { const mv0 = L.BOSS_MOVES[String(a.card || '')]; if (a.ok && mv0 && mv0.cost && P.id !== S.me) setAmmo(P, ammoOf(P) - mv0.cost * .2); bossMove(P, String(a.card || ''), !!a.ok, a.n | 0, a.st | 0); break; }
@@ -3051,14 +3124,23 @@ function npcBossMove(P, dt) { // the NPC picks a move after a short think and "a
 // ══════════ v0.8 (Ennis, 21 Oct): melee, LINK recharge, Turbo Reload, escape-room puzzles + vaults, Archive sabotage, roster saves ══════════
 
 // ── Melee: every Evo claws at Archives in reach — no ammo needed. 2–4 scratch marks + a slash sound per strike. ──
-function meleeTick(P, dt) { // leader
-  P.meleeCd = Math.max(0, (P.meleeCd || 0) - dt); if (P.meleeCd > 0 || !isAlive(P) || P.protect > 0) return;
+function meleeTick(P, dt) { // leader: cooldown; only NPC Evos swing automatically (v0.9: players press CLAW / C)
+  P.meleeCd = Math.max(0, (P.meleeCd || 0) - dt); if (P.npc && !(P.meleeCd > 0)) meleeStrike(P, true);
+}
+function melee() { // local CLAW button
+  const p = S.p; if (!p || S.mode !== 'play' || S.quizOpen || S.shopOpen || S.puzOpen || S.rg || p.down) return;
+  const now = performance.now(); if ((S.clawAt || 0) > now) return; S.clawAt = now + L.MELEE.cd * 1000;
+  netAct({ k: 'melee' }); padPulse();
+}
+function meleeStrike(P, auto) { // leader
+  if ((P.meleeCd || 0) > 0 || !isAlive(P) || P.protect > 0) return false;
   let best = null, bd = 1e9; S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; const d = Math.hypot(e.x - P.x, e.y - P.y) - e.r - P.r; if (d < L.MELEE.reach && d < bd) { bd = d; best = e; } });
-  if (!best) return;
+  if (!best) { if (auto) return false; const fa = P.id === S.me ? (P.face || 0) : (P.aim != null ? P.aim : (P.face || 0)); P.meleeCd = L.MELEE.cd; emit({ k: 'claw', x: Math.round(P.x + Math.cos(fa) * 34), y: Math.round(P.y + Math.sin(fa) * 34), a: Math.round(fa * 100) / 100, n: 2 + Math.floor(S.rng() * 3), c: kitOf(P).color, w: 1 }); return true; }
   const an = Math.atan2(best.y - P.y, best.x - P.x), dmg = L.MELEE.dmg * (1 + psx(P, 'power')) * (P.boost.overdrive > 0 && P.studio === 'gentech' ? 2 : 1), n = 2 + Math.floor(S.rng() * 3);
   S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; if (e === best || Math.hypot(e.x - best.x, e.y - best.y) < 30) { damageEnemy(e, e === best ? dmg : dmg * .5, P.id); const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; if (e.type !== 'sentry') L.moveBody(S.map, e, (e.x - P.x) / d * L.MELEE.knock, (e.y - P.y) / d * L.MELEE.knock); } });
   P.meleeCd = L.MELEE.cd; if (P.id === S.me) P.face = an; else P.aim = an;
   emit({ k: 'claw', x: Math.round(best.x), y: Math.round(best.y), a: Math.round(an * 100) / 100, n: n, c: kitOf(P).color });
+  return true;
 }
 function drawClaws() {
   (S.claws || []).forEach(function (c) {
@@ -3434,7 +3516,7 @@ function saveProgress(final) {
 function renderHud() {
   const p = S.p; if (!p) return;
   $('vitF').style.width = Math.max(0, p.vit / p.maxVit * 100) + '%';
-  const mt = S.meter; if (mt) { $('ammoF').style.width = (mt.fill * 100) + '%'; const sl = shotsLeft(p), out = mt.fill <= 1e-6; $('ammoTxt').textContent = sl + ' / ' + clipOf(p); $('ammoBox').classList.toggle('empty', out); $('ammoWarn').classList.toggle('on', out && S.mode === 'play' && !p.down); }
+  const mt = S.meter; if (mt) { $('ammoF').style.width = (mt.fill * 100) + '%'; const sl = shotsLeft(p), out = mt.fill <= 1e-6; $('ammoTxt').textContent = sl + ' / ' + clipOf(p); $('ammoBox').classList.toggle('empty', out); $('ammoWarn').classList.toggle('on', out && S.mode === 'play' && !p.down); ammoAlert(p, mt.fill, sl); }
   const kit = kitOf(p); $('spName').textContent = kit.special.name.toUpperCase(); $('surgeLbl').textContent = kit.special.name.toUpperCase();
   const dmx = L.dashCharges(p.perks), dn = p.dashN == null ? dmx : p.dashN, dp = $('dashPips'); if (dp.children.length !== dmx) { dp.innerHTML = ''; for (let i = 0; i < dmx; i++) dp.appendChild(document.createElement('i')); } for (let i = 0; i < dmx; i++) dp.children[i].className = i < dn ? 'on' : '';
   if (S.eq) {
@@ -4022,6 +4104,102 @@ function stepSim(dt) { // advance the leader's sim exactly like the frame loop d
   if (S.clock) { S.clock.running = !S.rg; S.clock.tick(dt); if (S.clock.over) timeUp(); }
   ageFx(dt); S.mirror(); renderHud();
 }
+
+// ══════════ v0.9 PHONE CONTROLLER ══════════
+// The game shows a QR code + 6-digit PIN. The phone opens /pad.html, signs in to PFLX (pflx-auth pass),
+// and joins the broadcast channel pad-<PIN>. The game verifies the pass and only accepts the SAME player.
+const PAD_NET = { url: 'https://hyxiagexyptzvetqjmnj.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eGlhZ2V4eXB0enZldHFqbW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODM4MTYsImV4cCI6MjA4OTY1OTgxNn0.hqHVlRu775dZfJrKxSFMNEPhANu5EFm7gJpaJ3RnbnY' };
+const PAD_AUTH = PAD_NET.url + '/functions/v1/pflx-auth';
+const PAD = { hub: null, ch: null, pin: '', ok: false, sid: '', brand: '', seen: 0, last: '', lastAt: 0, vit: 100, joyAt: 0 };
+function padUrl() { return location.origin + '/pad.html?pin=' + PAD.pin + (qs.get('padbc') === '1' ? '&padbc=1' : ''); }
+function padOpen() {
+  if (S.role === 'host') return;
+  if (!PAD.ok) padListen();
+  $('padPin').textContent = PAD.pin.replace(/(\d{3})(\d{3})/, '$1 $2'); $('padUrl').textContent = padUrl(); padDrawQr(); padRender(); $('padM').classList.add('on');
+}
+function padListen() {
+  if (PAD.ch) { try { PAD.ch.leave(); } catch (e) {} }
+  PAD.pin = String(100000 + Math.floor(Math.random() * 900000)); PAD.ok = false; PAD.sid = '';
+  if (!PAD.hub) PAD.hub = NFNet.connect({ url: PAD_NET.url, key: PAD_NET.key, transport: qs.get('padbc') === '1' ? 'bc' : 'ws' });
+  PAD.ch = PAD.hub.channel('pad-' + PAD.pin).on(padMsg);
+}
+function padDrawQr() {
+  const cv = $('padQr'), g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+  function draw() { try { const q = window.qrcode(0, 'M'); q.addData(padUrl()); q.make(); const n = q.getModuleCount(), cs = Math.floor(cv.width / (n + 4)), o = Math.floor((cv.width - cs * n) / 2); g.fillStyle = '#000'; for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect(o + c * cs, o + r * cs, cs, cs); } catch (e) {} }
+  if (window.qrcode) return draw();
+  const sc = document.createElement('script'); sc.src = '/vendor/qrcode.js'; sc.onload = draw; document.head.appendChild(sc);
+}
+function padRender() {
+  const st = $('padSt'), on = PAD.ok && performance.now() - PAD.seen < 7000;
+  st.className = 'st' + (on ? ' ok' : ''); st.textContent = on ? '✓ Linked: ' + PAD.brand + "'s phone is the controller" : (PAD.ok ? 'Phone went quiet — reconnecting…' : 'Waiting for your phone…');
+  $('padOff').style.display = PAD.ok ? '' : 'none'; $('padBtn').classList.toggle('on', on); $('padBtn').textContent = on ? '📱 PHONE LINKED' : '📱 PHONE CONTROLLER';
+}
+function padVerify(tok) {
+  if (TEST && tok === 'test') return Promise.resolve({ id: S.player.id, brand: S.player.brand || 'Tester' });
+  return fetch(PAD_AUTH, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: PAD_NET.key, Authorization: 'Bearer ' + PAD_NET.key }, body: JSON.stringify({ action: 'padCheck', ticket: String(tok || '').slice(0, 2000), pin: PAD.pin }) })
+    .then(function (r) { return r.json(); }).then(function (r) { return r && r.ok ? r.player : null; }, function () { return null; });
+}
+function padSame(pl) { const me = S.player || {}; return !!pl && ((pl.id && pl.id === me.id) || (pl.brand && me.brand && String(pl.brand).toLowerCase() === String(me.brand).toLowerCase())); }
+function padMsg(e, d) {
+  d = d || {};
+  if (e === 'hello') {
+    if (PAD.ok && d.sid === PAD.sid) { PAD.seen = performance.now(); PAD.ch.send('welcome', { sid: d.sid, ok: true, name: PAD.brand, color: kitColor() }, true); PAD.last = ''; return; }
+    padVerify(d.tok).then(function (pl) {
+      if (!padSame(pl)) { PAD.ch.send('welcome', { sid: d.sid, ok: false, err: pl ? 'This game belongs to ' + (S.player.brand || 'another player') + '. Sign in as that player.' : 'Sign-in could not be checked. Sign in again.' }, true); return; }
+      PAD.ok = true; PAD.sid = String(d.sid || ''); PAD.brand = pl.brand || S.player.brand || 'Player'; PAD.seen = performance.now(); PAD.last = '';
+      PAD.ch.send('welcome', { sid: PAD.sid, ok: true, name: PAD.brand, color: kitColor() }, true);
+      toast('📱 Phone controller linked'); SFX.play('reload', 60, .8); padRender(); setTimeout(function () { if (PAD.ok) $('padM').classList.remove('on'); }, 1200);
+    });
+    return;
+  }
+  if (!PAD.ok || d.sid !== PAD.sid) return;
+  PAD.seen = performance.now();
+  if (e === 'in') { const x = Math.max(-1, Math.min(1, +d.x || 0)), y = Math.max(-1, Math.min(1, +d.y || 0)); if (joy.id == null) { joy.x = x; joy.y = y; } PAD.joyAt = performance.now(); if (d.f != null && S.p && (Math.abs(x) > .2 || Math.abs(y) > .2)) S.p.face = Math.atan2(y, x); return; }
+  if (e === 'btn') padButton(String(d.b || ''));
+  if (e === 'bye') { padUnlink(true); }
+}
+function kitColor() { try { return kitOf(S.p).color; } catch (e) { return '#00e5ff'; } }
+function padButton(b) {
+  SFX.unlock && SFX.unlock();
+  if (b === 'cut') { if (S.mode === 'cut') cutAdvance(false); return; }
+  if (/^opt[0-3]$/.test(b)) { pickOption(+b[3]); return; }
+  if (b === 'leave') { if (S.quizOpen) leaveSprint(); else if (S.puzOpen) closePuzzle(); else if (S.shopOpen) closeShop(); return; }
+  if (/^card[0-3]$/.test(b)) { chooseCard(['strike', 'surge', 'guard', 'super'][+b[4]]); return; }
+  if (/^pz\d{1,2}$/.test(b)) { const els = padPzEls(); const el = els[+b.slice(2)]; if (el && el.onclick) el.onclick(); return; }
+  if (b === 'melee') return melee(); if (b === 'dash') return dash(); if (b === 'special') return surge(); if (b === 'link') return openQuiz('field');
+  if (b === 'hack') return useTerminal(); if (b === 'shop') return S.shopOpen ? closeShop() : openShop();
+}
+function padPzEls() { return Array.prototype.slice.call($('pzBody').querySelectorAll('.wire, .pad, .keys button')); }
+function padState() {
+  const p = S.p, o = { m: S.mode, v: p ? Math.max(0, Math.round(100 * p.vit / (p.maxVit || 100))) : 0, a: S.meter ? Math.round(S.meter.fill * 100) : 0, l: linkCdLeft(), d: p ? (p.dashN == null ? 1 : p.dashN) : 0, sp: kitSpecialName() };
+  if (S.mode === 'cut') o.c = 'cut';
+  else if (S.quizOpen && curAttempt) { o.c = 'quiz'; o.q = curAttempt.term; o.o = curAttempt.options.map(function (x) { return x.text; }); o.qx = S.quizContext; o.done = !!answered; o.k = $('qKick') ? $('qKick').textContent : ''; o.msg = $('qMsg') ? $('qMsg').textContent : ''; }
+  else if (S.puzOpen) { o.c = 'puz'; o.pt = S.puzOpen.type; o.ti = $('pzT').textContent; o.msg = $('pzMsg').textContent; o.code = $('pzCode') ? $('pzCode').textContent : ''; o.it = padPzEls().map(function (el) { return [el.closest('.wcol.r') ? 1 : 0, el.dataset.c || el.style.background || '', el.dataset.k || '', (el.classList.contains('sel') ? 's' : '') + (el.classList.contains('done') ? 'd' : '') + (el.classList.contains('lit') ? 'l' : '')]; }); }
+  else if (S.shopOpen) o.c = 'shop';
+  else if (S.mode === 'boss') { o.c = 'boss'; o.turn = bossState.turn === 'players' && !S.bossBusy && (bossState.acted || []).indexOf(S.me) < 0; o.cards = ['strike', 'surge', 'guard', 'super'].map(function (id) { const mv = L.BOSS_MOVES[id]; const nm = id === 'super' && p ? L.superFor(p.studio, p.branch, p.lvl).name : (mv ? mv.name : id); const ok = id === 'super' ? (p && (p.superE | 0) >= L.SUPER_COST) : !(mv && mv.cost > S.quiz.charge); return [nm, ok ? 1 : 0]; }); o.e = p ? p.superE | 0 : 0; }
+  else if (S.mode === 'play') { o.c = 'field'; o.al = S.aaLvl | 0; o.h = !!nearTerminal(); o.hl = $('useBtn').textContent.replace(/\s*\[E\]\s*$/, ''); o.ob = S.obj ? S.obj.t : ''; }
+  else { o.c = 'wait'; o.w = S.mode === 'end' ? 'Round over — look at the big screen' : S.mode === 'lobby' ? 'In the squad lobby — get ready' : S.mode === 'loadout' ? 'Pick your loadout on the big screen' : 'Waiting for the round to start'; }
+  return o;
+}
+function kitSpecialName() { try { return kitOf(S.p).special.name; } catch (e) { return 'SPECIAL'; } }
+function padPulse() { if (PAD.ok) PAD.ch.send('fx', { sid: PAD.sid, t: 'tap' }); }
+function padUnlink(fromPhone) {
+  if (PAD.ch && PAD.ok && !fromPhone) PAD.ch.send('bye', { sid: PAD.sid }, true);
+  PAD.ok = false; PAD.sid = ''; joy.x = joy.y = 0; padListen(); padRender();
+  if ($('padM').classList.contains('on')) { $('padPin').textContent = PAD.pin.replace(/(\d{3})(\d{3})/, '$1 $2'); $('padUrl').textContent = padUrl(); padDrawQr(); }
+  toast('📱 Phone controller unlinked');
+}
+setInterval(function () {
+  if (!PAD.ok || !PAD.ch) { if ($('padM').classList.contains('on')) padRender(); return; }
+  const now = performance.now();
+  if (now - PAD.joyAt > 1500 && joy.id == null && (joy.x || joy.y)) { joy.x = joy.y = 0; } // phone stopped sending: let go of the stick
+  let st; try { st = padState(); } catch (e) { return; }
+  const j = JSON.stringify(st);
+  if (j !== PAD.last || now - PAD.lastAt > 2000) { PAD.ch.send('st', Object.assign({ sid: PAD.sid }, st)); PAD.last = j; PAD.lastAt = now; }
+  if (st.v < PAD.vit - 1) PAD.ch.send('fx', { sid: PAD.sid, t: 'hit', n: PAD.vit - st.v }); PAD.vit = st.v;
+  padRender();
+}, 125);
+$('padBtn').onclick = padOpen; $('padClose').onclick = function () { $('padM').classList.remove('on'); }; $('padOff').onclick = function () { padUnlink(false); };
 if (TEST) window.__nf = {
   S: S, L: L, NET: NET, OB: typeof OB !== 'undefined' ? OB : null, bossState: bossState,
   tp: function (x, y) { S.p.x = x; S.p.y = y; S.p.tx = x; S.p.ty = y; }, mode: function () { return S.mode; }, skipCut: function () { cutAdvance(true); },
@@ -4034,7 +4212,8 @@ if (TEST) window.__nf = {
   chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossWin: bossWin, endRound: finalizeRound, endRoundAnim: endRound, special: surge, dash: dash, lockIn: leaveSprint, pz: function () { return S.pz; }, useTerminal: useTerminal, puzzleSolve: puzzleSolve, linkCdLeft: linkCdLeft, squadScopeOf: squadScopeOf, closePuzzle: closePuzzle, showCutin: function (n) { showCutin(S.p, n || 'TEST SUPER', false); }, cardArt: function () { return cardArt(S.p); }, withExo: withExo, breach: breach, ammoOf: ammoOf, clipOf: clipOf, shotsLeft: shotsLeft, maintenance: maintenance, consNow: function () { return S.cons; }, BA: BA, awardPerks: awardPerks, startBoss: startBoss, enterBoss: enterBoss,
   hurtId: function (id, d) { const P = S.players[id]; if (P) { P.hurtCd = 0; P.inv = 0; P.protect = 0; hurtPlayer(P, d, 't'); } }, strip: function (id) { const P = S.players[id]; if (P && P.eq) { P.eq.abilityLeft = 0; P.eq.list = []; P.eq.inv = []; P.eq.aq = []; P.eq.aegisHits = 0; } }, addXc: function (id, n) { const P = S.players[id]; if (P) P.xc += n; S.mirror(); }, addBank: function (n) { S.bank.grant(n); }, startRegroup: startRegroup, doGive: doGive, aegisAbsorb: aegisAbsorb, settleRound: settleRound, renderEndExtra: renderEndExtra, refreshEvents: refreshEvents,
   playerList: playerList, doBuy: doBuy, handleAct: handleAct, netAct: netAct, members: members, lobbyCheck: lobbyCheck, leaderId: leaderId, backToLobby: backToLobby, stepSim: stepSim,
-  snapNow: function () { return encodeSnap && encodeSnap(); }
+  snapNow: function () { return encodeSnap && encodeSnap(); },
+  melee: melee, meleeStrike: meleeStrike, pad: PAD, padOpen: padOpen, padState: function () { return padState(); }, padUnlink: padUnlink, joy: function () { return joy; }
 };
 requestAnimationFrame(frame);
 })();

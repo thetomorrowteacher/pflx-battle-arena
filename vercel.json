@@ -8,6 +8,14 @@
       "destination": "/public/preview.html"
     },
     {
+      "source": "/pad.html",
+      "destination": "/public/pad.html"
+    },
+    {
+      "source": "/pad",
+      "destination": "/public/pad.html"
+    },
+    {
       "source": "/creator.html",
       "destination": "/public/creator.html"
     },
