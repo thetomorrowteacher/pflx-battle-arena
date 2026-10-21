@@ -199,14 +199,14 @@ t('upgrades last ONE round: everything brought in is used up, fired or not (in-r
   assert.deepStrictEqual(L.consumedItems(['chronorespawn', 'aegis', 'magnet#2', 'aegis']), { chronorespawn: 1, aegis: 2, 'magnet#2': 1 });
   assert.deepStrictEqual(L.consumedItems([]), {}); assert.deepStrictEqual(L.consumedItems(['nonsense', 'deadline']), {});
 });
-t('catalog: game upgrades only (no session kinds), 9 families × 3 tiers, every price a multiple of 5 and ≥ 10, higher tiers cost and do more', () => {
-  const U = L.UPGRADES; assert.strictEqual(Object.keys(U).length, 9); assert.ok(!U.deadline && !U.reassess, 'session upgrades live only in X-Live');
+t('catalog: game upgrades only (no session kinds), 10 families × 3 tiers, every price a multiple of 5 and ≥ 10, higher tiers cost and do more', () => {
+  const U = L.UPGRADES; assert.strictEqual(Object.keys(U).length, 10); assert.ok(!U.deadline && !U.reassess, 'session upgrades live only in X-Live');
   Object.keys(U).forEach(id => { assert.strictEqual(U[id].kind, 'game'); assert.strictEqual(U[id].tiers.length, 3, id); for (let t = 0; t < 3; t++) { const p = U[id].tiers[t].p; assert.ok(p >= 10 && p % 5 === 0, id + ' tier ' + (t + 1) + ' price ' + p); if (t) assert.ok(p > U[id].tiers[t - 1].p, id + ' price rises with tier'); } });
-  assert.strictEqual(L.marketKeys().length, 27); assert.ok(L.marketKeys().every(k => { const i = L.itemInfo(k); return i && i.price >= 10 && i.price % 5 === 0 && i.name && i.desc; }));
+  assert.strictEqual(L.marketKeys().length, 30); assert.ok(L.marketKeys().every(k => { const i = L.itemInfo(k); return i && i.price >= 10 && i.price % 5 === 0 && i.name && i.desc; }));
   assert.strictEqual(Math.min.apply(null, L.marketKeys().map(L.priceOf)), 10);
   const v = (id, f) => [1, 2, 3].map(t => L.tierFx(id, t)[f]); assert.deepStrictEqual(v('aegis', 'v'), [2, 3, 4]); assert.deepStrictEqual(v('chronorespawn', 'v'), [.6, .75, .9]); assert.deepStrictEqual(v('repair', 'v'), [50, 70, 100]);
   assert.deepStrictEqual(v('capacitor', 'v'), [.4, .6, .8]); assert.deepStrictEqual(v('surgeamp', 'v'), [9, 11, 13]); assert.deepStrictEqual(v('magnet', 'v'), [2.5, 3.5, 4.5]); assert.deepStrictEqual(v('rapid', 'v'), [.30, .26, .22]);
-  assert.deepStrictEqual(v('linkext', 'v'), [10, 15, 20]); assert.deepStrictEqual(v('seeker', 'v'), [2, 3, 4]);
+  assert.deepStrictEqual(v('linkext', 'v'), [10, 15, 20]); assert.deepStrictEqual(v('seeker', 'v'), [2, 3, 4]); assert.deepStrictEqual(v('turbo', 'w'), [1, 2, 3]);
 });
 t('item keys: aegis / aegis#2 / aegis#3 round-trip; junk and tier 4 are rejected', () => {
   assert.strictEqual(L.keyOf('aegis', 1), 'aegis'); assert.strictEqual(L.keyOf('aegis', 3), 'aegis#3'); assert.deepStrictEqual(L.parseKey('aegis#2'), { id: 'aegis', tier: 2 });
@@ -243,9 +243,9 @@ t('team bank: collected XC joins the bank; System Events (double XC, tax with ca
   assert.strictEqual(L.settle(5000, true, 100, 2000).payout, 2000); assert.strictEqual(L.bankCapFrom({}), 2000); assert.strictEqual(L.bankCapFrom({ nfBankCap: 99999 }), 5000);
   const f = new L.Bank(10); f.load(new L.Bank(0).state()); assert.strictEqual(f.value(), 0); const g = new L.Bank(300); g.add(1, null, 'a'); g.spend(50); const h = new L.Bank(0); h.load(g.state()); assert.strictEqual(h.value(), g.value());
 });
-t('round goals: 20 correct answers, Access Keys from the first Sentries, defeat the boss + exit; keys never exceed the Sentries left on a resumed run', () => {
+t('round goals: 20 correct answers, Access Keys from the vault puzzles, defeat the boss + exit; keys never exceed the Sentries left on a resumed run', () => {
   const gc = L.goalConfig({}, 0, 'ranger'); assert.deepStrictEqual(gc, { correct: 20, keys: 3, clear: true });
-  assert.strictEqual(L.goalConfig({}, 5, 'ranger').keys, 2, 'resuming at section 6 leaves 2 Sentries'); assert.strictEqual(L.goalConfig({ nfGoalKeys: 0, nfGoalCorrect: 10, nfGoalClear: false }, 0, 'cadet').keys, 0);
+  assert.strictEqual(L.goalConfig({}, 5, 'ranger').keys, 1, 'resuming at section 6 leaves 1 vault (room 5)'); assert.strictEqual(L.goalConfig({ nfGoalKeys: 0, nfGoalCorrect: 10, nfGoalClear: false }, 0, 'cadet').keys, 0);
   const g = new L.Goals(gc); assert.strictEqual(g.met(), false); g.correct = 19; g.keys = 3; g.clear = true; assert.strictEqual(g.met(), false); g.correct = 20; assert.strictEqual(g.met(), true);
   assert.deepStrictEqual(g.status().map(x => x.id), ['correct', 'keys', 'clear']); const h = new L.Goals(gc); h.load(g.state()); assert.strictEqual(h.met(), true);
   assert.strictEqual(new L.Goals({ correct: 0, keys: 0, clear: false }).met(), false, 'a round with no goals cannot be "won"');
@@ -282,7 +282,7 @@ t('v0.6 difficulty: every level is harder than the one below on damage, speed, A
   assert.ok(o[0].dmgMul > 1 && o[0].offset >= 1, 'even Cadet is harder than v0.5'); assert.strictEqual(L.DIFFS.cadet.bolt, 0); assert.strictEqual(L.DIFFS.expert.bolt, 1);
 });
 t('v0.6 ammo: the clip shrinks with difficulty and grows 25% per Ammo Extension tier; dash charges 1 / 2 / 3', () => {
-  assert.strictEqual(L.clipFor('ranger', {}), 38); assert.strictEqual(L.clipFor('ranger', { ammo: 1 }), 48); assert.strictEqual(L.clipFor('expert', { ammo: 3 }), Math.round(26 * 1.75)); assert.strictEqual(L.clipFor('expert', { ammo: 9 }), Math.round(26 * 1.75));
+  assert.strictEqual(L.clipFor('ranger', {}), 60); assert.strictEqual(L.clipFor('ranger', { ammo: 1 }), 75); assert.strictEqual(L.clipFor('expert', { ammo: 3 }), Math.round(42 * 1.75)); assert.strictEqual(L.clipFor('expert', { ammo: 9 }), Math.round(42 * 1.75));
   assert.strictEqual(L.dashCharges({}), 1); assert.strictEqual(L.dashCharges({ dash: 1 }), 2); assert.strictEqual(L.dashCharges({ dash: 2 }), 3); assert.strictEqual(L.dashCharges({ dash: 7 }), 3);
 });
 t('v0.6 sprint: a custom "full" test can end the sprint (ammo bar)', () => {
@@ -396,3 +396,20 @@ t('RoundClock: <=10 min, +1/-1 minute live, ceiling, time-up', () => {
   assert.strictEqual(new L.RoundClock(425).fmt(), '7:05'); assert.deepStrictEqual(L.timeoutOutcome(3, false), { saved: 3, bossDone: false, reason: 'time' });
 });
 console.log('\n' + n + ' tests passed');
+
+// ───────── v0.8 (Ennis, 21 Oct): longer ammo, melee, LINK recharge, Turbo Reload, escape-room puzzles, roster saves ─────────
+t('v0.8 ammo lasts longer: every clip is bigger than v0.7 and starts fuller', () => {
+  assert.deepStrictEqual(['cadet', 'ranger', 'veteran', 'expert'].map(d => L.DIFFS[d].clip), [70, 60, 52, 42]);
+  assert.deepStrictEqual(['cadet', 'ranger', 'veteran', 'expert'].map(d => L.DIFFS[d].startAmmo), [.75, .65, .55, .45]);
+});
+t('v0.8 melee needs no ammo and the LINK recharges for 20 s by default', () => {
+  assert.ok(L.MELEE.reach > 0 && L.MELEE.dmg > 0 && L.MELEE.cd > 0 && L.MELEE.knock > 0); assert.strictEqual(L.LINK_COOLDOWN, 20);
+});
+t('v0.8 Turbo Reload: Mk I lasts 1 LINK round, Mk II 2, Mk III 3; higher tiers cost more', () => {
+  const U = L.UPGRADES.turbo; assert.strictEqual(U.kind, 'game'); assert.deepStrictEqual(U.tiers.map(x => x.w), [1, 2, 3]); assert.ok(U.tiers.every(x => x.v > 1));
+  assert.ok(U.tiers[1].p > U.tiers[0].p && U.tiers[2].p > U.tiers[1].p); assert.strictEqual(L.itemInfo('turbo#3').name.length > 0, true);
+});
+t('v0.8 keys come from vaults in rooms 2, 4 and 6; a resumed run only counts the vaults still ahead', () => {
+  assert.deepStrictEqual(L.VAULT_ROOMS, [1, 3, 5]); assert.strictEqual(L.vaultsFrom(0), 3); assert.strictEqual(L.vaultsFrom(2), 2); assert.strictEqual(L.vaultsFrom(4), 1); assert.strictEqual(L.vaultsFrom(6), 0);
+  assert.strictEqual(L.goalConfig({}, 0, 'ranger').keys, 3); assert.strictEqual(L.goalConfig({}, 4, 'ranger').keys, 1);
+});

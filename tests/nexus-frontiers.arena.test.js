@@ -19,8 +19,8 @@ function harness() {
   return { f, db, sent, awards, env };
 }
 (async () => {
-  await t('prices in the Arena match the cartridge catalog exactly (27 tiered keys; session upgrades are NOT sold here)', () => {
-    const h = harness(), keys = L.marketKeys(); assert.strictEqual(keys.length, 27); keys.forEach(k => assert.strictEqual(h.f.NF_MARKET[k], L.priceOf(k), k)); assert.deepStrictEqual(Object.keys(h.f.NF_MARKET).sort(), keys.slice().sort());
+  await t('prices in the Arena match the cartridge catalog exactly (30 tiered keys; session upgrades are NOT sold here)', () => {
+    const h = harness(), keys = L.marketKeys(); assert.strictEqual(keys.length, 30); keys.forEach(k => assert.strictEqual(h.f.NF_MARKET[k], L.priceOf(k), k)); assert.deepStrictEqual(Object.keys(h.f.NF_MARKET).sort(), keys.slice().sort());
     assert.ok(!('deadline' in h.f.NF_MARKET) && !('reassess' in h.f.NF_MARKET));
     keys.forEach(k => { const pr = h.f.NF_MARKET[k]; assert.ok(pr >= 10 && pr % 5 === 0, k + ' price is >= 10 and a multiple of 5'); });
     assert.deepStrictEqual(Array.from(h.f.NF_ORB_COST), L.ORB_COST); Object.keys(L.BADGES).forEach(k => { assert.strictEqual(h.f.NF_BADGES[k].id, L.BADGES[k].id); assert.strictEqual(h.f.NF_BADGES[k].name, L.BADGES[k].name); assert.strictEqual(h.f.NF_BADGES[k].xc, L.BADGES[k].xc, k); });
@@ -220,22 +220,22 @@ function harness() {
   });
 
   // ── Marketplace (Oct 2026): the Arena owns game upgrades and publishes them for X-Coin / X-Live / the Console ──
-  await t('marketplace: published game items cover all 27 keys and match the cartridge (names, descriptions, prices, which ones fire)', () => {
-    const h = harness(), items = h.f.nfMarketItems({}); assert.strictEqual(items.length, 27);
+  await t('marketplace: published game items cover all 30 keys and match the cartridge (names, descriptions, prices, which ones fire)', () => {
+    const h = harness(), items = h.f.nfMarketItems({}); assert.strictEqual(items.length, 30);
     items.forEach(i => { const u = L.UPGRADES[i.id], tr = u.tiers[i.tier - 1]; assert.strictEqual(i.desc, tr.d, i.key); assert.strictEqual(i.price, tr.p, i.key); assert.strictEqual(i.fires, !!u.trigger, i.key); assert.ok(i.effect && i.icon === u.icon, i.key); assert.strictEqual(i.name, u.name + (i.tier > 1 ? ' Mk ' + ['I', 'II', 'III'][i.tier - 1] : ''), i.key); });
     const o = h.f.nfMarketItems({ aegis: { name: 'Big Shield', desc: 'Hosted text', price: 35, image: 'https://x/y.png' } }).find(i => i.key === 'aegis');
     assert.deepStrictEqual([o.name, o.desc, o.price, o.image], ['Big Shield', 'Hosted text', 35, 'https://x/y.png']);
   });
   await t('marketplace: only a host publishes; a player never writes pflx_market_game', async () => {
     const h = harness(); h.env.host = false; assert.strictEqual(await h.f.nfPublishMarket({}, 0), false); assert.ok(!h.db.pflx_market_game);
-    h.env.host = true; assert.strictEqual(await h.f.nfPublishMarket({}, 123), true); assert.strictEqual(h.db.pflx_market_game.items.length, 27); assert.strictEqual(h.db.pflx_market_game.catAt, 123); assert.strictEqual(h.db.pflx_market_game.v, 1);
+    h.env.host = true; assert.strictEqual(await h.f.nfPublishMarket({}, 123), true); assert.strictEqual(h.db.pflx_market_game.items.length, 30); assert.strictEqual(h.db.pflx_market_game.catAt, 123); assert.strictEqual(h.db.pflx_market_game.v, 1);
   });
   await t('marketplace: an oversized catalog (big pictures) is published without the pictures instead of bloating the row', async () => {
     const h = harness(); h.env.host = true; const big = 'data:image/png;base64,' + 'A'.repeat(39000), cat = {}; Object.keys(h.f.NF_MARKET).forEach(k => cat[k] = { image: big });
     await h.f.nfPublishMarket(cat, 1); assert.ok(h.db.pflx_market_game.imagesStripped); assert.ok(h.db.pflx_market_game.items.every(i => i.image === '')); assert.ok(JSON.stringify(h.db.pflx_market_game).length < 700000);
   });
   await t('marketplace: a host opening the Marketplace publishes when the row is missing or older than the catalog, and leaves a fresh row alone', async () => {
-    const h = harness(); h.env.host = true; await h.f.nfEnsureMarketPublished(); assert.strictEqual(h.db.pflx_market_game.items.length, 27); const t1 = h.db.pflx_market_game.updatedAt;
+    const h = harness(); h.env.host = true; await h.f.nfEnsureMarketPublished(); assert.strictEqual(h.db.pflx_market_game.items.length, 30); const t1 = h.db.pflx_market_game.updatedAt;
     h.db.pflx_market_game.updatedAt = 1; await h.f.nfEnsureMarketPublished(); assert.strictEqual(h.db.pflx_market_game.updatedAt, 1);
     h.db.pflx_nf_catalog = { v: 1, items: { aegis: { price: 25 } }, updatedAt: 5000 }; await h.f.nfEnsureMarketPublished(); assert.ok(h.db.pflx_market_game.updatedAt > 1); assert.strictEqual(h.db.pflx_market_game.items.find(i => i.key === 'aegis').price, 25); assert.strictEqual(h.db.pflx_market_game.catAt, 5000);
     const p = harness(); p.env.host = false; await p.f.nfEnsureMarketPublished(); assert.ok(!p.db.pflx_market_game);

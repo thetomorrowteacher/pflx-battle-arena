@@ -222,6 +222,17 @@
   @keyframes ciTxt { 0%,16%{transform:translateX(-30%) scale(1.6);opacity:0;filter:blur(8px)} 26%{transform:none;opacity:1;filter:none} 85%{opacity:1} 100%{opacity:0;transform:translateX(6%)} }
   @keyframes ciCardS { 0%{transform:translateX(60%) rotate(-10deg);opacity:0} 18%{transform:rotate(-6deg);opacity:.95} 75%{opacity:.95} 100%{transform:translateX(-12%) rotate(-6deg);opacity:0} }
   @keyframes ciTxtS { 0%,12%{opacity:0;transform:scale(1.4)} 24%{opacity:1;transform:none} 78%{opacity:1} 100%{opacity:0} }
+  /* v0.8 escape-room puzzles */
+  #puz .panel { width:min(560px,92%); text-align:center; }
+  #puz h3 { font-family:'Orbitron','Rajdhani',monospace; letter-spacing:.2em; font-size:1em; color:#7fd8ff; margin-bottom:.3em; } #puz p.pd { font-size:.85em; color:#9bb8d6; margin-bottom:.8em; }
+  #pzBody { position:relative; min-height:12em; } #pzMsg { min-height:1.4em; margin-top:.6em; font-weight:700; } #pzMsg.good { color:#7dffb4; } #pzMsg.bad { color:#ff6b8a; }
+  .wcol { position:absolute; top:0; bottom:0; width:22%; display:flex; flex-direction:column; justify-content:space-around; } .wcol.l { left:4%; } .wcol.r { right:4%; }
+  .wire { height:1.6em; border-radius:.4em; cursor:pointer; border:2px solid rgba(255,255,255,.25); } .wire.sel { box-shadow:0 0 1em #fff; border-color:#fff; } .wire.done { opacity:.4; pointer-events:none; }
+  #pzSvg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .pads { display:grid; grid-template-columns:1fr 1fr; gap:.7em; width:13em; margin:0 auto; } .pad { height:5em; border-radius:.8em; cursor:pointer; opacity:.45; border:2px solid rgba(255,255,255,.3); transition:opacity .08s; } .pad.lit { opacity:1; box-shadow:0 0 1.6em currentColor; }
+  .code { font-family:'Orbitron',monospace; font-size:2em; letter-spacing:.5em; color:#ffd740; margin:.3em 0 .5em; } .keys { display:grid; grid-template-columns:repeat(3,3.4em); gap:.4em; justify-content:center; } .keys button { height:2.6em; font:inherit; font-weight:800; font-size:1em; background:rgba(0,229,255,.1); color:#e6f7ff; border:1px solid rgba(0,229,255,.5); border-radius:.5em; cursor:pointer; }
+  #puz.shake .panel { animation:pzs .4s; } @keyframes pzs { 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+  #useBtn { display:none; } #useBtn.on { display:inline-block; animation:pl .9s infinite; }
   .card.super { border-color:#ffd740; box-shadow:0 0 1.2em rgba(255,215,64,.35) inset; } .card.super .t { color:#ffd740; }
   @media (prefers-reduced-motion: reduce) { #cutin * { animation-duration:.01s !important; } }
   #qWarn { color:#ff9f0a; font-size:.75em; font-weight:700; letter-spacing:.08em; min-height:1.2em; margin-top:.4em; }
@@ -256,11 +267,13 @@
       <button class="btn" id="dashBtn">DASH <small>[SPACE]</small></button>
       <button class="btn gold" id="surgeBtn"><span id="surgeLbl">SPECIAL</span> <small>[F]</small></button>
       <button class="btn" id="shopBtn">SHOP <small>[B]</small></button>
-      <button class="btn gold" id="linkBtn">LINK SPRINT <small>[Q]</small></button>
+      <button class="btn" id="useBtn">HACK <small>[E]</small></button>
+      <button class="btn gold" id="linkBtn"><span id="linkLbl">LINK SPRINT</span> <small>[Q]</small></button>
     </div>
     <button class="btn" id="exitBtn">EXIT</button>
   </div>
   <div id="gameover"><b id="goT">GAME OVER</b><small id="goS" class="mono"></small></div>
+  <div class="ov" id="puz"><div class="panel"><h3 id="pzT"></h3><p class="pd" id="pzD"></p><div id="pzBody"></div><div id="pzMsg"></div><button class="btn" id="pzClose" style="margin-top:.6em">BACK TO FIELD [ESC]</button><div class="mono" style="font-size:.6em;color:#ffd740;margin-top:.6em;letter-spacing:.15em">YOUR EVO IS IN MAINTENANCE — THE ROOM KEEPS MOVING</div></div></div>
   <div id="cutin"><div class="ci-bg"></div><div class="ci-lines"></div><div class="ci-band"></div><img id="ciImg" alt=""><div class="ci-txt"><small id="ciWho"></small><b id="ciName"></b><i id="ciSub"></i></div></div>
 
   <div class="drtag" id="drTag">⚠ DANGER ROOM · PRACTICE</div>
@@ -771,10 +784,10 @@ const NFLogic = (function () {
     //   dmgMul/spdMul = Archive damage & speed · capAdd = extra Archives on the field · clip = shots in a FULL ammo bar
     //   startAmmo = ammo at the start of a round · bolt = how often Interceptors shoot energy bolts (0 = never)
     //   bossHit = Elite damage · dodge = base chance an Evo dodges an Elite hit
-    cadet:   { id: 'cadet',   label: 'Cadet',   offset: 1, meter: 6,  bossMul: 1.3, teamK: 0.45, dmgMul: 1.25, spdMul: 1.08, capAdd: 1, clip: 44, startAmmo: .6, bolt: 0,   bossHit: 1.15, dodge: .12 },
-    ranger:  { id: 'ranger',  label: 'Ranger',  offset: 2, meter: 7,  bossMul: 1.5, teamK: 0.55, dmgMul: 1.5,  spdMul: 1.15, capAdd: 2, clip: 38, startAmmo: .5, bolt: .3,  bossHit: 1.35, dodge: .10 },
-    veteran: { id: 'veteran', label: 'Veteran', offset: 3, meter: 9,  bossMul: 1.8, teamK: 0.65, dmgMul: 1.85, spdMul: 1.22, capAdd: 4, clip: 32, startAmmo: .4, bolt: .6,  bossHit: 1.6,  dodge: .08 },
-    expert:  { id: 'expert',  label: 'Expert',  offset: 5, meter: 11, bossMul: 2.3, teamK: 0.8,  dmgMul: 2.4,  spdMul: 1.32, capAdd: 6, clip: 26, startAmmo: .3, bolt: 1,   bossHit: 2.0,  dodge: .06 } // area 1 == the stage-6 distribution
+    cadet:   { id: 'cadet',   label: 'Cadet',   offset: 1, meter: 6,  bossMul: 1.3, teamK: 0.45, dmgMul: 1.25, spdMul: 1.08, capAdd: 1, clip: 70, startAmmo: .75, bolt: 0,   bossHit: 1.15, dodge: .12 },
+    ranger:  { id: 'ranger',  label: 'Ranger',  offset: 2, meter: 7,  bossMul: 1.5, teamK: 0.55, dmgMul: 1.5,  spdMul: 1.15, capAdd: 2, clip: 60, startAmmo: .65, bolt: .3,  bossHit: 1.35, dodge: .10 },
+    veteran: { id: 'veteran', label: 'Veteran', offset: 3, meter: 9,  bossMul: 1.8, teamK: 0.65, dmgMul: 1.85, spdMul: 1.22, capAdd: 4, clip: 52, startAmmo: .55, bolt: .6,  bossHit: 1.6,  dodge: .08 },
+    expert:  { id: 'expert',  label: 'Expert',  offset: 5, meter: 11, bossMul: 2.3, teamK: 0.8,  dmgMul: 2.4,  spdMul: 1.32, capAdd: 6, clip: 42, startAmmo: .45, bolt: 1,   bossHit: 2.0,  dodge: .06 } // area 1 == the stage-6 distribution
   };
   function diffFromConfig(cfg) {
     cfg = cfg || {};
@@ -847,7 +860,12 @@ const NFLogic = (function () {
     seeker: up('seeker', 'Star Seeker', '✨', false, [
       { p: 25, v: 2, d: 'Archives drop temporary boosters twice as often.' },
       { p: 45, v: 3, d: 'Archives drop temporary boosters three times as often.' },
-      { p: 75, v: 4, d: 'Archives drop temporary boosters four times as often.' }])
+      { p: 75, v: 4, d: 'Archives drop temporary boosters four times as often.' }]),
+    // v0.8 (Ennis, 21 Oct): v = reload multiplier per correct answer, w = how many LINK rounds it lasts
+    turbo: up('turbo', 'Turbo Reload', '🔄', true, [
+      { p: 20, v: 1.75, w: 1, d: 'Correct answers reload 75% more ammo for your next LINK round.' },
+      { p: 40, v: 1.75, w: 2, d: 'Correct answers reload 75% more ammo for your next 2 LINK rounds.' },
+      { p: 70, v: 2,    w: 3, d: 'Correct answers reload DOUBLE ammo for your next 3 LINK rounds.' }])
   };
   // Inventory slots by Evo level: 1–2 → 3, 3–4 → 4, 5–6 → 5, 7–8 → 6, 9–10 → 7 (Ennis: level 1=3, 3=4, 5=5, 7=6, 9=7; even levels share the lower step).
   function slotsFor(level) { const l = clampInt(level, 1, 10, 1); return l >= 9 ? 7 : l >= 7 ? 6 : l >= 5 ? 5 : l >= 3 ? 4 : 3; }
@@ -1125,8 +1143,11 @@ const NFLogic = (function () {
   function sentriesFrom(diff, resume) {
     let n = 0; for (let i = Math.max(0, resume | 0); i < 6; i++) n += baseEncounter(stageScale(diff, i)).sentryAfter.length; return n;
   }
+  // v0.8: Access Keys are locked in escape-room VAULTS (sections 2, 4 and 6): find the section's 3 code shards, then crack the vault.
+  const VAULT_ROOMS = [1, 3, 5], LINK_COOLDOWN = 20, MELEE = { reach: 24, dmg: 1.4, cd: .45, knock: 18 };
+  function vaultsFrom(resume) { return VAULT_ROOMS.filter(function (i) { return i >= (resume | 0); }).length; }
   function goalConfig(cfg, resume, diff) {
-    cfg = cfg || {}; return { correct: clampInt(cfg.nfGoalCorrect, 0, 60, 20), keys: Math.min(clampInt(cfg.nfGoalKeys, 0, 6, 3), sentriesFrom(diff || 'ranger', resume)), clear: cfg.nfGoalClear !== false };
+    cfg = cfg || {}; return { correct: clampInt(cfg.nfGoalCorrect, 0, 60, 20), keys: Math.min(clampInt(cfg.nfGoalKeys, 0, 6, 3), vaultsFrom(resume)), clear: cfg.nfGoalClear !== false };
   }
   function Goals(conf) { this.conf = conf; this.correct = 0; this.answered = 0; this.keys = 0; this.clear = false; }
   Goals.prototype.status = function () {
@@ -1188,7 +1209,7 @@ const NFLogic = (function () {
     WAGER_STEP: WAGER_STEP, wagerCap: wagerCap, clampWager: clampWager, BANK_CAP_DEFAULT: BANK_CAP_DEFAULT, bankCapFrom: bankCapFrom, eventFx: eventFx, Bank: Bank, sentriesFrom: sentriesFrom, goalConfig: goalConfig, Goals: Goals, settle: settle,
     BADGES: BADGES, COMPLETION_BADGES: COMPLETION_BADGES, MIN_ROUND_SEC: MIN_ROUND_SEC, completionBadges: completionBadges, TEAM_STATS: TEAM_STATS, teamStatsOf: teamStatsOf, collabScore: collabScore, beaconEligible: beaconEligible, pickWinner: pickWinner,
     BOOSTERS: BOOSTERS, BOOSTER_RULES: BOOSTER_RULES, boosterDrop: boosterDrop,
-    KITS: KITS, kitFor: kitFor, BREACH: BREACH, SUPERS: SUPERS, SUPER_COST: SUPER_COST, superFor: superFor, bossCharge: bossCharge, guardMit: guardMit, LINK_GAME: LINK_GAME, isBonusQ: isBonusQ, linkReward: linkReward, BOSS_TURN: BOSS_TURN, bossTurnSec: bossTurnSec, EFFORT_MIN_ANSWERS: EFFORT_MIN_ANSWERS, BEACON_MIN: BEACON_MIN, roundBadges: roundBadges, PERK_MAX: PERK_MAX, PERK_ACC: PERK_ACC, PERK_MIN_ANSWERS: PERK_MIN_ANSWERS, victoryQualifies: victoryQualifies, nextPerks: nextPerks, perkNames: perkNames, clipFor: clipFor, dashCharges: dashCharges, resolveElite: resolveElite,
+    KITS: KITS, kitFor: kitFor, BREACH: BREACH, VAULT_ROOMS: VAULT_ROOMS, vaultsFrom: vaultsFrom, LINK_COOLDOWN: LINK_COOLDOWN, MELEE: MELEE, SUPERS: SUPERS, SUPER_COST: SUPER_COST, superFor: superFor, bossCharge: bossCharge, guardMit: guardMit, LINK_GAME: LINK_GAME, isBonusQ: isBonusQ, linkReward: linkReward, BOSS_TURN: BOSS_TURN, bossTurnSec: bossTurnSec, EFFORT_MIN_ANSWERS: EFFORT_MIN_ANSWERS, BEACON_MIN: BEACON_MIN, roundBadges: roundBadges, PERK_MAX: PERK_MAX, PERK_ACC: PERK_ACC, PERK_MIN_ANSWERS: PERK_MIN_ANSWERS, victoryQualifies: victoryQualifies, nextPerks: nextPerks, perkNames: perkNames, clipFor: clipFor, dashCharges: dashCharges, resolveElite: resolveElite,
     STUDIO_IDS: STUDIO_IDS, STUDIO_COLORS: STUDIO_COLORS, COOP: COOP, studioKey: studioKey, slug: slug, coopRules: coopRules, lobbyCheck: lobbyCheck, assignTeams: assignTeams, RoundClock: RoundClock, timeoutOutcome: timeoutOutcome, escortFor: escortFor,
     XC_RULES: XC_RULES, coinDrop: coinDrop, placeMaterials: placeMaterials,
     T: T, mulberry32: mulberry32, shuffle: shuffle, SpawnBag: SpawnBag, Encounter: Encounter, W01_ENCOUNTERS: W01_ENCOUNTERS,
@@ -1361,6 +1382,7 @@ function renderDangerRoom() {
     '<div class="drrow"><span class="drlbl mono">FIELD SHOP</span>' + shop + '</div>' +
     '<div class="drrow"><span class="drlbl mono">LINK SPRINT</span>' + lsec + '</div>' +
     '<div class="drrow"><span class="drlbl mono">BOSS LINK</span>' + bsec + '</div>' +
+    '<div class="drrow"><span class="drlbl mono">LINK RECHARGE</span>' + [0, 10, 20, 30].map(function (n) { return B('lcd', n, n ? n + ' s' : 'None', (c.nfLinkCooldown == null ? 20 : c.nfLinkCooldown) === n); }).join('') + '</div>' +
     '<div class="drrow" style="justify-content:center;margin-top:.9em"><button class="btn gold" id="drGo">ENTER THE DANGER ROOM</button></div>' +
     '<div class="drnote">Solo training on <b>' + escapeHtml((S.deck && S.deck.name) || 'your deck') + '</b>. Training gear is free and refills every run — try any upgrade. ' +
     'Nothing here is real: <b>no X-Coin, no wager, no badges, and your squad\'s checkpoint is untouched.</b> “Enemy scale” sets how many Archives spawn, so you can rehearse a full squad\'s load alone.</div>';
@@ -1368,7 +1390,7 @@ function renderDangerRoom() {
     b.onclick = function () {
       const k = b.dataset.k, v = b.dataset.v;
       if (k === 'diff') c.nfDifficulty = v; else if (k === 'team') c.nfTeam = v | 0; else if (k === 'meter') c.nfMeter = v | 0; else if (k === 'shop') c.nfShop = v === 'on';
-      else if (k === 'start') p.start = v | 0; else if (k === 'clock') p.roundMin = v | 0; else if (k === 'npc') { p.npc = v === 'on'; if (p.npc) c.nfTeam = 4; } else if (k === 'lsec') c.nfLinkSec = v | 0; else if (k === 'bsec') c.nfBossLinkSec = v | 0;
+      else if (k === 'start') p.start = v | 0; else if (k === 'clock') p.roundMin = v | 0; else if (k === 'npc') { p.npc = v === 'on'; if (p.npc) c.nfTeam = 4; } else if (k === 'lsec') c.nfLinkSec = v | 0; else if (k === 'lcd') c.nfLinkCooldown = v | 0; else if (k === 'bsec') c.nfBossLinkSec = v | 0;
       renderDangerRoom();
     };
   });
@@ -1382,7 +1404,7 @@ function readCfg() {
   if (TEST && qs.get('diff') && L.DIFFS[qs.get('diff')]) diff = qs.get('diff');
   if (TEST && qs.get('team')) team = Math.max(1, Math.min(4, qs.get('team') | 0));
   const ci = function (v, lo, hi, d) { v = parseInt(v, 10); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; };
-  S.cfg = { diff: diff, team: team, meterTarget: L.meterTargetFrom(c, diff), shop: c.nfShop !== false, linkSec: ci(c.nfLinkSec, 20, 180, 60), bossLinkSec: ci(c.nfBossLinkSec, 10, 90, 30) };
+  S.cfg = { diff: diff, team: team, meterTarget: L.meterTargetFrom(c, diff), shop: c.nfShop !== false, linkSec: ci(c.nfLinkSec, 20, 180, 60), bossLinkSec: ci(c.nfBossLinkSec, 10, 90, 30), linkCd: ci(c.nfLinkCooldown, 0, 120, L.LINK_COOLDOWN) };
   if (TEST && qs.get('meter')) S.cfg.meterTarget = Math.max(3, Math.min(12, qs.get('meter') | 0));
   if (!S.nf) S.nf = { scope: 'solo', owned: {}, xc: 0, progress: { cleared: 0 }, market: false };
 }
@@ -1590,7 +1612,8 @@ addEventListener('keydown', function (e) {
   if (S.mode === 'cut' && k === 'escape') { cutAdvance(true); return; }
   if (S.shopOpen) { if (k === 'escape' || k === 'b') closeShop(); return; }
   if (S.quizOpen) { if (k >= '1' && k <= '4') pickOption(+k - 1); if (k === 'escape' && S.quizContext === 'field') leaveSprint(); return; }
-  if (S.mode === 'play') { if (k === 'b') openShop(); if (k === 'q') openQuiz('field'); if (k === 'f') surge(); if (k === ' ') { dash(); e.preventDefault(); } }
+  if (S.puzOpen) { if (k === 'escape') closePuzzle(); else puzzleKey(k); return; }
+  if (S.mode === 'play') { if (k === 'e') useTerminal(); if (k === 'b') openShop(); if (k === 'q') openQuiz('field'); if (k === 'f') surge(); if (k === ' ') { dash(); e.preventDefault(); } }
   if (S.mode === 'boss' && k >= '1' && k <= '4' && bossState.turn === 'players' && !S.quizOpen) chooseCard(['strike', 'surge', 'guard', 'super'][+k - 1]);
 });
 addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
@@ -1605,6 +1628,7 @@ let joy = { x: 0, y: 0, id: null };
   j.addEventListener('pointerup', up); j.addEventListener('pointercancel', up);
   addEventListener('touchstart', function () { document.body.classList.add('touch'); }, { once: true, passive: true });
 })();
+$('useBtn').onclick = function () { useTerminal(); }; $('pzClose').onclick = function () { closePuzzle(); };
 $('dashBtn').onclick = function () { dash(); }; $('surgeBtn').onclick = function () { surge(); }; $('linkBtn').onclick = function () { openQuiz('field'); };
 
 // ── Quiz: FIELD = a LINK sprint while the Evo is in MAINTENANCE (the room keeps moving); BOSS = one question per move ──
@@ -1630,6 +1654,8 @@ function openQuiz(ctxName, cb) {
   if (linkLocked()) { toast('BREACH — LINK locked for ' + linkLocked() + ' s'); SFX.play('empty'); return; }
   if (ctxName === 'field') {
     if (S.meter.isFull()) { toast('Ammo is full — use your special (F)'); return; }
+    if (linkCdLeft() > 0) { toast('LINK recharging: ' + linkCdLeft() + ' s — fight up close with melee!'); SFX.play('empty'); return; }
+    netAct({ k: 'turbo' }); // a Turbo Reload in the loadout powers this LINK round
     S.sprint = new L.Sprint(S.meter, (S.cfg.linkSec || L.SPRINT_SEC) + (has('linkext') ? L.tierFx('linkext', L.bestTier(S.eq.list, 'linkext')).v : 0)); S.sprintEnding = false;
   } else if (ctxName === 'boss') { // v0.7 boss LINK: answer as many as you can; every correct answer powers your move, 3 in a row = power streak
     S.sprint = new L.Sprint(S.meter, S.cfg.bossLinkSec || 30); S.sprint.isFull = function () { return false; }; S.sprintEnding = false; S.bossRun = { n: 0, streak: 0, st: 0 };
@@ -1665,6 +1691,7 @@ function pickOption(i) {
   $('qWarn').textContent = (!res.correct && S.wrongLocal === L.BREACH.run - 1) ? '⚠ One more wrong answer triggers a BATTLE ARENA BREACH (−' + L.BREACH.fine + ' XC, LINK locked ' + L.BREACH.lock + ' s)' : '';
   if (res.correct) { if (S.isLeader) S.score += 20; else netAct({ k: 'pts', n: 20 }); }
   const fieldQ = S.quizContext === 'field'; if (fieldQ) S.fieldN = (S.fieldN | 0) + 1;
+  if (fieldQ && res.correct && (S.turboMult || 1) > 1) { S.meter.setFill(Math.min(1, S.meter.fill + (S.turboMult - 1) / S.meter.target)); S.quiz.setMeter(S.meter); renderSprintHud(); }
   netAct({ k: 'qa', ok: !!res.correct, f: fieldQ ? 1 : 0 });
   if (S.sprint) {
     S.sprint.record(res.correct);
@@ -1698,7 +1725,11 @@ function leaveSprint() {
   const lost = sp.leave(); S.sprintEnding = true;
   closeQuiz(); renderHud(); toast(lost > 0 ? 'Left the sprint early: −1 notch of ammo' : 'Left the sprint');
 }
-function closeQuiz() { S.quizOpen = false; $('quiz').classList.remove('on'); S.sprint = null; }
+function closeQuiz() {
+  if (S.quizOpen && S.quizContext === 'field' && S.sprint) S.linkCdUntil = performance.now() + ((S.cfg && S.cfg.linkCd != null ? S.cfg.linkCd : L.LINK_COOLDOWN) * 1000); // v0.8: the LINK needs to recharge after a sprint
+  S.quizOpen = false; $('quiz').classList.remove('on'); S.sprint = null; S.turboMult = 1;
+}
+function linkCdLeft() { return S.linkCdUntil && performance.now() < S.linkCdUntil ? Math.ceil((S.linkCdUntil - performance.now()) / 1000) : 0; }
 $('qClose').onclick = function () { if (S.sprint) leaveSprint(); else closeQuiz(); };
 
 
@@ -1749,7 +1780,7 @@ function joinTeam(key, name) {
   if (NET.team) { NET.team.leave(); NET.team = null; }
   NET.teamKey = key; NET.teamName = name; NET.members = {}; S.team = { key: key, name: name, members: NET.members }; NET.formed = !!S.coop.squad;
   NET.team = NET.hub.channel('t-' + S.coop.scope + '-' + key).on(onTeamMsg);
-  S.nf.scope = S.coop.base + '_' + key; post({ type: 'pflx_arena_nf_scope', game: 'nexus-frontiers', scope: S.nf.scope }); // team checkpoint = per squad
+  rosterScope(true); // team checkpoint = per ROSTER (v0.8): the same squad continues in its next session
   sendHello(); if (S.mode === 'lobby') renderLobby();
 }
 function sendHello() {
@@ -1804,7 +1835,7 @@ function handleAct(id, a) { // leader
     case 'bossmove': { const mv0 = L.BOSS_MOVES[String(a.card || '')]; if (a.ok && mv0 && mv0.cost && P.id !== S.me) setAmmo(P, ammoOf(P) - mv0.cost * .2); bossMove(P, String(a.card || ''), !!a.ok, a.n | 0, a.st | 0); break; }
     case 'pts': S.score += Math.max(0, Math.min(20, a.n | 0)); break;
     case 'qa': P.qn = (P.qn | 0) + 1; S.goals.answered++;
-      if (a.ok) { P.qc = (P.qc | 0) + 1; S.goals.correct++; P.wrongRun = 0; P.streak = (P.streak | 0) + 1; if (P.id !== S.me) setAmmo(P, ammoOf(P) + 1 / S.cfg.meterTarget); }
+      if (a.ok) { P.qc = (P.qc | 0) + 1; S.goals.correct++; P.wrongRun = 0; P.streak = (P.streak | 0) + 1; if (P.id !== S.me) setAmmo(P, ammoOf(P) + (a.f && P.turboUntil > performance.now() ? P.turboMult : 1) / S.cfg.meterTarget); }
       else { P.wrongRun = (P.wrongRun | 0) + 1; P.streak = 0; if (P.wrongRun % L.BREACH.run === 0) breach(P); }
       if (a.f) { // the LINK sprint mini-game: XC for right answers, streak bonuses, bonus questions, fines for misses
         P.fn = (P.fn | 0) + 1; const rw = L.linkReward(!!a.ok, P.fn, P.streak | 0, P.wrongRun | 0);
@@ -1814,6 +1845,8 @@ function handleAct(id, a) { // leader
       break;
     case 'give': doGive(P, S.players[String(a.to || '')], String(a.key || '')); break;
     case 'rgready': if (S.rg) S.rg.ready[id] = 1; break;
+    case 'turbo': turboStart(P); break;
+    case 'puz': puzzleSolve(P, String(a.id || ''), a.code); break;
   }
 }
 function onPos(p) { // leader: another player's own movement
@@ -1836,6 +1869,7 @@ function coopTick() {
   if (!NET.formed && NET.formDeadline && now > NET.formDeadline && !NET.team) { NET.formed = false; }
   if (!NET.team || (!S.coop.squad && !S.round)) formSquads();
   if (now - NET.helloAt > 1400) { NET.helloAt = now; sendHello(); sendSessHello(); }
+  if (!S.round && now - (NET.scopeAt || 0) > 1500) { NET.scopeAt = now; rosterScope(false); }
   if (S.mode === 'lobby') {
     if (now - (NET.lobbyUi || 0) > 700) { NET.lobbyUi = now; renderLobby(); }
     if (NET.startReq && leaderId() === S.me) { NET.startReq = false; tryLeaderStart(); }
@@ -1877,7 +1911,7 @@ function sendStart(rejoin, only) { // leader
   if (rejoin && S.round) msg = Object.assign({}, S.round.msg, { rejoin: true, to: only });
   else {
     const roster = S.pendingRoster.map(function (m) { return { id: m.id, name: m.name, studio: L.studioKey(m.studioId), lvl: m.lvl || 1, tier: m.tier || 1, stats: m.stats || {}, perks: m.perks || {}, branch: m.branch || '', picks: m.picks || [], wg: L.clampWager(m.id === S.me ? S.stake : m.wg, m.lvl || 1, 1e9) }; });
-    msg = { id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), seed: (Math.random() * 2e9) | 0 || 1, resume: (S.nf.progress && S.nf.progress.cleared) | 0, roster: roster, roundSec: NET.roundSec, diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, ls: S.cfg.linkSec, bs: S.cfg.bossLinkSec, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
+    msg = { id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), seed: (Math.random() * 2e9) | 0 || 1, resume: (S.nf.progress && S.nf.progress.cleared) | 0, roster: roster, roundSec: NET.roundSec, diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, ls: S.cfg.linkSec, bs: S.cfg.bossLinkSec, lc: S.cfg.linkCd, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
   }
   if (!NET.team) return;
   NET.team.send('start', msg, true); setTimeout(function () { NET.team && NET.team.send('start', msg, true); }, 500); setTimeout(function () { NET.team && NET.team.send('start', msg, true); }, 1300);
@@ -1889,8 +1923,9 @@ function onStart(msg) {
   if (S.round && S.round.id === msg.id && !msg.rejoin) return;
   S.round = { id: msg.id, msg: msg, roster: {} }; msg.roster.forEach(function (r) { S.round.roster[r.id] = r; });
   NET.roundId = msg.id; NET.lastSnapAt = performance.now();
-  S.cfg = Object.assign({}, S.cfg, { diff: msg.diff || S.cfg.diff, team: Math.max(1, Math.min(4, msg.roster.length)), meterTarget: msg.meter || S.cfg.meterTarget, shop: msg.shop !== false, linkSec: msg.ls || S.cfg.linkSec || 60, bossLinkSec: msg.bs || S.cfg.bossLinkSec || 30 });
+  S.cfg = Object.assign({}, S.cfg, { diff: msg.diff || S.cfg.diff, team: Math.max(1, Math.min(4, msg.roster.length)), meterTarget: msg.meter || S.cfg.meterTarget, shop: msg.shop !== false, linkSec: msg.ls || S.cfg.linkSec || 60, bossLinkSec: msg.bs || S.cfg.bossLinkSec || 30, linkCd: msg.lc != null ? msg.lc : (S.cfg.linkCd != null ? S.cfg.linkCd : L.LINK_COOLDOWN) });
   S.isLeader = msg.leader === S.me;
+  if (S.coop && !S.practice) { const sc = squadScopeOf(msg.roster.map(function (r) { return r.id; })); if (sc !== S.nf.scope) { S.nf.scope = sc; post({ type: 'pflx_arena_nf_scope', game: 'nexus-frontiers', scope: sc }); } }
   if (!inRoster) { S.players = {}; S.order = []; setMode('lobby'); renderLobby(); return; }
   beginRound(msg);
 }
@@ -1961,6 +1996,9 @@ function playEv(ev) {
     case 'down': SFX.play('down'); document.body.classList.remove('downfx'); void document.body.offsetWidth; document.body.classList.add('downfx'); setTimeout(function () { document.body.classList.remove('downfx'); }, 1500); break;
     case 'perk': onPerkEv(ev); break;
     case 'lq': onLinkReward(ev); break;
+    case 'turbo': S.turboMult = ev.m || 1; toast('🔄 TURBO RELOAD ×' + ev.m + ' this LINK round' + (ev.left ? ' · ' + ev.left + ' more round' + (ev.left > 1 ? 's' : '') + ' after this' : '')); SFX.play('power', 80, .6); break;
+    case 'claw': S.claws = S.claws || []; S.claws.push({ x: ev.x, y: ev.y, a: ev.a, n: ev.n, c: ev.c, t: .38 }); SFX.play('scratch', 50, .8); break;
+    case 'pzr': onPuzzleResult(ev); break;
     case 'ending': onEndingEv(ev); break;
     case 'gameover': showGameOver(ev.kind); break;
     case 'bA': case 'bE': onBossAnim(ev); break;
@@ -1973,10 +2011,11 @@ function ring(x, y, max, c, r0) { emit({ k: 'ring', x: Math.round(x), y: Math.ro
 function fxAt(x, y, f, t, text) { emit({ k: 'fx', x: Math.round(x), y: Math.round(y), f: f, t: t, text: text }); }
 
 // ══════════ WORLD ══════════
+function k0Resume(r) { return Math.max(0, Math.min(6, r | 0)); }
 function buildWorld(seed, resume) {
   S.seed = seed >>> 0 || 1; S.map = L.buildWorldMap(S.seed); const m = S.map;
   S.mats = L.placeMaterials(m, L.mulberry32((S.seed ^ 0x9e3779b9) >>> 0));
-  S.enemies = []; S.shots = []; S.orbs = []; S.coins = []; S.stars = []; S.fx = []; S.rings = []; S.evq = []; S.cons = []; S.eshots = []; S.drones = []; S.breaches = 0; S.blinkFx = null; BA.list = []; BA.dieT = 0; S.xc = 0; S.xcDropped = 0; S.awarded = false; S.ledger = new L.DropLedger(); S.flows = {};
+  S.enemies = []; S.shots = []; S.orbs = []; S.coins = []; S.stars = []; S.fx = []; S.rings = []; S.evq = []; S.cons = []; S.eshots = []; S.drones = []; S.breaches = 0; S.claws = []; buildPuzzles(S.seed, k0Resume(resume)); S.blinkFx = null; BA.list = []; BA.dieT = 0; S.xc = 0; S.xcDropped = 0; S.awarded = false; S.ledger = new L.DropLedger(); S.flows = {};
   S.areas = [0, 1, 2, 3, 4, 5].map(function (i) { const c = L.encounterFor(S.cfg.diff, i, S.cfg.team); return { idx: i, cfg: c, scale: L.stageScale(S.cfg.diff, i), enc: new L.Encounter(c, L.mulberry32((m.seed + i * 7919) >>> 0)), state: 'dormant', cd: 0 }; });
   bossState.max = L.bossHp(60, S.cfg.diff, S.cfg.team);
   S.areaIdx = -1; S.crossed = {}; S.seenCut = {}; S.score = 0; S.kills = 0; S.bossDone = false; S.portal = null; S.ended = false; S.t = 0; S.timeSec = 0; S.secCleared = 0; S.lastSaved = -1; S.runLive = true; S.consumedSent = false; S.portalT = 0; S.nid = 1; S.revives = 0; S.keyItems = []; S.keyDrops = 0; S.rg = null; S.evT = 0; S.rainT = 0; S.clearSec = 0; S.obj = { t: 'Move into the first section', s: 'WASD / arrows' };
@@ -2083,7 +2122,7 @@ function killEnemy(e, by) {
   const a = S.areas[S.areaIdx]; if (a) a.enc.onDefeat(e.type);
   const KP = S.players[by]; if (KP) KP.kills++;
   S.kills++; S.score += DEF[e.type].score; fxAt(e.x, e.y, 'burst', .5); emit({ k: 'sfx', s: 'kill' }); if (e.type === 'sentry') emit({ k: 'shake', n: 8 }); dropCoins(e.type, e.x, e.y, 'xe' + e.id);
-  if (e.type === 'sentry' && S.goals && S.keyDrops < S.goals.conf.keys && S.ledger.create('key' + e.id)) { S.keyDrops++; S.keyItems.push({ id: 'k' + e.id, x: e.x, y: e.y - 10, life: 20 }); emit({ k: 'banner', t: 'ACCESS KEY DROPPED' }); }
+  if (false && e.type === 'sentry' && S.goals && S.keyDrops < S.goals.conf.keys && S.ledger.create('key' + e.id)) { /* v0.8: keys come from vault puzzles now */ S.keyDrops++; S.keyItems.push({ id: 'k' + e.id, x: e.x, y: e.y - 10, life: 20 }); emit({ k: 'banner', t: 'ACCESS KEY DROPPED' }); }
   if (S.ledger.create('b' + e.id)) { const anySeeker = playerList().reduce(function (m, P) { return Math.max(m, phas(P, 'seeker') ? pfx(P, 'seeker').v : 1); }, 1); const bt = L.boosterDrop(e.type, S.rng, anySeeker); if (bt) S.stars.push({ id: 'b' + e.id, type: bt, x: e.x, y: e.y - 6, life: 14 }); }
   if (S.ledger.create('e' + e.id) && S.rng() < DEF[e.type].drop) {
     const n = e.type === 'sentry' ? 3 : 1;
@@ -2222,7 +2261,7 @@ function refreshEvents() {
 
 // ══════════ MOVEMENT (own Evo; runs on the player's own device, both as leader and as client) ══════════
 function localMove(dt) {
-  const p = S.p, m = S.map; if (!p || !m || p.down || S.quizOpen || S.shopOpen || S.rg || S.ending) return;
+  const p = S.p, m = S.map; if (!p || !m || p.down || S.quizOpen || S.shopOpen || S.puzOpen || S.rg || S.ending) return;
   let ax = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0) + joy.x, ay = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0) + joy.y;
   const mag = Math.hypot(ax, ay); if (mag > 1) { ax /= mag; ay /= mag; }
   const spd = 190 * (1 + psx(p, 'speed'));
@@ -2249,7 +2288,7 @@ function simUpdate(dt) {
   plist.forEach(function (P) {
     if (!isAlive(P) || P.protect > 0) return;
     P.shotCd -= dt;
-    overdriveTick(P, dt); famTick(P, dt);
+    overdriveTick(P, dt); famTick(P, dt); meleeTick(P, dt);
     if (P.shotCd <= 0 && ammoOf(P) <= 1e-6) P.shotCd = .25; // out of ammo: nothing fires until a LINK reload
     else if (P.shotCd <= 0) {
       let best = null, bd = 300;
@@ -2325,7 +2364,7 @@ function simUpdate(dt) {
     S.enemies.forEach(function (o) { if (o === e || o.dead || o.type === 'sentry') return; const ox = e.x - o.x, oy = e.y - o.y, od = Math.hypot(ox, oy); if (od > 0 && od < e.r + o.r) L.moveBody(m, e, ox / od * 40 * dt, oy / od * 40 * dt); }); // soft separation
   });
   S.enemies = S.enemies.filter(function (e) { return !e.dead; });
-  consTick(dt); eshotTick(dt); droneTick(dt);
+  consTick(dt); eshotTick(dt); droneTick(dt); puzzleTick(dt);
   S.orbs.forEach(function (o) { o.life -= dt; const h = pullTo(o, 60); if (h && h.d < 22 && S.ledger.claim(o.id)) { o.life = -1; h.P.orbs++; h.P.vit = Math.min(h.P.maxVit, h.P.vit + 8); ring(o.x, o.y, 34, '#7fd8ff', 6); emit({ k: 'sfx', s: 'orb', to: h.P.id }); } });
   S.orbs = S.orbs.filter(function (o) { return o.life > 0; });
   S.coins.forEach(function (c) {
@@ -2347,7 +2386,7 @@ function simUpdate(dt) {
     const inside = livePlayers().filter(function (P) { return Math.hypot(P.x - S.portal.x, P.y - S.portal.y) < 36; }), all = livePlayers();
     if (inside.length) { S.portalT += dt; if (inside.length === all.length || S.portalT > 8 || all.length === 1) { S.goals.clear = true; S.clearSec = Math.round(S.t); finish(); } } else S.portalT = 0;
   }
-  S.obj = objectiveText();
+  S.obj = objectiveText(); const ph = puzzleHint(); if (ph) S.obj.s = (S.obj.s ? S.obj.s + ' · ' : '') + ph;
   S.mirror();
 }
 function objectiveText() {
@@ -2509,7 +2548,7 @@ function chooseCard(id) { // any squad member
 // ── Sound: small WebAudio synth (no files). Background music per stage plugs in through MUSIC when Ennis supplies the tracks. ──
 // v0.7: the big moments use clips from the PFLX Sound Library (assets/nexus-frontiers/sfx, copied from the platform library);
 // rapid-fire sounds (weapons, sparks, coins…) stay on the light synth, which is also the fallback while clips load.
-const SFX_CLIPS = {"hit": [["impact_027", "impact_031", "impact_034", "impact_037", "impact_042", "impact_023"], 0.9], "swing": [["impact_025", "impact_043", "impact_049", "impact_040"], 0.8], "miss": [["impact_038"], 0.7], "crit": [["impact_048", "impact_050", "impact_041"], 1.0], "charge": [["impact_026", "impact_033", "impact_030"], 0.8], "zap": [["transition_072"], 0.55], "block": [["blip_046"], 0.9], "riser": [["riser_021"], 0.8], "cutin": [["sting_hit_scifi_suspense_trailer"], 0.9], "gameover": [["powerdown_arcade_game_over"], 0.9], "down": [["powerdown_022"], 0.8], "shatter": [["glitch_001"], 0.6], "roar": [["transition_075"], 0.9], "victory": [["sting_hit_glass_interface_drift"], 0.8], "power": [["blip_002"], 0.6], "coin": [["blip_061"], 0.35], "reload": [["blip_017"], 0.6], "empty": [["blip_003"], 0.5], "low": [["blip_009"], 0.45], "build": [["riser_023"], 0.55], "slam": [["impact_045"], 0.9], "emp": [["glitch_005"], 0.6], "blink": [["glitch_002"], 0.6], "kill": [["impact_029"], 0.35], "wave_in": [["transition_048"], 0.5], "gate": [["transition_059"], 0.6], "breach": [["glitch_008"], 0.8], "streak": [["riser_011"], 0.6]};
+const SFX_CLIPS = { "scratch": [["impact_025", "impact_043", "impact_049"], 0.55], "hit": [["impact_027", "impact_031", "impact_034", "impact_037", "impact_042", "impact_023"], 0.9], "swing": [["impact_025", "impact_043", "impact_049", "impact_040"], 0.8], "miss": [["impact_038"], 0.7], "crit": [["impact_048", "impact_050", "impact_041"], 1.0], "charge": [["impact_026", "impact_033", "impact_030"], 0.8], "zap": [["transition_072"], 0.55], "block": [["blip_046"], 0.9], "riser": [["riser_021"], 0.8], "cutin": [["sting_hit_scifi_suspense_trailer"], 0.9], "gameover": [["powerdown_arcade_game_over"], 0.9], "down": [["powerdown_022"], 0.8], "shatter": [["glitch_001"], 0.6], "roar": [["transition_075"], 0.9], "victory": [["sting_hit_glass_interface_drift"], 0.8], "power": [["blip_002"], 0.6], "coin": [["blip_061"], 0.35], "reload": [["blip_017"], 0.6], "empty": [["blip_003"], 0.5], "low": [["blip_009"], 0.45], "build": [["riser_023"], 0.55], "slam": [["impact_045"], 0.9], "emp": [["glitch_005"], 0.6], "blink": [["glitch_002"], 0.6], "kill": [["impact_029"], 0.35], "wave_in": [["transition_048"], 0.5], "gate": [["transition_059"], 0.6], "breach": [["glitch_008"], 0.8], "streak": [["riser_011"], 0.6]};
 const SFX = (function () {
   let ac = null, master = null, muted = false, loading = false; const last = {}, buf = {};
   function loadClips() {
@@ -2575,6 +2614,7 @@ const SFX = (function () {
     wave_in: function () { tone(150, 150, .18, 'square', .06); tone(150, 150, .18, 'square', .06, .25); },
     down: function () { tone(400, 50, 1.1, 'sawtooth', .18); noise(.9, .12, 900, 80); },
     gameover: function () { tone(110, 55, 2.2, 'sawtooth', .16); tone(165, 82, 2.2, 'triangle', .1); },
+    scratch: function () { noise(.12, .3, 5000, 1500, 0, 2); noise(.1, .22, 4200, 1200, .06, 2); },
     riser: function () { tone(150, 1800, 1.2, 'sawtooth', .07); noise(1.2, .08, 300, 6000, 0, 1.5); },
     cutin: function () { tone(80, 40, .8, 'sawtooth', .3); noise(.6, .3, 3000, 200); },
     streak: function () { [660, 880, 1320].forEach(function (f, i) { tone(f, f, .12, 'square', .06, i * .07); }); },
@@ -3007,12 +3047,207 @@ function npcBossMove(P, dt) { // the NPC picks a move after a short think and "a
   bossMove(P, card, ok, n, st);
 }
 
+// ─── src/d3_v08.js ───
+// ══════════ v0.8 (Ennis, 21 Oct): melee, LINK recharge, Turbo Reload, escape-room puzzles + vaults, Archive sabotage, roster saves ══════════
+
+// ── Melee: every Evo claws at Archives in reach — no ammo needed. 2–4 scratch marks + a slash sound per strike. ──
+function meleeTick(P, dt) { // leader
+  P.meleeCd = Math.max(0, (P.meleeCd || 0) - dt); if (P.meleeCd > 0 || !isAlive(P) || P.protect > 0) return;
+  let best = null, bd = 1e9; S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; const d = Math.hypot(e.x - P.x, e.y - P.y) - e.r - P.r; if (d < L.MELEE.reach && d < bd) { bd = d; best = e; } });
+  if (!best) return;
+  const an = Math.atan2(best.y - P.y, best.x - P.x), dmg = L.MELEE.dmg * (1 + psx(P, 'power')) * (P.boost.overdrive > 0 && P.studio === 'gentech' ? 2 : 1), n = 2 + Math.floor(S.rng() * 3);
+  S.enemies.forEach(function (e) { if (e.dead || e.spawnT > 0) return; if (e === best || Math.hypot(e.x - best.x, e.y - best.y) < 30) { damageEnemy(e, e === best ? dmg : dmg * .5, P.id); const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; if (e.type !== 'sentry') L.moveBody(S.map, e, (e.x - P.x) / d * L.MELEE.knock, (e.y - P.y) / d * L.MELEE.knock); } });
+  P.meleeCd = L.MELEE.cd; if (P.id === S.me) P.face = an; else P.aim = an;
+  emit({ k: 'claw', x: Math.round(best.x), y: Math.round(best.y), a: Math.round(an * 100) / 100, n: n, c: kitOf(P).color });
+}
+function drawClaws() {
+  (S.claws || []).forEach(function (c) {
+    const u = 1 - c.t / .38, grow = Math.min(1, u * 3), fade = Math.min(1, c.t * 5);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a + Math.PI / 2 - .5); ctx.globalAlpha = fade; ctx.lineCap = 'round';
+    for (let i = 0; i < c.n; i++) {
+      const off = (i - (c.n - 1) / 2) * 9, len = 34 * grow;
+      ctx.strokeStyle = c.c || '#fff'; ctx.shadowColor = c.c || '#fff'; ctx.shadowBlur = 12; ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.moveTo(off - 4, -17); ctx.quadraticCurveTo(off + 6, -17 + len * .5, off - 2, -17 + len); ctx.stroke();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6; ctx.shadowBlur = 0; ctx.beginPath(); ctx.moveTo(off - 4, -17); ctx.quadraticCurveTo(off + 6, -17 + len * .5, off - 2, -17 + len); ctx.stroke();
+    }
+    ctx.restore();
+  });
+}
+function ageClaws(dt) { if (S.claws && S.claws.length) { S.claws.forEach(function (c) { c.t -= dt; }); S.claws = S.claws.filter(function (c) { return c.t > 0; }); } }
+
+// ── Turbo Reload (leader): at the start of a LINK round, an equipped Turbo powers it; Mk II/III last 2/3 rounds ──
+function turboStart(P) {
+  const now = performance.now();
+  if ((P.turboLeft | 0) > 0) { P.turboLeft--; }
+  else { const key = bestAvailKey(P, 'turbo'); if (!key) return; const fx = L.tierFx('turbo', L.parseKey(key).tier); spendKey(P, key); P.turboMult = fx.v; P.turboLeft = fx.w - 1; }
+  P.turboUntil = now + ((S.cfg.linkSec || 60) + 20) * 1000;
+  emit({ k: 'turbo', to: P.id, m: P.turboMult, left: P.turboLeft | 0 });
+}
+
+// ── Squad progress is saved per ROSTER (same players → same checkpoint), so a session-launched squad continues next session ──
+function squadScopeOf(ids) {
+  const str = ids.slice().map(String).sort().join('|'); let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return 'sq_' + h.toString(36) + '_' + ids.length;
+}
+function rosterScope(force) {
+  if (!S.coop || S.practice || !NET.team) return;
+  const ids = members().filter(function (m) { return m.online || m.id === S.me; }).map(function (m) { return m.id; });
+  if (ids.indexOf(S.me) < 0) ids.push(S.me);
+  const sc = squadScopeOf(ids); if (!force && sc === S.nf.scope) return;
+  S.nf.scope = sc; post({ type: 'pflx_arena_nf_scope', game: 'nexus-frontiers', scope: sc });
+}
+
+// ── Escape-room puzzles (Among Us-style tasks). Layout + vault codes come from the round seed, so every squad member builds the same map;
+//    the leader decides solves, shard pickups and the sabotage, and ships the progress in each snapshot. ──
+const PZ_COL = ['#ff4d6d', '#ffd740', '#00e5ff', '#7dffb4', '#b388ff', '#ff9f0a'];
+function buildPuzzles(seed, resume) {
+  const m = S.map, rng = L.mulberry32(((seed >>> 0) ^ 0x5eed1e) >>> 0), pz = { terms: [], shards: [], vd: {}, codes: {}, sab: null };
+  const center = function (r) { return { x: r.px.x + r.px.w / 2, y: r.px.y + r.px.h / 2 }; };
+  const cellNear = function (r, x, y, avoid) { let best = null, bd = 1e9; r.cells.forEach(function (c) { const cx = c.tx * T + 16, cy = c.ty * T + 16; if ((avoid || []).some(function (q) { return Math.hypot(q.x - cx, q.y - cy) < T * 5; })) return; const d = Math.hypot(cx - x, cy - y); if (d < bd) { bd = d; best = { x: cx, y: cy }; } }); return best; };
+  const farCells = function (r, n, avoid) { const out = [], av = (avoid || []).slice(); for (let t = 0; t < 200 && out.length < n; t++) { const c = r.cells[Math.floor(rng() * r.cells.length)]; if (!c) break; const p = { x: c.tx * T + 16, y: c.ty * T + 16 }; if (av.some(function (q) { return Math.hypot(q.x - p.x, q.y - p.y) < T * 6; })) continue; out.push(p); av.push(p); } return out; };
+  m.rooms.forEach(function (r, i) {
+    if (i > 5 || !r.cells.length) return;
+    const ctr = center(r), doorL = { x: r.px.x + T * 2, y: (r.y + r.rowL + 1) * T }, doorR = { x: r.px.x + r.px.w - T * 2, y: (r.y + r.rowR + 1) * T };
+    if (L.VAULT_ROOMS.indexOf(i) >= 0) {
+      const v = cellNear(r, ctr.x, ctr.y, [doorL, doorR]) || ctr, code = String(100 + Math.floor(rng() * 900));
+      pz.terms.push({ id: 'v' + i, type: 'vault', room: i, x: v.x, y: v.y, solved: i < resume, on: true }); pz.codes['v' + i] = code; pz.vd['v' + i] = i < resume ? code : '___';
+      farCells(r, 3, [v, doorL, doorR]).forEach(function (p, k) { pz.shards.push({ id: 's' + i + '_' + k, vault: 'v' + i, idx: k, room: i, x: p.x, y: p.y, got: i < resume }); });
+    } else {
+      const q = farCells(r, 1, [ctr, doorL, doorR])[0] || cellNear(r, ctr.x, ctr.y); if (q) pz.terms.push({ id: 't' + i, type: i === 2 ? 'signal' : 'wires', room: i, x: q.x, y: q.y, solved: i < resume, on: true });
+    }
+  });
+  // the Archive's SABOTAGE: two emergency terminals in sections 2 and 3, armed when section 3 is cleared (solve both in 60 s)
+  [1, 2].forEach(function (ri, j) { const r = m.rooms[ri]; if (!r) return; const q = farCells(r, 1, pz.terms.concat(pz.shards))[0]; if (q) pz.terms.push({ id: 'x' + j, type: 'wires', sab: true, room: ri, x: q.x, y: q.y, solved: false, on: false }); });
+  pz.sabDone = resume >= 3; S.pz = pz;
+}
+function roomEntered(i) { const a = S.areas[i]; return !!a && a.state !== 'dormant'; }
+function termById(id) { return S.pz && S.pz.terms.filter(function (t) { return t.id === id; })[0]; }
+function nearTerminal() { const p = S.p; if (!p || !S.pz || p.down || S.mode !== 'play') return null; return S.pz.terms.filter(function (t) { return t.on && !t.solved && roomEntered(t.room) && Math.hypot(t.x - p.x, t.y - p.y) < 42; })[0] || null; }
+function puzzleTick(dt) { // leader
+  const pz = S.pz; if (!pz) return;
+  pz.shards.forEach(function (sh) {
+    if (sh.got || !roomEntered(sh.room)) return;
+    const P = livePlayers().filter(function (Q) { return Math.hypot(Q.x - sh.x, Q.y - sh.y) < 26; })[0]; if (!P) return;
+    sh.got = true; const code = pz.codes[sh.vault], cur = (pz.vd[sh.vault] || '___').split(''); cur[sh.idx] = code[sh.idx]; pz.vd[sh.vault] = cur.join('');
+    const have = pz.shards.filter(function (x) { return x.vault === sh.vault && x.got; }).length;
+    fxAt(sh.x, sh.y - 12, 'txt', 1, 'DIGIT ' + code[sh.idx]); emit({ k: 'banner', t: 'CODE SHARD ' + have + '/3' }); emit({ k: 'toast', t: P.name + ' found a code shard: vault code ' + pz.vd[sh.vault].split('').join(' ') }); emit({ k: 'sfx', s: 'power' });
+  });
+  if (!pz.sabDone && !pz.sab && S.secCleared >= 3) { pz.sab = { t: 60 }; pz.terms.forEach(function (t) { if (t.sab) t.on = true; }); emit({ k: 'banner', t: '⚠ ARCHIVE SABOTAGE' }); emit({ k: 'toast', t: 'CORE OVERLOAD — fix BOTH emergency terminals (sections 2 and 3) within 60 s!' }); emit({ k: 'sfx', s: 'breach' }); }
+  if (pz.sab) {
+    pz.sab.t -= dt; const st = pz.terms.filter(function (t) { return t.sab; });
+    if (st.every(function (t) { return t.solved; })) { pz.sab = null; pz.sabDone = true; if (S.bank) S.bank.grant(20); emit({ k: 'banner', t: 'SABOTAGE STOPPED' }); emit({ k: 'toast', t: '+20 XC to the team bank' }); emit({ k: 'sfx', s: 'victory' }); }
+    else if (pz.sab.t <= 0) { pz.sab = null; pz.sabDone = true; st.forEach(function (t) { t.on = false; }); const f = S.bank ? S.bank.fine(20) : 0; livePlayers().forEach(function (Q) { if (!(Q.protect > 0)) Q.vit = Math.max(1, Q.vit - Q.maxVit * .3); }); emit({ k: 'banner', t: 'CORE OVERLOAD' }); emit({ k: 'toast', t: 'The sabotage hit the squad: −30% vitality' + (f ? ', −' + f + ' XC' : '') }); emit({ k: 'shake', n: 14 }); emit({ k: 'sfx', s: 'crit' }); }
+  }
+}
+function puzzleSolve(P, id, code) { // leader
+  const t = termById(id); if (!t || t.solved || !t.on || !P) return;
+  if (t.type === 'vault') {
+    const ok = S.pz.shards.filter(function (x) { return x.vault === id; }).every(function (x) { return x.got; }) && String(code || '') === S.pz.codes[id];
+    if (!ok) { emit({ k: 'pzr', to: P.id, id: id, ok: 0 }); return; }
+    t.solved = true; emit({ k: 'pzr', to: P.id, id: id, ok: 1 }); emit({ k: 'banner', t: 'VAULT CRACKED' }); emit({ k: 'sfx', s: 'victory' });
+    if (S.goals && S.keyDrops < S.goals.conf.keys && S.ledger.create('key' + id)) { S.keyDrops++; S.keyItems.push({ id: 'k' + id, x: t.x, y: t.y - 30, life: 25 }); emit({ k: 'toast', t: 'An ACCESS KEY rolls out of the vault!' }); }
+    else if (S.bank) { S.bank.grant(25); emit({ k: 'toast', t: 'Vault bonus: +25 XC to the team bank' }); }
+    return;
+  }
+  t.solved = true; emit({ k: 'pzr', to: P.id, id: id, ok: 1 });
+  if (t.sab) { emit({ k: 'toast', t: P.name + ' fixed an emergency terminal' }); return; }
+  livePlayers().forEach(function (Q) { setAmmo(Q, ammoOf(Q) + .35); }); if (S.bank) S.bank.grant(10);
+  emit({ k: 'banner', t: 'POWER RESTORED' }); emit({ k: 'toast', t: P.name + ' hacked a terminal: +35% ammo for the squad, +10 XC' }); emit({ k: 'sfx', s: 'power' });
+}
+function puzzleState() { const pz = S.pz; if (!pz) return 0; return [pz.terms.map(function (t) { return (t.solved ? 1 : 0) + (t.on ? 2 : 0); }).join(''), pz.shards.map(function (x) { return x.got ? 1 : 0; }).join(''), pz.vd, pz.sab ? Math.round(pz.sab.t) : -1, pz.sabDone ? 1 : 0]; }
+function puzzleLoad(a) { const pz = S.pz; if (!pz || !a) return; pz.terms.forEach(function (t, i) { const v = +a[0][i] || 0; t.solved = !!(v & 1); t.on = !!(v & 2); }); pz.shards.forEach(function (x, i) { x.got = a[1][i] === '1'; }); pz.vd = a[2] || pz.vd; pz.sab = a[3] >= 0 ? { t: a[3] } : null; pz.sabDone = !!a[4]; }
+function puzzleHint() {
+  const pz = S.pz, a = S.areas[S.areaIdx]; if (!pz) return '';
+  if (pz.sab) return '⚠ SABOTAGE ' + Math.max(0, Math.ceil(pz.sab.t)) + 's — fix both emergency terminals';
+  if (!a) return ''; const v = pz.terms.filter(function (t) { return t.type === 'vault' && t.room === a.idx && !t.solved; })[0];
+  if (v) { const have = pz.shards.filter(function (x) { return x.vault === v.id && x.got; }).length; return 'VAULT: shards ' + have + '/3 · code ' + (pz.vd[v.id] || '___').split('').join(' '); }
+  const tt = pz.terms.filter(function (t) { return !t.sab && t.room === a.idx && !t.solved; })[0]; return tt ? 'Terminal online — hack it [E] for ammo' : '';
+}
+function drawPuzzles() {
+  const pz = S.pz; if (!pz) return; const t = S.t;
+  pz.shards.forEach(function (x) { if (x.got || !roomEntered(x.room)) return; const b = Math.sin(t * 4 + x.x) * 3; ctx.save(); ctx.translate(x.x, x.y + b); ctx.rotate(t * 1.5); ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 16; ctx.fillStyle = 'rgba(0,229,255,.85)'; ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 0); ctx.lineTo(0, 11); ctx.lineTo(-8, 0); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.fillStyle = '#e6fbff'; ctx.font = '800 9px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('SHARD', x.x, x.y - 16); });
+  pz.terms.forEach(function (tm) {
+    if (!tm.on || !roomEntered(tm.room)) return; const col = tm.solved ? '#7dffb4' : tm.sab ? (Math.floor(t * 4) % 2 ? '#ff2244' : '#ff9f0a') : tm.type === 'vault' ? '#ffd740' : '#00e5ff';
+    ctx.save(); ctx.translate(tm.x, tm.y); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(0, 16, 20, 6, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#0b1530'; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = tm.solved ? 4 : 14 + Math.sin(t * 5) * 6;
+    if (tm.type === 'vault') { ctx.fillRect(-20, -22, 40, 38); ctx.strokeRect(-20, -22, 40, 38); ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(0, -3, 10, 0, 7); ctx.stroke(); for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283 + (tm.solved ? 0 : t); ctx.beginPath(); ctx.moveTo(Math.cos(a) * 4, -3 + Math.sin(a) * 4); ctx.lineTo(Math.cos(a) * 10, -3 + Math.sin(a) * 10); ctx.stroke(); } }
+    else { ctx.fillRect(-16, -20, 32, 30); ctx.strokeRect(-16, -20, 32, 30); ctx.shadowBlur = 0; ctx.fillStyle = col; ctx.globalAlpha = .35 + .3 * Math.sin(t * 6); ctx.fillRect(-12, -16, 24, 14); ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.font = '800 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(tm.solved ? '✓' : tm.type === 'signal' ? '◈' : '⚡', 0, -5); }
+    ctx.restore();
+    const near = S.p && Math.hypot(S.p.x - tm.x, S.p.y - tm.y) < 42;
+    ctx.fillStyle = col; ctx.font = '800 9px Orbitron, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(tm.solved ? (tm.type === 'vault' ? 'VAULT OPEN' : 'ONLINE') : (tm.sab ? 'EMERGENCY' : tm.type === 'vault' ? 'VAULT ' + (S.pz.vd[tm.id] || '___').split('').join(' ') : tm.type === 'signal' ? 'SIGNAL LOCK' : 'WIRING') + (near && !tm.solved ? ' · [E]' : ''), tm.x, tm.y - 30);
+  });
+}
+
+// ── the puzzle screens (player's own device) ──
+function useTerminal() { const t = nearTerminal(); if (!t || S.quizOpen || S.shopOpen || S.puzOpen) return; openPuzzle(t); }
+function openPuzzle(t) {
+  S.puzOpen = t; S.pzState = null; $('pzMsg').textContent = ''; $('pzMsg').className = ''; const b = $('pzBody'); b.innerHTML = '';
+  if (t.type === 'wires') {
+    $('pzT').textContent = t.sab ? '⚠ EMERGENCY WIRING' : 'WIRING TERMINAL'; $('pzD').textContent = 'Connect each wire to the matching colour: click a wire on the left, then its match on the right.';
+    const n = 4, cols = PZ_COL.slice(0, n), right = cols.slice().sort(function () { return Math.random() - .5; });
+    b.innerHTML = '<svg id="pzSvg"></svg><div class="wcol l">' + cols.map(function (c, i) { return '<div class="wire" data-s="l" data-c="' + c + '" style="background:' + c + '"></div>'; }).join('') + '</div><div class="wcol r">' + right.map(function (c) { return '<div class="wire" data-s="r" data-c="' + c + '" style="background:' + c + '"></div>'; }).join('') + '</div>';
+    S.pzState = { sel: null, done: 0, n: n };
+    b.querySelectorAll('.wire').forEach(function (w) { w.onclick = function () { wireClick(w); }; });
+  } else if (t.type === 'signal') {
+    $('pzT').textContent = 'SIGNAL LOCK'; $('pzD').textContent = 'Watch the pads light up, then repeat the sequence.';
+    b.innerHTML = '<div class="pads">' + PZ_COL.slice(0, 4).map(function (c, i) { return '<div class="pad" data-i="' + i + '" style="background:' + c + ';color:' + c + '"></div>'; }).join('') + '</div>';
+    const len = 4 + ['cadet', 'ranger', 'veteran', 'expert'].indexOf(S.cfg.diff); S.pzState = { seq: [], pos: 0, len: Math.max(4, len), busy: true };
+    for (let i = 0; i < S.pzState.len; i++) S.pzState.seq.push(Math.floor(Math.random() * 4));
+    b.querySelectorAll('.pad').forEach(function (p) { p.onclick = function () { padClick(+p.dataset.i); }; }); setTimeout(signalShow, 500);
+  } else {
+    const have = S.pz.shards.filter(function (x) { return x.vault === t.id && x.got; }).length;
+    $('pzT').textContent = 'VAULT LOCK'; $('pzD').textContent = have < 3 ? 'The code is split across 3 CODE SHARDS hidden in this section (' + have + '/3 found). Find them, remember the digits, then come back.' : 'Enter the 3-digit code from the shards your squad found.';
+    S.pzState = { entry: '', lock: 0 };
+    b.innerHTML = '<div class="code" id="pzCode">_ _ _</div><div class="keys">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '⏎'].map(function (k) { return '<button data-k="' + k + '">' + k + '</button>'; }).join('') + '</div>';
+    b.querySelectorAll('.keys button').forEach(function (k) { k.onclick = function () { vaultKey(String(k.dataset.k)); }; });
+  }
+  $('puz').classList.add('on'); SFX.play('blink', 60, .6);
+}
+function closePuzzle() { S.puzOpen = null; $('puz').classList.remove('on'); }
+function pzWin(msg) { $('pzMsg').className = 'good'; $('pzMsg').textContent = msg; const t = S.puzOpen; if (!t) return; netAct({ k: 'puz', id: t.id }); SFX.play('victory', 100, .7); setTimeout(function () { if (S.puzOpen === t) closePuzzle(); }, 900); }
+function wireClick(w) {
+  const st = S.pzState; if (!st) return;
+  if (w.dataset.s === 'l') { $('pzBody').querySelectorAll('.wire.sel').forEach(function (x) { x.classList.remove('sel'); }); st.sel = w; w.classList.add('sel'); SFX.play('reload', 40, .5); return; }
+  if (!st.sel) return;
+  if (st.sel.dataset.c === w.dataset.c) {
+    const b = $('pzBody').getBoundingClientRect(), a1 = st.sel.getBoundingClientRect(), a2 = w.getBoundingClientRect(), svg = $('pzSvg');
+    svg.insertAdjacentHTML('beforeend', '<line x1="' + (a1.right - b.left) + '" y1="' + (a1.top + a1.height / 2 - b.top) + '" x2="' + (a2.left - b.left) + '" y2="' + (a2.top + a2.height / 2 - b.top) + '" stroke="' + w.dataset.c + '" stroke-width="8" stroke-linecap="round"/>');
+    st.sel.classList.add('done'); st.sel.classList.remove('sel'); w.classList.add('done'); st.sel = null; st.done++; SFX.play('block', 40, .7);
+    if (st.done >= st.n) pzWin('WIRING COMPLETE');
+  } else { $('pzMsg').className = 'bad'; $('pzMsg').textContent = 'Wrong colour — try again'; SFX.play('empty'); st.sel.classList.remove('sel'); st.sel = null; }
+}
+function signalShow() {
+  const st = S.pzState; if (!st || !S.puzOpen) return; st.busy = true; st.pos = 0; const pads = $('pzBody').querySelectorAll('.pad');
+  st.seq.forEach(function (v, i) { setTimeout(function () { if (!pads[v]) return; pads[v].classList.add('lit'); SFX.play('reload', 20, .5); setTimeout(function () { pads[v].classList.remove('lit'); if (i === st.seq.length - 1) st.busy = false; }, 380); }, i * 560); });
+}
+function padClick(i) {
+  const st = S.pzState; if (!st || st.busy) return; const pads = $('pzBody').querySelectorAll('.pad'); pads[i].classList.add('lit'); setTimeout(function () { pads[i].classList.remove('lit'); }, 200);
+  if (st.seq[st.pos] === i) { st.pos++; SFX.play('reload', 20, .5); if (st.pos >= st.seq.length) pzWin('SIGNAL MATCHED'); }
+  else { $('pzMsg').className = 'bad'; $('pzMsg').textContent = 'Sequence broken — watch again'; SFX.play('empty'); st.seq = st.seq.map(function () { return Math.floor(Math.random() * 4); }); setTimeout(signalShow, 700); }
+}
+function vaultKey(k) {
+  const st = S.pzState; if (!st || performance.now() < st.lock) return;
+  if (k === 'C') st.entry = ''; else if (k === '⏎') { if (st.entry.length === 3) { netAct({ k: 'puz', id: S.puzOpen.id, code: st.entry }); $('pzMsg').className = ''; $('pzMsg').textContent = 'Checking…'; } return; }
+  else if (st.entry.length < 3) st.entry += k;
+  SFX.play('reload', 20, .4); $('pzCode').textContent = (st.entry + '___').slice(0, 3).split('').join(' ');
+}
+function puzzleKey(k) { if (S.puzOpen && S.puzOpen.type === 'vault') { if (k >= '0' && k <= '9') vaultKey(k); else if (k === 'enter') vaultKey('⏎'); else if (k === 'backspace') vaultKey('C'); } }
+function onPuzzleResult(ev) {
+  if (!S.puzOpen || S.puzOpen.id !== ev.id) return;
+  if (S.puzOpen.type !== 'vault') return;
+  if (ev.ok) { pzWin('VAULT UNLOCKED'); return; }
+  const st = S.pzState; st.entry = ''; st.lock = performance.now() + 3000; $('pzCode').textContent = '_ _ _'; $('pzMsg').className = 'bad'; $('pzMsg').textContent = 'ACCESS DENIED — keypad locked 3 s'; SFX.play('breach', 100, .6);
+  const p = $('puz'); p.classList.remove('shake'); void p.offsetWidth; p.classList.add('shake');
+}
+
 // ─── src/e_view.js ───
 
 // ══════════════════════════ ROUND START / END ══════════════════════════
 function soloLike() { return livePlayers().length <= 1; }
 // MAINTENANCE: this player is in a LINK sprint or the inventory/shop. Their Evo stands still and can't be hurt, but the room keeps moving.
-function maintenance() { return S.mode === 'play' && ((S.quizOpen && S.quizContext === 'field') || S.shopOpen); } // a quiz/shop only freezes the room when nobody else is playing
+function maintenance() { return S.mode === 'play' && ((S.quizOpen && S.quizContext === 'field') || S.shopOpen || S.puzOpen); } // a quiz/shop only freezes the room when nobody else is playing
 function beginRound(msg) {
   const n = msg.roster.length; S.round = S.round || { id: msg.id, msg: msg, roster: {} }; msg.roster.forEach(function (r) { S.round.roster[r.id] = r; });
   S.players = {}; S.order = msg.roster.map(function (r) { return r.id; }).sort();
@@ -3048,12 +3283,12 @@ function beginWorld(n, opt) {
     L.STUDIO_IDS.filter(function (st) { return st !== me.studio; }).slice(0, 3).forEach(function (st, i) { roster.push({ id: 'npc' + i + '_' + st, name: tag[st], studio: st, lvl: me.lvl, tier: me.tier, branch: me.lvl >= 5 ? ['A1', 'B1', 'C1'][i] : me.lvl >= 2 ? ['A', 'B', 'C'][i] : 'BASE', stats: { power: 2, guard: 2, speed: 2, luck: 2 }, perks: {}, picks: [], wg: 0, npc: true }); });
     S.cfg.team = 4;
   }
-  const msg = { id: 'solo' + Date.now(), seed: seed, resume: Math.max(0, Math.min(6, opt.resume | 0)), roster: roster, roundSec: opt.roundSec || (S.coop ? S.coop.rules.roundSec : 0), diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, ls: S.cfg.linkSec, bs: S.cfg.bossLinkSec, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
+  const msg = { id: 'solo' + Date.now(), seed: seed, resume: Math.max(0, Math.min(6, opt.resume | 0)), roster: roster, roundSec: opt.roundSec || (S.coop ? S.coop.rules.roundSec : 0), diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, ls: S.cfg.linkSec, bs: S.cfg.bossLinkSec, lc: S.cfg.linkCd, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
   S.round = { id: msg.id, msg: msg, roster: { [S.me]: me } };
   beginRound(msg);
 }
 function onModeChange() { // keep every screen in step with the (team-wide) mode
-  if (S.mode === 'boss') { S.quizOpen && closeQuiz(); closeShop(); S.p && (S.p.charge = S.quiz.charge); BA.list = []; BA.dieT = 0; S.bpart = []; S.bring = []; S.bpop = []; S.bzoom = .12; setMode('boss'); renderBoss(); }
+  if (S.mode === 'boss') { S.quizOpen && closeQuiz(); closeShop(); S.puzOpen && closePuzzle(); S.p && (S.p.charge = S.quiz.charge); BA.list = []; BA.dieT = 0; S.bpart = []; S.bring = []; S.bpop = []; S.bzoom = .12; setMode('boss'); renderBoss(); }
   else if (S.mode === 'play') setMode('play');
   if (S.isLeader && NET.team) NET.snapAt = 0;
 }
@@ -3071,7 +3306,7 @@ function encodeSnap() {
     P: pl.map(function (P) { return { i: P.id, x: r0(P.x), y: r0(P.y), v: r0(P.vit), m: P.maxVit, a: Math.round(P.face * 100) / 100, f: (P.inv > 0 ? 1 : 0) | (P.hit > 0 ? 2 : 0) | (P.down ? 4 : 0) | (P.away ? 8 : 0) | (P.protect > 0 ? 16 : 0), xc: P.xc, o: P.orbs, k: P.kills, bv: r0(P.bvit), tp: P.teleport | 0, bo: P.boost, am: Math.round(ammoOf(P) * 1000) / 1000, dm: P.dome ? Math.max(0, r0(P.dome.hp)) : 0, se: P.superE | 0, fm: P.fam ? [P.fam.n, r1(P.fam.t)] : 0, eq: P.eq ? { l: P.eq.list, s: P.eq.spent, a: P.eq.abilityLeft, h: P.eq.aegisHits } : 0 }; }),
     E: S.enemies.map(function (e) { const x = [e.id, ETYPES.indexOf(e.type), r0(e.x), r0(e.y), r1(e.hp), e.max, ESTATES.indexOf(e.state), (e.spawnT > 0 ? 1 : 0) | (e.stun > 0 ? 2 : 0) | (e.slowF ? 4 : 0), Math.round(e.tx * 100) / 100, Math.round(e.ty * 100) / 100]; if (e.petals) x.push(e.petals.map(function (q) { return [Math.round(q.a * 100) / 100, r1(q.hp), q.max]; })); return x; }),
     Sh: S.shots.map(function (s) { return [r0(s.x), r0(s.y), r0(s.vx), r0(s.vy), s.rad || 0, s.st | 0]; }),
-    Cn: S.cons.map(function (c) { return [c.id, c.k === 'hard' ? 0 : 1, r0(c.x), r0(c.y), r0(c.hp), c.max, c.r]; }), EB: S.eshots.map(function (b) { return [r0(b.x), r0(b.y), r0(b.vx), r0(b.vy)]; }), Dr: S.drones.map(function (d) { return [d.id, r0(d.x), r0(d.y), r0(d.hp), d.max]; }),
+    Cn: S.cons.map(function (c) { return [c.id, c.k === 'hard' ? 0 : 1, r0(c.x), r0(c.y), r0(c.hp), c.max, c.r]; }), EB: S.eshots.map(function (b) { return [r0(b.x), r0(b.y), r0(b.vx), r0(b.vy)]; }), Dr: S.drones.map(function (d) { return [d.id, r0(d.x), r0(d.y), r0(d.hp), d.max]; }), Pz: puzzleState(),
     O: S.orbs.map(function (o) { return [o.id, r0(o.x), r0(o.y), r1(o.life)]; }), C: S.coins.map(function (c) { return [c.id, r0(c.x), r0(c.y), r1(c.life)]; }), St: S.stars.map(function (s) { return [s.id, s.type, r0(s.x), r0(s.y), r1(s.life)]; }),
     M: S.mats.map(function (m) { return m.dead ? -1 : m.hp; }), ev: S.evq.splice(0, S.evq.length),
     en: en ? [en.wavesIssued, en.pending, en.pendingKind || '', en.sentryDue ? 1 : 0, en.alive, en.escortLeft | 0, en.sentriesSpawnedThisWave ? 1 : 0, en.sentriesSpawned, en.sentriesDefeated, en.kills] : 0
@@ -3115,6 +3350,7 @@ function onSnap(sn) {
   });
   S.shots = sn.Sh.map(function (a) { return { x: a[0], y: a[1], vx: a[2], vy: a[3], rad: a[4], st: a[5] | 0, hit: {} }; });
   S.cons = (sn.Cn || []).map(function (a) { return { id: a[0], k: a[1] ? 'fire' : 'hard', x: a[2], y: a[3], hp: a[4], max: a[5], r: a[6], life: 8, own: '' }; });
+  if (sn.Pz) puzzleLoad(sn.Pz);
   S.eshots = (sn.EB || []).map(function (a) { return { x: a[0], y: a[1], vx: a[2], vy: a[3], life: 2, dmg: 8 }; });
   { const od = {}; (S.drones || []).forEach(function (d) { od[d.id] = d; }); S.drones = (sn.Dr || []).map(function (a) { const d = od[a[0]] || { id: a[0], x: a[1], y: a[2], r: 10 }; d.gx = a[1]; d.gy = a[2]; d.hp = a[3]; d.max = a[4]; d.life = 2; d.own = ''; return d; }); }
   S.orbs = sn.O.map(function (a) { return { id: a[0], x: a[1], y: a[2], life: a[3] }; }); S.coins = sn.C.map(function (a) { return { id: a[0], x: a[1], y: a[2], life: a[3] }; });
@@ -3168,7 +3404,7 @@ function onEnd(msg) {
   if (S.endShown || (S.round && msg.id && msg.id !== S.round.id)) return; S.endShown = true; S.ended = true; S.mode = 'end'; S.ending = null; clearEndingFx(); music('');
   S.timeSec = msg.t | 0; S.score = msg.sc; S.secCleared = Math.max(S.secCleared, msg.sec | 0); if (msg.bd) S.bossDone = true;
   const mine = msg.stats.filter(function (x) { return x.i === S.me; })[0]; if (mine) { S.xc = mine.xc; if (S.p) S.p.xc = mine.xc; }
-  S.quizOpen && closeQuiz(); closeShop(); closeRegroup(); S.rg = null;
+  S.quizOpen && closeQuiz(); closeShop(); closeRegroup(); S.rg = null; S.puzOpen && closePuzzle();
   if (S.bank && msg.bank != null) { S.bankFinal = msg.bank; }
   const q = S.quiz.stats, mm = Math.floor(S.timeSec / 60), ss = String(S.timeSec % 60).padStart(2, '0');
   $('endT').textContent = msg.kind === 'clear' ? 'SERVER 01 CLEARED' : msg.kind === 'time' ? 'TIME UP' : 'ROUND OVER';
@@ -3210,7 +3446,9 @@ function renderHud() {
   const ip = $('pips'); const c = S.quiz.charge; if (ip.children.length !== 5) { ip.innerHTML = ''; for (let i = 0; i < 5; i++) { const d = document.createElement('div'); d.className = 'pip'; ip.appendChild(d); } }
   for (let i = 0; i < 5; i++) ip.children[i].className = 'pip' + (i < c ? ' on' : '');
   $('scoreV').textContent = S.score; $('xcV').textContent = S.bank ? S.bank.value() : S.xc; $('orbV').textContent = S.orbCount; renderGoals();
-  $('linkBtn').classList.toggle('pulse', (S.meter && S.meter.fill < .2) && S.enemies.some(function (e) { return !e.dead; }));
+  const lcd = linkCdLeft(); $('linkLbl').textContent = lcd ? 'LINK ' + lcd + 's' : 'LINK SPRINT'; $('linkBtn').classList.toggle('off', !!lcd);
+  $('linkBtn').classList.toggle('pulse', !lcd && (S.meter && S.meter.fill < .2) && S.enemies.some(function (e) { return !e.dead; }));
+  const nt = nearTerminal(); $('useBtn').classList.toggle('on', !!nt); if (nt) $('useBtn').firstChild.nodeValue = (nt.type === 'vault' ? 'CRACK VAULT ' : 'HACK ');
   const o = $('obj'); o.firstChild.nodeValue = S.obj.t; o.lastChild.textContent = S.obj.s;
   const ck = $('clock'); if (S.clock) { ck.style.display = ''; ck.textContent = '⏱ ' + S.clock.fmt(); ck.classList.toggle('low', S.clock.left < 60); } else ck.style.display = 'none';
   const sq = $('squad'); const pl = playerList();
@@ -3306,7 +3544,7 @@ function render() {
   (S.keyItems || []).forEach(function (k) { const bob = Math.sin(S.t * 4 + k.x) * 3; ctx.save(); ctx.shadowColor = '#ffd740'; ctx.shadowBlur = 16; ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🗝', k.x, k.y + bob); ctx.restore(); });
   S.coins.forEach(function (c) { const ci = img(ASSET + 'sprites/xcoin-64.png'), f = c.life < 4 && Math.floor(S.t * 8) % 2 ? .4 : 1, w = Math.max(.25, Math.abs(Math.cos(S.t * 4 + c.x * .05))) * 20; ctx.globalAlpha = f; ctx.shadowColor = '#ffd740'; ctx.shadowBlur = 8; if (ready(ci)) ctx.drawImage(ci, c.x - w / 2, c.y - 10, w, 20); else { ctx.fillStyle = '#ffd740'; ctx.beginPath(); ctx.arc(c.x, c.y, 7, 0, 7); ctx.fill(); } ctx.shadowBlur = 0; ctx.globalAlpha = 1; });
   drawEnemies(S.enemies, S.t);
-  S.shots.forEach(drawShot); drawV06World();
+  S.shots.forEach(drawShot); drawV06World(); drawPuzzles(); drawClaws();
   playerList().forEach(function (P) { if (P.id !== S.me) drawEvo(P); }); if (S.p) drawEvo(S.p);
   S.rings.forEach(function (r) { ctx.strokeStyle = r.c; ctx.globalAlpha = Math.max(0, r.a); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; });
   S.fx.forEach(function (f) { const a = Math.min(1, f.t * 3); ctx.globalAlpha = a;
@@ -3437,6 +3675,7 @@ function renderBossScene() {
 }
 // ══════════════════════════ FRAME LOOP ══════════════════════════
 function ageFx(dt) {
+  ageClaws(dt);
   S.fx.forEach(function (f) { f.t -= dt; }); S.fx = S.fx.filter(function (f) { return f.t > 0; });
   S.rings.forEach(function (r) { r.r += (r.max - r.r) * Math.min(1, dt * 9); r.a -= dt * 2.4; }); S.rings = S.rings.filter(function (r) { return r.a > 0; });
   S.shake = Math.max(0, S.shake - dt * 22);
@@ -3792,7 +4031,7 @@ if (TEST) window.__nf = {
   fillAmmo: function (f) { S.meter.setFill(f); S.quiz.setMeter(S.meter); renderHud(); },
   eq: function () { return S.p && S.p.eq; }, meter: function () { return S.meter; }, sprint: function () { return S.sprint; }, setPicks: function (l) { S.ld.picks = l; }, openLoadout: openLoadout, openShop: openShop, shopBuy: shopBuy, leaveSprint: leaveSprint,
   evoDown: function () { return evoDown(S.p); }, hurt: function (d, src) { return hurtPlayer(S.p, d, src); }, saveProgress: saveProgress, roundOver: roundOver, sprintTick: function (sec) { if (S.sprint) { S.sprint.tick(sec); renderSprintHud(); if (S.sprint.over && !answered) endSprint(); } },
-  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossWin: bossWin, endRound: finalizeRound, endRoundAnim: endRound, special: surge, dash: dash, lockIn: leaveSprint, showCutin: function (n) { showCutin(S.p, n || 'TEST SUPER', false); }, cardArt: function () { return cardArt(S.p); }, withExo: withExo, breach: breach, ammoOf: ammoOf, clipOf: clipOf, shotsLeft: shotsLeft, maintenance: maintenance, consNow: function () { return S.cons; }, BA: BA, awardPerks: awardPerks, startBoss: startBoss, enterBoss: enterBoss,
+  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossWin: bossWin, endRound: finalizeRound, endRoundAnim: endRound, special: surge, dash: dash, lockIn: leaveSprint, pz: function () { return S.pz; }, useTerminal: useTerminal, puzzleSolve: puzzleSolve, linkCdLeft: linkCdLeft, squadScopeOf: squadScopeOf, closePuzzle: closePuzzle, showCutin: function (n) { showCutin(S.p, n || 'TEST SUPER', false); }, cardArt: function () { return cardArt(S.p); }, withExo: withExo, breach: breach, ammoOf: ammoOf, clipOf: clipOf, shotsLeft: shotsLeft, maintenance: maintenance, consNow: function () { return S.cons; }, BA: BA, awardPerks: awardPerks, startBoss: startBoss, enterBoss: enterBoss,
   hurtId: function (id, d) { const P = S.players[id]; if (P) { P.hurtCd = 0; P.inv = 0; P.protect = 0; hurtPlayer(P, d, 't'); } }, strip: function (id) { const P = S.players[id]; if (P && P.eq) { P.eq.abilityLeft = 0; P.eq.list = []; P.eq.inv = []; P.eq.aq = []; P.eq.aegisHits = 0; } }, addXc: function (id, n) { const P = S.players[id]; if (P) P.xc += n; S.mirror(); }, addBank: function (n) { S.bank.grant(n); }, startRegroup: startRegroup, doGive: doGive, aegisAbsorb: aegisAbsorb, settleRound: settleRound, renderEndExtra: renderEndExtra, refreshEvents: refreshEvents,
   playerList: playerList, doBuy: doBuy, handleAct: handleAct, netAct: netAct, members: members, lobbyCheck: lobbyCheck, leaderId: leaderId, backToLobby: backToLobby, stepSim: stepSim,
   snapNow: function () { return encodeSnap && encodeSnap(); }

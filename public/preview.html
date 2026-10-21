@@ -3974,7 +3974,7 @@ window.addEventListener('message', function (e) {
 //   pflx_nf_team_<scope>    -> { v:1, cleared, clears, runs, best, byPlayer }    (shared by everyone in the same session/season)
 // Prices below MUST match NFLogic.UPGRADES in games/nexus-frontiers.html (a test compares them).
 // 9 game upgrades x 3 Mk levels (key, key#2, key#3). Session Upgrades (Deadline Extension, Checkpoint Reassess) are sold in the X-Live Marketplace only.
-const NF_MARKET = { chronorespawn: 50, 'chronorespawn#2': 90, 'chronorespawn#3': 150, aegis: 20, 'aegis#2': 40, 'aegis#3': 70, repair: 20, 'repair#2': 40, 'repair#3': 70, capacitor: 15, 'capacitor#2': 30, 'capacitor#3': 50, surgeamp: 25, 'surgeamp#2': 50, 'surgeamp#3': 85, magnet: 10, 'magnet#2': 25, 'magnet#3': 45, rapid: 20, 'rapid#2': 40, 'rapid#3': 70, linkext: 30, 'linkext#2': 55, 'linkext#3': 90, seeker: 25, 'seeker#2': 45, 'seeker#3': 75 };
+const NF_MARKET = { chronorespawn: 50, 'chronorespawn#2': 90, 'chronorespawn#3': 150, aegis: 20, 'aegis#2': 40, 'aegis#3': 70, repair: 20, 'repair#2': 40, 'repair#3': 70, capacitor: 15, 'capacitor#2': 30, 'capacitor#3': 50, surgeamp: 25, 'surgeamp#2': 50, 'surgeamp#3': 85, magnet: 10, 'magnet#2': 25, 'magnet#3': 45, rapid: 20, 'rapid#2': 40, 'rapid#3': 70, linkext: 30, 'linkext#2': 55, 'linkext#3': 90, seeker: 25, 'seeker#2': 45, 'seeker#3': 75, turbo: 20, 'turbo#2': 40, 'turbo#3': 70 };
 const NF_OWN_MAX = 9;
 function nfClamp(v, lo, hi) { v = Math.round(Number(v)); if (!isFinite(v)) v = lo; return Math.max(lo, Math.min(hi, v)); }
 function nfScopeFor(opts, pid) {
@@ -4107,9 +4107,9 @@ function nfPriceOf(key, cat) { return (cat && cat[key] && cat[key].price) || NF_
 async function nfLoadCatalog() { try { const d = await supabaseLoad('pflx_nf_catalog'); return nfCleanCatalog(d && d.items); } catch (e) { return {}; } }
 
 // ── Marketplace publishing (Oct 2026): the Arena OWNS game upgrades; it publishes the resolved list to app_data 'pflx_market_game' so X-Coin, X-Live and the Console can show it. Hosts publish (never players). ──
-const NF_DESC = {"chronorespawn": "Revive once when your Evo falls (60% vitality). Used when triggered.", "chronorespawn#2": "Revive once when your Evo falls (75% vitality). Used when triggered.", "chronorespawn#3": "Revive once when your Evo falls (90% vitality). Used when triggered.", "aegis": "Blocks the next 2 hits you take. Used when it activates.", "aegis#2": "Blocks the next 3 hits you take. Used when it activates.", "aegis#3": "Blocks the next 4 hits you take. Used when it activates.", "repair": "Auto-restores 50 vitality when you drop below 30%. Used when triggered.", "repair#2": "Auto-restores 70 vitality when you drop below 35%. Used when triggered.", "repair#3": "Auto-restores 100 vitality when you drop below 40%. Used when triggered.", "capacitor": "Start the round with the ammo meter 40% full.", "capacitor#2": "Start the round with the ammo meter 60% full.", "capacitor#3": "Start the round with the ammo meter 80% full.", "surgeamp": "SURGE hits 50% harder and reaches farther.", "surgeamp#2": "SURGE hits 80% harder and reaches much farther.", "surgeamp#3": "SURGE hits 120% harder and reaches far.", "magnet": "X-Coin, orbs and boosters are pulled in from much farther.", "magnet#2": "X-Coin, orbs and boosters are pulled in from very far.", "magnet#3": "X-Coin, orbs and boosters are pulled in from across the room.", "rapid": "Your spark fires about 30% faster.", "rapid#2": "Your spark fires about 60% faster.", "rapid#3": "Your spark fires about 90% faster.", "linkext": "Each quiz sprint lasts 10 seconds longer.", "linkext#2": "Each quiz sprint lasts 15 seconds longer.", "linkext#3": "Each quiz sprint lasts 20 seconds longer.", "seeker": "Archives drop temporary boosters twice as often.", "seeker#2": "Archives drop temporary boosters three times as often.", "seeker#3": "Archives drop temporary boosters four times as often."};
-const NF_FIRES = {"aegis": 1, "chronorespawn": 1, "repair": 1};
-const NF_FX = {"chronorespawn": "Revive once", "aegis": "Block hits", "repair": "Auto-heal", "capacitor": "Ammo head start", "surgeamp": "Stronger SURGE", "magnet": "Pickup range", "rapid": "Faster spark", "linkext": "Longer sprint", "seeker": "More boosters"};
+const NF_DESC = {"chronorespawn": "Revive once when your Evo falls (60% vitality). Used when triggered.", "chronorespawn#2": "Revive once when your Evo falls (75% vitality). Used when triggered.", "chronorespawn#3": "Revive once when your Evo falls (90% vitality). Used when triggered.", "aegis": "Blocks the next 2 hits you take. Used when it activates.", "aegis#2": "Blocks the next 3 hits you take. Used when it activates.", "aegis#3": "Blocks the next 4 hits you take. Used when it activates.", "repair": "Auto-restores 50 vitality when you drop below 30%. Used when triggered.", "repair#2": "Auto-restores 70 vitality when you drop below 35%. Used when triggered.", "repair#3": "Auto-restores 100 vitality when you drop below 40%. Used when triggered.", "capacitor": "Start the round with the ammo meter 40% full.", "capacitor#2": "Start the round with the ammo meter 60% full.", "capacitor#3": "Start the round with the ammo meter 80% full.", "surgeamp": "SURGE hits 50% harder and reaches farther.", "surgeamp#2": "SURGE hits 80% harder and reaches much farther.", "surgeamp#3": "SURGE hits 120% harder and reaches far.", "magnet": "X-Coin, orbs and boosters are pulled in from much farther.", "magnet#2": "X-Coin, orbs and boosters are pulled in from very far.", "magnet#3": "X-Coin, orbs and boosters are pulled in from across the room.", "rapid": "Your spark fires about 30% faster.", "rapid#2": "Your spark fires about 60% faster.", "rapid#3": "Your spark fires about 90% faster.", "linkext": "Each quiz sprint lasts 10 seconds longer.", "linkext#2": "Each quiz sprint lasts 15 seconds longer.", "linkext#3": "Each quiz sprint lasts 20 seconds longer.", "seeker": "Archives drop temporary boosters twice as often.", "seeker#2": "Archives drop temporary boosters three times as often.", "seeker#3": "Archives drop temporary boosters four times as often.", "turbo": "Correct answers reload 75% more ammo for your next LINK round.", "turbo#2": "Correct answers reload 75% more ammo for your next 2 LINK rounds.", "turbo#3": "Correct answers reload DOUBLE ammo for your next 3 LINK rounds."};
+const NF_FIRES = {"aegis": 1, "chronorespawn": 1, "repair": 1, "turbo": 1};
+const NF_FX = {"chronorespawn": "Revive once", "aegis": "Block hits", "repair": "Auto-heal", "capacitor": "Ammo head start", "surgeamp": "Stronger SURGE", "magnet": "Pickup range", "rapid": "Faster spark", "linkext": "Longer sprint", "seeker": "More boosters", "turbo": "Faster LINK reload"};
 function nfMarketItems(cat) {
   return Object.keys(NF_MARKET).map(function (k) {
     const t = nfTierOf(k), m = NF_META[t.id], c = (cat && cat[k]) || {};
@@ -4295,7 +4295,7 @@ function nfHandleClaim(m) { // polled by the lobby / end screen: closes finished
 }
 
 // ── Host: game upgrade catalog (name, description, picture, price per upgrade). Session Upgrades live in the X-Live Marketplace, not here. ──
-const NF_META = { chronorespawn: ['ChronoRespawn', '⏳'], aegis: ['Aegis Shell', '🛡'], repair: ['Repair Pack', '🔧'], capacitor: ['Capacitor', '🔋'], surgeamp: ['Surge Amp', '💥'], magnet: ['Coin Magnet', '🧲'], rapid: ['Rapid Spark', '⚡'], linkext: ['Link Extender', '⏱'], seeker: ['Star Seeker', '✨'] };
+const NF_META = { chronorespawn: ['ChronoRespawn', '⏳'], aegis: ['Aegis Shell', '🛡'], repair: ['Repair Pack', '🔧'], capacitor: ['Capacitor', '🔋'], surgeamp: ['Surge Amp', '💥'], magnet: ['Coin Magnet', '🧲'], rapid: ['Rapid Spark', '⚡'], linkext: ['Link Extender', '⏱'], seeker: ['Star Seeker', '✨'], turbo: ['Turbo Reload', '🔄'] };
 let nfCatDraft = null;
 function nfCatEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function nfDefaultName(key) { const t = nfTierOf(key), m = NF_META[t.id]; return m[0] + (t.tier > 1 ? ' Mk ' + ['I', 'II', 'III'][t.tier - 1] : ''); }
@@ -5174,6 +5174,7 @@ function studioEditGame(id) {
     set('stNfMeter', (g.config && g.config.nfMeter) || 0);
     set('stNfLinkSec', (g.config && g.config.nfLinkSec) || 60);
     set('stNfBossSec', (g.config && g.config.nfBossLinkSec) || 30);
+    set('stNfLinkCd', (g.config && g.config.nfLinkCooldown != null) ? g.config.nfLinkCooldown : 20);
     set('stNfShop', (g.config && g.config.nfShop === false) ? 'off' : 'on');
     set('stNfGoalC', (g.config && g.config.nfGoalCorrect != null) ? g.config.nfGoalCorrect : 20);
     set('stNfGoalK', (g.config && g.config.nfGoalKeys != null) ? g.config.nfGoalKeys : 3);
@@ -5214,6 +5215,7 @@ function studioReadConfig() {
     nfShop: studioSelTemplate === 'nexus-frontiers' ? val('stNfShop', 'on') !== 'off' : undefined,
     nfLinkSec: studioSelTemplate === 'nexus-frontiers' ? Math.max(20, Math.min(180, parseInt(val('stNfLinkSec', '60'), 10) || 60)) : undefined,
     nfBossLinkSec: studioSelTemplate === 'nexus-frontiers' ? Math.max(10, Math.min(90, parseInt(val('stNfBossSec', '30'), 10) || 30)) : undefined,
+    nfLinkCooldown: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(120, parseInt(val('stNfLinkCd', '20'), 10) || 0)) : undefined,
     nfGoalCorrect: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(60, parseInt(val('stNfGoalC', '20'), 10) || 0)) : undefined,
     nfGoalKeys: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(6, parseInt(val('stNfGoalK', '3'), 10) || 0)) : undefined,
     nfGoalClear: studioSelTemplate === 'nexus-frontiers' ? val('stNfGoalX', 'on') !== 'off' : undefined,
@@ -5227,7 +5229,7 @@ function studioConfigOf(c) {
   const o = { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
            ordered: c.ordered, sound: c.sound, music: c.music, powerups: c.powerups, rivalName: c.rivalName, roundTime: c.roundTime };
   // Nexus Frontiers host pre-launch settings (saved with the game / session, so they carry through the season)
-  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfRoundMin = c.nfRoundMin || 10; o.nfAllowSolo = !!c.nfAllowSolo; o.nfStudioRule = c.nfStudioRule || 'strict'; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; o.nfLinkSec = c.nfLinkSec || 60; o.nfBossLinkSec = c.nfBossLinkSec || 30; o.nfGoalCorrect = c.nfGoalCorrect == null ? 20 : c.nfGoalCorrect; o.nfGoalKeys = c.nfGoalKeys == null ? 3 : c.nfGoalKeys; o.nfGoalClear = c.nfGoalClear !== false; o.nfBankCap = c.nfBankCap || 2000; o.nfAwardMinTeams = c.nfAwardMinTeams || 2; }
+  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfRoundMin = c.nfRoundMin || 10; o.nfAllowSolo = !!c.nfAllowSolo; o.nfStudioRule = c.nfStudioRule || 'strict'; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; o.nfLinkSec = c.nfLinkSec || 60; o.nfBossLinkSec = c.nfBossLinkSec || 30; o.nfLinkCooldown = c.nfLinkCooldown == null ? 20 : c.nfLinkCooldown; o.nfGoalCorrect = c.nfGoalCorrect == null ? 20 : c.nfGoalCorrect; o.nfGoalKeys = c.nfGoalKeys == null ? 3 : c.nfGoalKeys; o.nfGoalClear = c.nfGoalClear !== false; o.nfBankCap = c.nfBankCap || 2000; o.nfAwardMinTeams = c.nfAwardMinTeams || 2; }
   return o;
 }
 
@@ -5511,6 +5513,8 @@ function renderStudio() {
           <select id="stNfLinkSec" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[30, 45, 60, 75, 90, 120].map(function (n) { return '<option value="' + n + '"' + (n === 60 ? ' selected' : '') + '>' + n + ' seconds' + (n === 60 ? ' (default)' : '') + '</option>'; }).join('')}</select></div>
         <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">BOSS LINK TIMER (ANSWERS POWER EACH MOVE)</div>
           <select id="stNfBossSec" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[15, 20, 30, 45, 60].map(function (n) { return '<option value="' + n + '"' + (n === 30 ? ' selected' : '') + '>' + n + ' seconds' + (n === 30 ? ' (default)' : '') + '</option>'; }).join('')}</select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">LINK RECHARGE AFTER A SPRINT (MELEE TIME)</div>
+          <select id="stNfLinkCd" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[0, 10, 15, 20, 30, 45].map(function (n) { return '<option value="' + n + '"' + (n === 20 ? ' selected' : '') + '>' + (n ? n + ' seconds' : 'No recharge') + (n === 20 ? ' (default)' : '') + '</option>'; }).join('')}</select></div>
         <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">IN-ROUND FIELD SHOP</div>
           <select id="stNfShop" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="on" selected>On — spend the team bank on upgrades</option><option value="off">Off</option>
@@ -13318,6 +13322,7 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
   var key = String(p.get('nfs') || '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 50); if (!key) return;
   var sid = 'sess_xl_' + key, mins = Math.max(1, Math.min(10, parseInt(p.get('nfm'), 10) || 10));
   var diff = ['cadet', 'ranger', 'veteran', 'expert'].indexOf(p.get('nfd')) >= 0 ? p.get('nfd') : 'ranger';
+  var linkCd = p.get('nfcd') == null ? 20 : Math.max(0, Math.min(120, parseInt(p.get('nfcd'), 10) || 0));
   var linkSec = Math.max(20, Math.min(180, parseInt(p.get('nfls'), 10) || 60)), bossSec = Math.max(10, Math.min(90, parseInt(p.get('nfbs'), 10) || 30));
   var solo = p.get('nfo') === '1', deckName = String(p.get('nfk') || '').trim().toLowerCase(), title = String(p.get('nft') || 'Nexus Frontiers').slice(0, 60);
   var started = Date.now(), done = false, lastReload = 0;
@@ -13340,7 +13345,7 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
     var d = pickDeck();
     if (!d) { banner('⚠ NEXUS FRONTIERS NEEDS A KNOWLEDGE DECK<br><span style="font-size:0.65rem;color:#9bb8d6;letter-spacing:0.05em">Import a deck with 4+ cards on the Arena DECKS screen, then reopen this activity.</span>'); return null; }
     var sess = { id: sid, title: title, template: 'nexus-frontiers', deckId: d.id, xlive: key,
-      config: { nfDifficulty: diff, nfRoundMin: mins, nfLinkSec: linkSec, nfBossLinkSec: bossSec, nfAllowSolo: solo, nfStudioRule: 'strict', nfShop: true, nfGoalCorrect: 20, nfGoalKeys: 3, nfGoalClear: true, nfBankCap: 2000, nfAwardMinTeams: 2 },
+      config: { nfDifficulty: diff, nfRoundMin: mins, nfLinkSec: linkSec, nfBossLinkSec: bossSec, nfLinkCooldown: linkCd, nfAllowSolo: solo, nfStudioRule: 'strict', nfShop: true, nfGoalCorrect: 20, nfGoalKeys: 3, nfGoalClear: true, nfBankCap: 2000, nfAwardMinTeams: 2 },
       launchedBy: (state.player && state.player.id) || 'host', launchedByName: (state.player && state.player.brand) || 'Host',
       startsAt: now, endsAt: now + (mins + 20) * 60000, createdAt: now };
     await baSessions.upsert(sess);
