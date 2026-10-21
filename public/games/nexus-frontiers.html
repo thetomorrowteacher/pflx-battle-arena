@@ -201,6 +201,29 @@
   #ammoWarn { display:none; color:#ff6b8a; font-weight:800; font-size:.62em; letter-spacing:.18em; margin:.1em 0 .25em; } #ammoWarn.on { display:block; animation:pl .7s infinite; }
   #dashPips { display:inline-flex; gap:.25em; vertical-align:middle; margin-left:.4em; } #dashPips i { width:.7em; height:.7em; border-radius:50%; background:rgba(255,255,255,.15); border:1px solid rgba(0,229,255,.5); } #dashPips i.on { background:#00e5ff; box-shadow:0 0 .5em #00e5ff; }
   .qo.wait { opacity:.45; pointer-events:none; }
+  /* v0.7 super-move cut-in (Evo card) */
+  #cutin { position:absolute; inset:0; z-index:56; pointer-events:none; display:none; overflow:hidden; --cc:#7fd8ff; }
+  #cutin.on { display:block; }
+  #cutin .ci-bg { position:absolute; inset:0; background:radial-gradient(ellipse at 70% 50%, rgba(0,0,0,.5), rgba(0,0,0,.95)); animation:ciFade 2.5s ease both; }
+  #cutin .ci-lines { position:absolute; left:-50%; top:-50%; width:200%; height:200%; background:repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,.16) 0deg 1.2deg, transparent 1.2deg 7deg); animation:ciSpin 2.5s linear both; mix-blend-mode:screen; }
+  #cutin .ci-band { position:absolute; left:-10%; right:-10%; top:24%; height:52%; transform:skewY(-7deg); background:linear-gradient(90deg, transparent, var(--cc) 30%, var(--cc) 70%, transparent); opacity:.28; animation:ciBand 2.5s ease both; }
+  #cutin img { position:absolute; right:7%; top:50%; height:118%; aspect-ratio:2/3; object-fit:cover; border:.25em solid var(--cc); border-radius:1em; box-shadow:0 0 2.5em var(--cc), 0 0 6em rgba(0,0,0,.8); animation:ciCard 2.5s cubic-bezier(.2,.9,.2,1) both; }
+  #cutin .ci-txt { position:absolute; left:5%; top:52%; width:58%; animation:ciTxt 2.5s cubic-bezier(.2,.9,.2,1) both; }
+  #cutin small { display:block; font-family:'Orbitron','Rajdhani',monospace; letter-spacing:.4em; font-size:.85em; color:var(--cc); text-shadow:0 0 .6em var(--cc); }
+  #cutin b { display:block; font-family:'Orbitron','Rajdhani',monospace; font-weight:900; font-size:3em; line-height:1.05; color:#fff; letter-spacing:.06em; text-shadow:0 0 .2em var(--cc), 0 0 .8em var(--cc), .06em .06em 0 #000; }
+  #cutin i { display:block; font-style:normal; margin-top:.5em; font-size:.85em; color:#dfe9ff; opacity:.9; }
+  #cutin.short .ci-bg, #cutin.short .ci-lines { display:none; } #cutin.short .ci-band { top:62%; height:22%; opacity:.22; animation-duration:1s; }
+  #cutin.short img { height:62%; top:auto; bottom:6%; right:3%; animation:ciCardS 1s cubic-bezier(.2,.9,.2,1) both; }
+  #cutin.short .ci-txt { top:auto; bottom:12%; left:auto; right:24%; width:auto; text-align:right; animation:ciTxtS 1s ease both; } #cutin.short b { font-size:1.6em; } #cutin.short i { display:none; }
+  @keyframes ciFade { 0%{opacity:0} 10%,85%{opacity:1} 100%{opacity:0} }
+  @keyframes ciSpin { 0%{transform:rotate(0) scale(1.2);opacity:0} 10%{opacity:1} 85%{opacity:1} 100%{transform:rotate(25deg) scale(1);opacity:0} }
+  @keyframes ciBand { 0%{transform:skewY(-7deg) scaleX(0)} 12%{transform:skewY(-7deg) scaleX(1)} 85%{opacity:.28} 100%{opacity:0} }
+  @keyframes ciCard { 0%{transform:translate(70%,-50%) rotate(-14deg) scale(1.15);opacity:0} 16%{transform:translate(0,-50%) rotate(-6deg) scale(1);opacity:1} 80%{transform:translate(-4%,-50%) rotate(-5deg) scale(1.06);opacity:1} 100%{transform:translate(-30%,-50%) rotate(-5deg) scale(1.12);opacity:0} }
+  @keyframes ciTxt { 0%,16%{transform:translateX(-30%) scale(1.6);opacity:0;filter:blur(8px)} 26%{transform:none;opacity:1;filter:none} 85%{opacity:1} 100%{opacity:0;transform:translateX(6%)} }
+  @keyframes ciCardS { 0%{transform:translateX(60%) rotate(-10deg);opacity:0} 18%{transform:rotate(-6deg);opacity:.95} 75%{opacity:.95} 100%{transform:translateX(-12%) rotate(-6deg);opacity:0} }
+  @keyframes ciTxtS { 0%,12%{opacity:0;transform:scale(1.4)} 24%{opacity:1;transform:none} 78%{opacity:1} 100%{opacity:0} }
+  .card.super { border-color:#ffd740; box-shadow:0 0 1.2em rgba(255,215,64,.35) inset; } .card.super .t { color:#ffd740; }
+  @media (prefers-reduced-motion: reduce) { #cutin * { animation-duration:.01s !important; } }
   #qWarn { color:#ff9f0a; font-size:.75em; font-weight:700; letter-spacing:.08em; min-height:1.2em; margin-top:.4em; }
   @media (prefers-reduced-motion: reduce) { body.danger #vign, body.danger2 #vign { animation:none; opacity:.45; } #gameover b { animation:none; } }
   @media (prefers-reduced-motion: reduce) { #clock.low { animation:none; } }
@@ -238,6 +261,7 @@
     <button class="btn" id="exitBtn">EXIT</button>
   </div>
   <div id="gameover"><b id="goT">GAME OVER</b><small id="goS" class="mono"></small></div>
+  <div id="cutin"><div class="ci-bg"></div><div class="ci-lines"></div><div class="ci-band"></div><img id="ciImg" alt=""><div class="ci-txt"><small id="ciWho"></small><b id="ciName"></b><i id="ciSub"></i></div></div>
 
   <div class="drtag" id="drTag">⚠ DANGER ROOM · PRACTICE</div>
   <div class="ov" id="menu">
@@ -931,6 +955,35 @@ const NFLogic = (function () {
     }
     return { xc: 0, fine: wrongRun > BREACH.run ? LINK_GAME.runFine : wrongRun === BREACH.run ? 0 : LINK_GAME.wrongFine, label: wrongRun > BREACH.run ? 'WRONG RUN ×' + wrongRun : '' };
   }
+  // ── Super moves (Ennis, 21 Oct — names DRAFT pending approval): one per Evo branch, shown with the Evo's card in an anime cut-in.
+  //    fx: armor (Elite +25% dmg next turn) · squadguard (squad −50% next Elite hit) · stun (50%: Elite skips its attack) · noblock (can't be blocked)
+  //        charge (squadmates' next move +3 answers of power) · heal (squad +25% vitality) · crit (crit chance ×2) · dodge (squad dodge +25% next hit)
+  //        scale (grows with the squad's correct answers) · pierce (ignores the Elite's block) · cancel (60%: Elite skips its attack) · weaken (Elite's next hit −40%)
+  const SUPER_COST = 3; // super energy: +1 per power streak (3 correct in a row inside a boss LINK)
+  const SUPERS = {
+    gentech: { A: { name: 'Forgeclaw: Molten Rend', fx: 'armor', power: 30, desc: 'Superheated claw slashes. The Elite takes +25% damage next turn.' },
+      B: { name: 'Bulwark: Citadel Crash', fx: 'squadguard', power: 24, desc: 'A fortress wall slams down. The squad takes 50% less from the next Elite attack.' },
+      C: { name: 'Arcwright: Tesla Cathedral', fx: 'stun', power: 26, desc: 'An arc tower chains lightning. 50% chance the Elite is stunned and skips its attack.' } },
+    mindforge: { A: { name: 'Bassbreaker: Subsonic Drop', fx: 'noblock', power: 32, desc: 'A huge bass shockwave that cannot be blocked.' },
+      B: { name: 'Tempo: Metronome Rush', fx: 'charge', power: 26, desc: 'A 5-hit combo. Every squadmate\'s next move starts charged.' },
+      C: { name: 'Harmonic: Prism Chorus', fx: 'heal', power: 24, desc: 'Hardlight prism beams. Heals the whole squad 25%.' } },
+    emagination: { A: { name: 'Quillblade: Final Chapter', fx: 'crit', power: 28, desc: 'An ink-blade flurry with double critical chance.' },
+      B: { name: 'Mirage: Thousand Reflections', fx: 'dodge', power: 24, desc: 'Illusion copies strike. The squad dodges the next Elite attack far more often.' },
+      C: { name: 'Starweaver: Constellation Fall', fx: 'scale', power: 24, desc: 'A meteor rain that grows with the squad\'s correct answers.' } },
+    innov8: { A: { name: 'Riftfang: Void Lance', fx: 'pierce', power: 30, desc: 'A rift-piercing lance that ignores the Elite\'s guard.' },
+      B: { name: 'Ghostwire: System Hijack', fx: 'cancel', power: 24, desc: 'Hacks the Elite: 60% chance to cancel its next attack.' },
+      C: { name: 'Voltstalker: Overcharge Storm', fx: 'weaken', power: 26, desc: 'Chain lightning. The Elite\'s next attack is 40% weaker.' } }
+  };
+  const COMPANION = { name: 'Companion Strike', fx: 'none', power: 20, desc: 'Your companion Evo\'s first super attack. Choose a branch at level 2 to unlock your own.' };
+  function superFor(studio, branch, lvl) {
+    const b = String(branch || ((lvl | 0) >= 2 ? 'A' : '')).toUpperCase(), letter = b && b !== 'BASE' ? (b[0] === 'H' ? 'A' : b[0]) : '', set = SUPERS[studio] || SUPERS.gentech, t = set[letter];
+    if (!t) return { id: 'companion', name: COMPANION.name, fx: 'none', power: COMPANION.power, desc: COMPANION.desc, hits: 1 };
+    const two = (lvl | 0) >= 5;
+    return { id: (studio || 'gentech') + '-' + letter, name: t.name + (two ? ' II' : ''), fx: t.fx, power: Math.round(t.power * (two ? 1.2 : 1) * (1 + 0.04 * Math.max(0, (lvl | 0) - 1))), desc: t.desc, hits: t.fx === 'charge' ? 5 : 1 };
+  }
+  // Boss LINK sprint: every correct answer powers the chosen move, each 3-in-a-row streak powers it more (cap ×3)
+  function bossCharge(n, st) { return Math.min(3, 1 + 0.12 * (n | 0) + 0.25 * (st | 0)); }
+  function guardMit(n) { return Math.min(0.85, 0.5 + 0.05 * (n | 0)); }
   // Elite turn timer per difficulty (each Evo picks a move and answers inside it)
   const BOSS_TURN = { cadet: 60, ranger: 50, veteran: 40, expert: 30 };
   function bossTurnSec(diff) { return BOSS_TURN[diff] || 50; }
@@ -1135,7 +1188,7 @@ const NFLogic = (function () {
     WAGER_STEP: WAGER_STEP, wagerCap: wagerCap, clampWager: clampWager, BANK_CAP_DEFAULT: BANK_CAP_DEFAULT, bankCapFrom: bankCapFrom, eventFx: eventFx, Bank: Bank, sentriesFrom: sentriesFrom, goalConfig: goalConfig, Goals: Goals, settle: settle,
     BADGES: BADGES, COMPLETION_BADGES: COMPLETION_BADGES, MIN_ROUND_SEC: MIN_ROUND_SEC, completionBadges: completionBadges, TEAM_STATS: TEAM_STATS, teamStatsOf: teamStatsOf, collabScore: collabScore, beaconEligible: beaconEligible, pickWinner: pickWinner,
     BOOSTERS: BOOSTERS, BOOSTER_RULES: BOOSTER_RULES, boosterDrop: boosterDrop,
-    KITS: KITS, kitFor: kitFor, BREACH: BREACH, LINK_GAME: LINK_GAME, isBonusQ: isBonusQ, linkReward: linkReward, BOSS_TURN: BOSS_TURN, bossTurnSec: bossTurnSec, EFFORT_MIN_ANSWERS: EFFORT_MIN_ANSWERS, BEACON_MIN: BEACON_MIN, roundBadges: roundBadges, PERK_MAX: PERK_MAX, PERK_ACC: PERK_ACC, PERK_MIN_ANSWERS: PERK_MIN_ANSWERS, victoryQualifies: victoryQualifies, nextPerks: nextPerks, perkNames: perkNames, clipFor: clipFor, dashCharges: dashCharges, resolveElite: resolveElite,
+    KITS: KITS, kitFor: kitFor, BREACH: BREACH, SUPERS: SUPERS, SUPER_COST: SUPER_COST, superFor: superFor, bossCharge: bossCharge, guardMit: guardMit, LINK_GAME: LINK_GAME, isBonusQ: isBonusQ, linkReward: linkReward, BOSS_TURN: BOSS_TURN, bossTurnSec: bossTurnSec, EFFORT_MIN_ANSWERS: EFFORT_MIN_ANSWERS, BEACON_MIN: BEACON_MIN, roundBadges: roundBadges, PERK_MAX: PERK_MAX, PERK_ACC: PERK_ACC, PERK_MIN_ANSWERS: PERK_MIN_ANSWERS, victoryQualifies: victoryQualifies, nextPerks: nextPerks, perkNames: perkNames, clipFor: clipFor, dashCharges: dashCharges, resolveElite: resolveElite,
     STUDIO_IDS: STUDIO_IDS, STUDIO_COLORS: STUDIO_COLORS, COOP: COOP, studioKey: studioKey, slug: slug, coopRules: coopRules, lobbyCheck: lobbyCheck, assignTeams: assignTeams, RoundClock: RoundClock, timeoutOutcome: timeoutOutcome, escortFor: escortFor,
     XC_RULES: XC_RULES, coinDrop: coinDrop, placeMaterials: placeMaterials,
     T: T, mulberry32: mulberry32, shuffle: shuffle, SpawnBag: SpawnBag, Encounter: Encounter, W01_ENCOUNTERS: W01_ENCOUNTERS,
@@ -1297,6 +1350,7 @@ function renderDangerRoom() {
   const meter = [[0, 'Auto'], [4, '4'], [6, '6'], [8, '8'], [10, '10'], [12, '12']].map(function (a) { return B('meter', a[0], a[1], (c.nfMeter | 0) === a[0]); }).join('');
   const shop = B('shop', 'on', 'On', c.nfShop !== false) + B('shop', 'off', 'Off', c.nfShop === false);
   const squad = B('npc', 'off', 'Solo', !p.npc) + B('npc', 'on', 'With 3 NPC Evos', !!p.npc);
+  const lsec = [30, 45, 60, 90].map(function (n) { return B('lsec', n, n + ' s', (c.nfLinkSec || 60) === n); }).join(''), bsec = [20, 30, 45, 60].map(function (n) { return B('bsec', n, n + ' s', (c.nfBossLinkSec || 30) === n); }).join('');
   el.innerHTML =
     '<div class="drrow"><span class="drlbl mono">DIFFICULTY</span>' + diffs + '</div>' +
     '<div class="drrow"><span class="drlbl mono">SQUAD</span>' + squad + '</div>' +
@@ -1305,6 +1359,8 @@ function renderDangerRoom() {
     '<div class="drrow"><span class="drlbl mono">ROUND CLOCK</span>' + clock + '</div>' +
     '<div class="drrow"><span class="drlbl mono">LINK TARGET</span>' + meter + '</div>' +
     '<div class="drrow"><span class="drlbl mono">FIELD SHOP</span>' + shop + '</div>' +
+    '<div class="drrow"><span class="drlbl mono">LINK SPRINT</span>' + lsec + '</div>' +
+    '<div class="drrow"><span class="drlbl mono">BOSS LINK</span>' + bsec + '</div>' +
     '<div class="drrow" style="justify-content:center;margin-top:.9em"><button class="btn gold" id="drGo">ENTER THE DANGER ROOM</button></div>' +
     '<div class="drnote">Solo training on <b>' + escapeHtml((S.deck && S.deck.name) || 'your deck') + '</b>. Training gear is free and refills every run — try any upgrade. ' +
     'Nothing here is real: <b>no X-Coin, no wager, no badges, and your squad\'s checkpoint is untouched.</b> “Enemy scale” sets how many Archives spawn, so you can rehearse a full squad\'s load alone.</div>';
@@ -1312,7 +1368,7 @@ function renderDangerRoom() {
     b.onclick = function () {
       const k = b.dataset.k, v = b.dataset.v;
       if (k === 'diff') c.nfDifficulty = v; else if (k === 'team') c.nfTeam = v | 0; else if (k === 'meter') c.nfMeter = v | 0; else if (k === 'shop') c.nfShop = v === 'on';
-      else if (k === 'start') p.start = v | 0; else if (k === 'clock') p.roundMin = v | 0; else if (k === 'npc') { p.npc = v === 'on'; if (p.npc) c.nfTeam = 4; }
+      else if (k === 'start') p.start = v | 0; else if (k === 'clock') p.roundMin = v | 0; else if (k === 'npc') { p.npc = v === 'on'; if (p.npc) c.nfTeam = 4; } else if (k === 'lsec') c.nfLinkSec = v | 0; else if (k === 'bsec') c.nfBossLinkSec = v | 0;
       renderDangerRoom();
     };
   });
@@ -1325,7 +1381,8 @@ function readCfg() {
   const c = S.config || {}; let diff = L.diffFromConfig(c), team = L.teamSizeFrom(c);
   if (TEST && qs.get('diff') && L.DIFFS[qs.get('diff')]) diff = qs.get('diff');
   if (TEST && qs.get('team')) team = Math.max(1, Math.min(4, qs.get('team') | 0));
-  S.cfg = { diff: diff, team: team, meterTarget: L.meterTargetFrom(c, diff), shop: c.nfShop !== false };
+  const ci = function (v, lo, hi, d) { v = parseInt(v, 10); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; };
+  S.cfg = { diff: diff, team: team, meterTarget: L.meterTargetFrom(c, diff), shop: c.nfShop !== false, linkSec: ci(c.nfLinkSec, 20, 180, 60), bossLinkSec: ci(c.nfBossLinkSec, 10, 90, 30) };
   if (TEST && qs.get('meter')) S.cfg.meterTarget = Math.max(3, Math.min(12, qs.get('meter') | 0));
   if (!S.nf) S.nf = { scope: 'solo', owned: {}, xc: 0, progress: { cleared: 0 }, market: false };
 }
@@ -1467,8 +1524,8 @@ function upRow(key, mode) { // mode: 'own' (owned stock, pre-round) | 'mkt' (mar
 function has2(list, id) { return L.bestTier(list, id) > 0; }
 function renderLoadout() {
   const cl = (S.nf.progress && S.nf.progress.cleared) | 0, lvl = evoLevel(), cap = L.slotsFor(lvl), dif = L.DIFFS[S.cfg.diff];
-  const secs = L.SPRINT_SEC, wcap = L.wagerCap(lvl);
-  $('ldSum').innerHTML = 'Server 01 · <b>' + dif.label.toUpperCase() + '</b> · team of <b>' + S.cfg.team + '</b> · Evo level <b>' + lvl + '</b> (' + cap + ' slot' + (cap > 1 ? 's' : '') + ')<br>Quiz sprint: <b>' + secs + ' s</b> · full ammo = <b>' + S.cfg.meterTarget + '</b> correct answers · Evo revive ability: <b>' + (L.reviveCharges(lvl) ? L.reviveCharges(lvl) + ' per round' : 'none until level 5') + '</b>' +
+  const secs = S.cfg.linkSec || L.SPRINT_SEC, wcap = L.wagerCap(lvl);
+  $('ldSum').innerHTML = 'Server 01 · <b>' + dif.label.toUpperCase() + '</b> · team of <b>' + S.cfg.team + '</b> · Evo level <b>' + lvl + '</b> (' + cap + ' slot' + (cap > 1 ? 's' : '') + ')<br>LINK sprint: <b>' + secs + ' s</b> · boss LINK: <b>' + (S.cfg.bossLinkSec || 30) + ' s</b> · full ammo = <b>' + S.cfg.meterTarget + '</b> correct answers · Evo revive ability: <b>' + (L.reviveCharges(lvl) ? L.reviveCharges(lvl) + ' per round' : 'none until level 5') + '</b>' +
     '<br>X-Coin: <b style="color:#ffd740">' + (S.nf.xc | 0) + '</b> · Orbs banked: <b style="color:#7fd8ff">' + (S.nf.orbs | 0) + '</b> · Team checkpoint: <b>' + (cl > 0 ? 'section ' + (cl + 1) + ' of 6' : 'start of server') + '</b>' +
     '<br>Your Evo kit: <b style="color:' + L.kitFor(L.studioKey(S.player.studioId)).color + '">' + L.kitFor(L.studioKey(S.player.studioId)).line + '</b> · ' + L.kitFor(L.studioKey(S.player.studioId)).weapon.name + ' · special: ' + L.kitFor(L.studioKey(S.player.studioId)).special.name + ' · overdrive: ' + L.kitFor(L.studioKey(S.player.studioId)).over.name +
     '<br>Earned perks: <b style="color:#7dffb4">' + (L.perkNames(S.nf.perks).join(' · ') || 'none yet — beat the Elite with 90%+ correct answers') + '</b> · ammo bar = <b>' + L.clipFor(S.cfg.diff, S.nf.perks) + '</b> shots' +
@@ -1534,7 +1591,7 @@ addEventListener('keydown', function (e) {
   if (S.shopOpen) { if (k === 'escape' || k === 'b') closeShop(); return; }
   if (S.quizOpen) { if (k >= '1' && k <= '4') pickOption(+k - 1); if (k === 'escape' && S.quizContext === 'field') leaveSprint(); return; }
   if (S.mode === 'play') { if (k === 'b') openShop(); if (k === 'q') openQuiz('field'); if (k === 'f') surge(); if (k === ' ') { dash(); e.preventDefault(); } }
-  if (S.mode === 'boss' && k >= '1' && k <= '3' && bossState.turn === 'players' && !S.quizOpen) chooseCard(['strike', 'surge', 'guard'][+k - 1]);
+  if (S.mode === 'boss' && k >= '1' && k <= '4' && bossState.turn === 'players' && !S.quizOpen) chooseCard(['strike', 'surge', 'guard', 'super'][+k - 1]);
 });
 addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', function () { for (const k in keys) keys[k] = false; });
@@ -1564,7 +1621,8 @@ function renderQuestion() {
     b.onclick = function () { pickOption(i); }; box.appendChild(b);
   });
   if (RD) setTimeout(function () { Array.prototype.forEach.call(box.children, function (b) { b.classList.remove('wait'); }); }, RD);
-  if (S.sprint) { const nb = L.isBonusQ((S.fieldN | 0) + 1); $('qKick').textContent = nb ? '⚡ BONUS QUESTION — DOUBLE XC' : 'LINK SPRINT · ' + (S.linkStreak > 1 ? 'STREAK ×' + S.linkStreak + ' · ' : '') + 'YOUR EVO IS IN MAINTENANCE — THE ROOM KEEPS MOVING'; $('qKick').style.color = nb ? '#ffd740' : ''; }
+  if (S.sprint && S.quizContext === 'boss') { const r = S.bossRun || { n: 0, streak: 0, st: 0 }; $('qKick').textContent = 'BOSS LINK · POWER ×' + L.bossCharge(r.n, r.st).toFixed(2) + ' · STREAK ' + (r.streak % 3) + '/3 · POWER STREAKS ' + r.st; $('qKick').style.color = '#ffd740'; }
+  else if (S.sprint) { const nb = L.isBonusQ((S.fieldN | 0) + 1); $('qKick').textContent = nb ? '⚡ BONUS QUESTION — DOUBLE XC' : 'LINK SPRINT · ' + (S.linkStreak > 1 ? 'STREAK ×' + S.linkStreak + ' · ' : '') + 'YOUR EVO IS IN MAINTENANCE — THE ROOM KEEPS MOVING'; $('qKick').style.color = nb ? '#ffd740' : ''; }
   $('qWarn').textContent = S.wrongLocal >= L.BREACH.run - 1 ? '⚠ One more wrong answer triggers a BATTLE ARENA BREACH (−' + L.BREACH.fine + ' XC, LINK locked ' + L.BREACH.lock + ' s)' : '';
 }
 function openQuiz(ctxName, cb) {
@@ -1572,7 +1630,9 @@ function openQuiz(ctxName, cb) {
   if (linkLocked()) { toast('BREACH — LINK locked for ' + linkLocked() + ' s'); SFX.play('empty'); return; }
   if (ctxName === 'field') {
     if (S.meter.isFull()) { toast('Ammo is full — use your special (F)'); return; }
-    S.sprint = new L.Sprint(S.meter, L.SPRINT_SEC + (has('linkext') ? L.tierFx('linkext', L.bestTier(S.eq.list, 'linkext')).v : 0)); S.sprintEnding = false;
+    S.sprint = new L.Sprint(S.meter, (S.cfg.linkSec || L.SPRINT_SEC) + (has('linkext') ? L.tierFx('linkext', L.bestTier(S.eq.list, 'linkext')).v : 0)); S.sprintEnding = false;
+  } else if (ctxName === 'boss') { // v0.7 boss LINK: answer as many as you can; every correct answer powers your move, 3 in a row = power streak
+    S.sprint = new L.Sprint(S.meter, S.cfg.bossLinkSec || 30); S.sprint.isFull = function () { return false; }; S.sprintEnding = false; S.bossRun = { n: 0, streak: 0, st: 0 };
   } else S.sprint = null;
   S.quizOpen = true; S.quizContext = ctxName; S.quizCb = cb || null;
   renderQuestion();
@@ -1580,8 +1640,9 @@ function openQuiz(ctxName, cb) {
   const rl = Math.ceil(clipOf(S.p) / S.meter.target);
   $('qTop').style.display = sp ? '' : 'none'; $('qKick').textContent = sp ? 'LINK SPRINT · YOUR EVO IS IN MAINTENANCE — THE ROOM KEEPS MOVING' : 'LINK · THE ELITE WAITS FOR YOUR ANSWER';
   $('qNote').textContent = (sp ? 'CORRECT = RELOAD ' + rl + ' SHOTS · ' : 'CORRECT = YOUR MOVE LANDS + RELOAD · ') + L.BREACH.run + ' WRONG IN A ROW = BATTLE ARENA BREACH (−' + L.BREACH.fine + ' XC, LINK LOCKED ' + L.BREACH.lock + ' s)' + (sp ? ' · ARCHIVES CAN\'T HURT YOU HERE, BUT THEY GATHER' : '');
-  if (sp) S.sprint.isFull = function () { return S.meter.isFull(); };
-  $('qClose').textContent = sp ? 'LEAVE SPRINT' : 'BACK TO FIELD'; $('qClose').style.display = ctxName === 'boss' ? 'none' : '';
+  if (sp && ctxName === 'field') S.sprint.isFull = function () { return S.meter.isFull(); };
+  if (ctxName === 'boss') { $('qNote').textContent = 'EVERY CORRECT ANSWER POWERS YOUR MOVE · 3 IN A ROW = POWER STREAK (BIGGER CHARGE + 1 SUPER ENERGY) · ' + L.BREACH.run + ' WRONG IN A ROW = BREACH'; SFX.play('riser', 200, .6); }
+  $('qClose').textContent = ctxName === 'boss' ? 'LOCK IN MOVE' : sp ? 'LEAVE SPRINT' : 'BACK TO FIELD'; $('qClose').style.display = '';
   renderSprintHud(); $('quiz').classList.add('on');
 }
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -1607,7 +1668,8 @@ function pickOption(i) {
   netAct({ k: 'qa', ok: !!res.correct, f: fieldQ ? 1 : 0 });
   if (S.sprint) {
     S.sprint.record(res.correct);
-    $('qMsg').textContent = res.correct ? (res.charge ? 'Correct! Reloaded +' + Math.ceil(clipOf(S.p) / S.meter.target) + ' shots.' : 'Correct! Ammo is full.') : 'Not this time. The answer: ' + res.answerText;
+    if (S.quizContext === 'boss' && S.bossRun) { const r = S.bossRun; if (res.correct) { r.n++; r.streak++; if (r.streak % 3 === 0) { r.st++; SFX.play('streak', 60); banner('POWER STREAK ×' + r.st); } } else r.streak = 0; }
+    $('qMsg').textContent = S.quizContext === 'boss' ? (res.correct ? 'Correct! Move power ×' + L.bossCharge(S.bossRun.n, S.bossRun.st).toFixed(2) : 'Not this time. The answer: ' + res.answerText) : res.correct ? (res.charge ? 'Correct! Reloaded +' + Math.ceil(clipOf(S.p) / S.meter.target) + ' shots.' : 'Correct! Ammo is full.') : 'Not this time. The answer: ' + res.answerText;
     renderSprintHud(); renderHud();
     const sp = S.sprint;
     setTimeout(function () { if (!S.quizOpen || S.sprint !== sp) return; if (sp.over) endSprint(); else renderQuestion(); }, res.correct ? 420 : 1250);
@@ -1620,6 +1682,10 @@ function pickOption(i) {
 }
 function endSprint() {
   const sp = S.sprint; if (!sp || S.sprintEnding) return; S.sprintEnding = true;
+  if (S.quizContext === 'boss') { // the boss LINK ends on time or LOCK IN: hand the result to the chosen move
+    const r = S.bossRun || { n: 0, st: 0 }; $('qMsg').className = r.n ? 'good' : 'bad'; $('qMsg').textContent = (sp.reason === 'lock' ? 'LOCKED IN! ' : 'TIME! ') + r.n + ' correct · ' + r.st + ' power streak' + (r.st === 1 ? '' : 's') + ' · power ×' + L.bossCharge(r.n, r.st).toFixed(2);
+    setTimeout(function () { if (S.sprint !== sp) return; const cb = S.quizCb; S.quizCb = null; closeQuiz(); cb && cb({ correct: r.n > 0, n: r.n, st: r.st }); }, TEST ? 0 : 900); return;
+  }
   const why = sp.reason === 'full' ? 'AMMO FULL!' : 'TIME!';
   $('qMsg').className = 'good'; $('qMsg').textContent = why + ' ' + sp.correct + ' correct out of ' + sp.answered + '.';
   renderSprintHud(); renderHud();
@@ -1628,6 +1694,7 @@ function endSprint() {
 function leaveSprint() {
   const sp = S.sprint; if (!sp) { closeQuiz(); return; }
   if (sp.over) return; // already finishing
+  if (S.quizContext === 'boss') { if (!S.bossRun || !S.bossRun.n) { toast('Answer at least one question before locking in'); return; } sp.over = true; sp.reason = 'lock'; endSprint(); return; }
   const lost = sp.leave(); S.sprintEnding = true;
   closeQuiz(); renderHud(); toast(lost > 0 ? 'Left the sprint early: −1 notch of ammo' : 'Left the sprint');
 }
@@ -1644,7 +1711,7 @@ $('qClose').onclick = function () { if (S.sprint) leaveSprint(); else closeQuiz(
 const NET = { hub: null, sess: null, team: null, teamKey: '', teamName: '', members: {}, startReq: false, snapSeq: 0, lastSnapAt: 0, lastSnap: null, lastEv: 0, posAt: 0, snapAt: 0, beaconAt: 0, helloAt: 0, roundId: '', roundSec: 600, status: 'local', sessHellos: {}, formed: false, joinAt: 0, locked: {}, rejoinAt: 0 };
 const SPRINT_PROTECT_MAX = 80;
 function coopActive() { return !!(S.coop && NET.hub); }
-function myInfo() { return { id: S.me, name: S.player.brand || 'Evo', studio: L.studioKey(S.player.studioId), lvl: evoLevel(), tier: iconTier(), stats: (S.exo && S.exo.stats) || {}, perks: (S.nf && S.nf.perks) || {} }; }
+function myInfo() { return { id: S.me, name: S.player.brand || 'Evo', studio: L.studioKey(S.player.studioId), lvl: evoLevel(), tier: iconTier(), stats: (S.exo && S.exo.stats) || {}, perks: (S.nf && S.nf.perks) || {}, branch: (S.exo && S.exo.branch) || '' }; }
 function iconTier() { const lvl = evoLevel(); return lvl <= 2 ? 1 : lvl <= 4 ? 2 : lvl <= 6 ? 3 : lvl <= 9 ? 4 : 5; }
 function coopInit() {
   const c = S.coop, tr = TEST && qs.get('net') === 'bc' ? 'bc' : (c.transport || (c.net && c.net.url ? 'ws' : 'bc'));
@@ -1687,7 +1754,7 @@ function joinTeam(key, name) {
 }
 function sendHello() {
   if (!NET.team) return; const i = myInfo(), me = NET.members[S.me] || {};
-  NET.team.send('hello', { id: i.id, name: i.name, studio: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, rdy: S.ready ? 1 : 0, picks: S.ld.picks, md: S.mode === 'play' || S.mode === 'boss' ? 'p' : S.mode === 'end' ? 'e' : 'l', rs: NET.roundSec, rd: NET.roundId, nf: S.nf && S.nf.progress ? S.nf.progress.cleared | 0 : 0, wg: S.stake | 0, pk: i.perks }, false);
+  NET.team.send('hello', { id: i.id, name: i.name, studio: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, rdy: S.ready ? 1 : 0, picks: S.ld.picks, md: S.mode === 'play' || S.mode === 'boss' ? 'p' : S.mode === 'end' ? 'e' : 'l', rs: NET.roundSec, rd: NET.roundId, nf: S.nf && S.nf.progress ? S.nf.progress.cleared | 0 : 0, wg: S.stake | 0, pk: i.perks, br: i.branch }, false);
   NET.members[S.me] = Object.assign(me, { id: i.id, name: i.name, studioId: i.studio, lvl: i.lvl, tier: i.tier, stats: i.stats, perks: i.perks, ready: !!S.ready, picks: S.ld.picks.slice(), wg: S.stake | 0, seen: performance.now(), online: true });
 }
 function onTeamMsg(e, p) {
@@ -1696,7 +1763,7 @@ function onTeamMsg(e, p) {
   switch (e) {
     case 'hello': {
       const m = NET.members[p.id] || (NET.members[p.id] = { id: p.id });
-      Object.assign(m, { name: p.name, studioId: p.studio, lvl: p.lvl, tier: p.tier, perks: p.pk || {}, stats: p.stats, ready: !!p.rdy, picks: p.picks || [], wg: p.wg | 0, seen: now, online: true, md: p.md });
+      Object.assign(m, { name: p.name, studioId: p.studio, lvl: p.lvl, tier: p.tier, branch: String(p.br || '').slice(0, 4), perks: p.pk || {}, stats: p.stats, ready: !!p.rdy, picks: p.picks || [], wg: p.wg | 0, seen: now, online: true, md: p.md });
       const P = S.players && S.players[p.id]; if (P) { P.lastSeen = now; }
       if (p.rs && p.id === leaderId()) NET.roundSec = p.rs;
       // rejoin: a squad member who reloaded mid-round says "lobby" while the round is live → leader sends the start message again
@@ -1734,7 +1801,7 @@ function handleAct(id, a) { // leader
     case 'dash': P.inv = Math.max(P.inv, .3); if (a.ink) doInkStep(P, a); break;
     case 'surge': if (P.id !== S.me) setAmmo(P, ammoOf(P) - .2); doSpecial(P, a); break;
     case 'buy': doBuy(P, String(a.item || '')); break;
-    case 'bossmove': { const mv0 = L.BOSS_MOVES[String(a.card || '')]; if (a.ok && mv0 && mv0.cost && P.id !== S.me) setAmmo(P, ammoOf(P) - mv0.cost * .2); bossMove(P, String(a.card || ''), !!a.ok); break; }
+    case 'bossmove': { const mv0 = L.BOSS_MOVES[String(a.card || '')]; if (a.ok && mv0 && mv0.cost && P.id !== S.me) setAmmo(P, ammoOf(P) - mv0.cost * .2); bossMove(P, String(a.card || ''), !!a.ok, a.n | 0, a.st | 0); break; }
     case 'pts': S.score += Math.max(0, Math.min(20, a.n | 0)); break;
     case 'qa': P.qn = (P.qn | 0) + 1; S.goals.answered++;
       if (a.ok) { P.qc = (P.qc | 0) + 1; S.goals.correct++; P.wrongRun = 0; P.streak = (P.streak | 0) + 1; if (P.id !== S.me) setAmmo(P, ammoOf(P) + 1 / S.cfg.meterTarget); }
@@ -1809,8 +1876,8 @@ function sendStart(rejoin, only) { // leader
   let msg;
   if (rejoin && S.round) msg = Object.assign({}, S.round.msg, { rejoin: true, to: only });
   else {
-    const roster = S.pendingRoster.map(function (m) { return { id: m.id, name: m.name, studio: L.studioKey(m.studioId), lvl: m.lvl || 1, tier: m.tier || 1, stats: m.stats || {}, perks: m.perks || {}, picks: m.picks || [], wg: L.clampWager(m.id === S.me ? S.stake : m.wg, m.lvl || 1, 1e9) }; });
-    msg = { id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), seed: (Math.random() * 2e9) | 0 || 1, resume: (S.nf.progress && S.nf.progress.cleared) | 0, roster: roster, roundSec: NET.roundSec, diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
+    const roster = S.pendingRoster.map(function (m) { return { id: m.id, name: m.name, studio: L.studioKey(m.studioId), lvl: m.lvl || 1, tier: m.tier || 1, stats: m.stats || {}, perks: m.perks || {}, branch: m.branch || '', picks: m.picks || [], wg: L.clampWager(m.id === S.me ? S.stake : m.wg, m.lvl || 1, 1e9) }; });
+    msg = { id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), seed: (Math.random() * 2e9) | 0 || 1, resume: (S.nf.progress && S.nf.progress.cleared) | 0, roster: roster, roundSec: NET.roundSec, diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, ls: S.cfg.linkSec, bs: S.cfg.bossLinkSec, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
   }
   if (!NET.team) return;
   NET.team.send('start', msg, true); setTimeout(function () { NET.team && NET.team.send('start', msg, true); }, 500); setTimeout(function () { NET.team && NET.team.send('start', msg, true); }, 1300);
@@ -1822,7 +1889,7 @@ function onStart(msg) {
   if (S.round && S.round.id === msg.id && !msg.rejoin) return;
   S.round = { id: msg.id, msg: msg, roster: {} }; msg.roster.forEach(function (r) { S.round.roster[r.id] = r; });
   NET.roundId = msg.id; NET.lastSnapAt = performance.now();
-  S.cfg = Object.assign({}, S.cfg, { diff: msg.diff || S.cfg.diff, team: Math.max(1, Math.min(4, msg.roster.length)), meterTarget: msg.meter || S.cfg.meterTarget, shop: msg.shop !== false });
+  S.cfg = Object.assign({}, S.cfg, { diff: msg.diff || S.cfg.diff, team: Math.max(1, Math.min(4, msg.roster.length)), meterTarget: msg.meter || S.cfg.meterTarget, shop: msg.shop !== false, linkSec: msg.ls || S.cfg.linkSec || 60, bossLinkSec: msg.bs || S.cfg.bossLinkSec || 30 });
   S.isLeader = msg.leader === S.me;
   if (!inRoster) { S.players = {}; S.order = []; setMode('lobby'); renderLobby(); return; }
   beginRound(msg);
@@ -1865,7 +1932,7 @@ function livePlayers() { return playerList().filter(isAlive); }
 function mkPlayer(id, info) {
   info = info || {}; const st = L.studioKey(info.studio);
   return { id: id, name: info.name || 'Evo', studio: st, color: L.STUDIO_COLORS[st], lvl: info.lvl || 1, tier: info.tier || 1, stats: info.stats || {}, picks: info.picks || [],
-    perks: info.perks || {}, am: 0, dome: null, fam: null, wrongRun: 0, npc: !!info.npc, ai: info.npc ? { t: 0, sp: 4 + Math.random() * 3, reload: 0, side: Math.random() < .5 ? 1 : -1, bossAt: 0 } : null,
+    perks: info.perks || {}, branch: String(info.branch || '').toUpperCase(), superE: 0, bonusN: 0, am: 0, dome: null, fam: null, wrongRun: 0, npc: !!info.npc, ai: info.npc ? { t: 0, sp: 4 + Math.random() * 3, reload: 0, side: Math.random() < .5 ? 1 : -1, bossAt: 0 } : null,
     x: 0, y: 0, r: 13, vit: 100, maxVit: 100, vx: 0, vy: 0, face: 0, dash: 0, dashCd: 0, inv: 0, hit: 0, shotCd: 0, charge: 0, hurtCd: 0, dvx: 0, dvy: 0,
     eq: null, boost: {}, novaCd: 0, xc: 0, orbs: 0, kills: 0, down: false, away: false, protect: 0, bvit: 100, lastSeen: performance.now(), tx: 0, ty: 0 };
 }
@@ -2111,7 +2178,7 @@ function surge() { // v0.6: the studio's SPECIAL move (one charge = a fifth of t
   if (!S.quiz.spend(1)) { toast('No charge — LINK (Q) to reload'); SFX.play('empty'); return; }
   p.charge = S.quiz.charge; p.spCd = 1.2; renderHud();
   const a = { k: 'surge' }; if (p.studio === 'innov8') Object.assign(a, blinkLocal(p));
-  netAct(a);
+  netAct(a); showCutin(p, kitOf(p).special.name, true);
 }
 function doSurge(P) { // leader: SURGE ring around the player's reported position
   if (!P || P.down) return;
@@ -2298,7 +2365,7 @@ S.mirror = function () { const p = S.p; if (p) { S.xc = p.xc; S.orbCount = p.orb
 // ══════════ BOSS: turn-based Elite (prototype cards/values). Squad version: everyone picks a move + answers, then the Elite hits every Evo. ══════════
 const bossState = { hp: 60, max: 60, turn: 'players', intent: null, round: 0, phase: 1, log: '', acted: [], guard: {}, dl: 40, wait: 0, acts: {}, rev: 0 };
 const ELITE = { pulse: { name: 'PULSE', hits: [14] }, barrage: { name: 'BARRAGE', hits: [7, 7] }, cross: { name: 'CROSS', hits: [20] } };
-function BOSS_SEC() { return L.bossTurnSec(S.cfg && S.cfg.diff); }
+function BOSS_SEC() { return ((S.cfg && S.cfg.bossLinkSec) || 30) + 15; } // boss LINK time + 15 s to pick a move
 function pickIntent() { const seq = bossState.phase === 1 ? ['pulse', 'barrage'] : ['pulse', 'barrage', 'cross']; bossState.intent = seq[bossState.round % seq.length]; bossState.round++; }
 function bossTouch() { bossState.rev++; }
 function enterBoss() { // leader
@@ -2320,34 +2387,54 @@ function bossTick(dt) { // leader
   } else if (b.turn === 'resolving') { b.wait -= dt; if (b.wait <= 0) { if (b.hp <= 0) { if (!b.dieT) { b.dieT = TEST ? .01 : 3.2; emit({ k: 'bdie' }); b.log = 'THE ELITE IS BREAKING APART!'; bossTouch(); } else { b.dieT -= dt; if (b.dieT <= 0) { b.dieT = 0; bossWin(); } } } else bossStrike(); } }
   else if (b.turn === 'striking') { b.wait -= dt; if (b.wait <= 0 && !S.ended) { b.turn = 'players'; b.acts = {}; b.acted = []; b.dl = BOSS_SEC(); pickIntent(); bossTouch(); } }
 }
-function bossMove(P, card, correct) { // leader: one squad member's chosen move + whether their LINK answer was right
-  const b = bossState; if (b.turn !== 'players' || !isAlive(P) || b.acts[P.id] || !L.BOSS_MOVES[card]) return;
-  b.acts[P.id] = { card: card, correct: !!correct }; b.acted = Object.keys(b.acts); bossTouch();
+function bossMove(P, card, correct, n, st) { // leader: a squad member's chosen move + how their boss LINK went (n correct, st power streaks)
+  const b = bossState; if (b.turn !== 'players' || !isAlive(P) || b.acts[P.id] || !(L.BOSS_MOVES[card] || card === 'super')) return;
+  n = Math.max(0, Math.min(40, n == null ? (correct ? 1 : 0) : n | 0)); st = Math.max(0, Math.min(13, st | 0, Math.floor(n / 3)));
+  if (card === 'super') { if ((P.superE | 0) >= L.SUPER_COST) P.superE -= L.SUPER_COST; else card = 'strike'; }
+  P.superE = Math.min(9, (P.superE | 0) + st); n += P.bonusN | 0; P.bonusN = 0;
+  b.acts[P.id] = { card: card, correct: !!correct, n: n, st: st }; b.acted = Object.keys(b.acts); bossTouch();
 }
 function bossResolve() { // leader
-  const b = bossState, lines = [], anim = []; let dmg = 0;
+  const b = bossState, lines = [], anim = []; let dmg = 0; const armor = b.armorNext || 1; b.armorNext = 0;
   bossAlive().forEach(function (P) {
     const a = b.acts[P.id]; if (!a) { lines.push(P.name + ' passes.'); return; }
-    const mv = L.BOSS_MOVES[a.card];
-    if (!a.correct) { lines.push(P.name + ': learning missed — ' + mv.name + ' fails.'); anim.push([P.id, a.card, 'fail', 0]); return; }
-    if (mv.kind === 'defense') { b.guard[P.id] = true; lines.push(P.name + ': guard up.'); anim.push([P.id, 'guard', 'guard', 0]); return; }
-    const out = L.resolveAttack({ move: mv, quizCorrect: true, rng: S.rng, powerBonus: psx(P, 'power'), luck: psx(P, 'luck') });
-    if (out.result === 'miss') { lines.push(P.name + ': ' + mv.name + ' MISSES.'); anim.push([P.id, a.card, 'miss', 0]); return; }
-    dmg += out.damage; b.hp -= out.damage; S.score += out.damage * 2; anim.push([P.id, a.card, out.result, out.damage]);
-    lines.push(P.name + ': ' + (out.result === 'crit' ? 'CRITICAL ' : out.result === 'block' ? 'blocked ' : '') + out.damage + ' dmg');
+    const sup = a.card === 'super', sm = sup ? L.superFor(P.studio, P.branch, P.lvl) : null, mv = sup ? { id: 'super', name: sm.name, kind: 'attack', power: sm.power, miss: .05 } : L.BOSS_MOVES[a.card], mult = L.bossCharge(a.n, a.st);
+    if (!a.correct) { lines.push(P.name + ': learning missed — ' + mv.name + ' fails.'); anim.push([P.id, sup ? 'super' : a.card, 'fail', 0, sup ? sm.name : '']); return; }
+    if (mv.kind === 'defense') { b.guard[P.id] = L.guardMit(a.n); lines.push(P.name + ': guard up (' + Math.round(b.guard[P.id] * 100) + '%).'); anim.push([P.id, 'guard', 'guard', 0]); return; }
+    const out = L.resolveAttack({ move: mv, quizCorrect: true, rng: S.rng, powerBonus: psx(P, 'power'), luck: psx(P, 'luck') + (sm && sm.fx === 'crit' ? .1 : 0), bossBlock: sm && (sm.fx === 'noblock' || sm.fx === 'pierce') ? 0 : undefined });
+    if (out.result === 'miss') { lines.push(P.name + ': ' + mv.name + ' MISSES.'); anim.push([P.id, sup ? 'super' : a.card, 'miss', 0, sup ? sm.name : '']); return; }
+    const scale = sm && sm.fx === 'scale' ? Math.min(2, 1 + (S.goals ? S.goals.correct : 0) / 40) : 1, d = Math.max(1, Math.round(out.damage * mult * armor * scale));
+    dmg += d; b.hp -= d; S.score += d * 2; anim.push([P.id, sup ? 'super' : a.card, out.result, d, sup ? sm.name : '']);
+    lines.push(P.name + ': ' + (sup ? '⚡' + sm.name.toUpperCase() + ' ' : '') + (out.result === 'crit' ? 'CRITICAL ' : out.result === 'block' ? 'blocked ' : '') + d + ' dmg (×' + mult.toFixed(2) + ')');
+    if (sup) { // super-move effects
+      if (sm.fx === 'armor') b.armorNext = 1.25;
+      else if (sm.fx === 'squadguard') b.sguard = .5;
+      else if (sm.fx === 'stun' && S.rng() < .5) b.stun = P.name;
+      else if (sm.fx === 'cancel' && S.rng() < .6) b.stun = P.name;
+      else if (sm.fx === 'charge') playerList().forEach(function (Q) { if (Q !== P) Q.bonusN = 3; });
+      else if (sm.fx === 'heal') bossAlive().forEach(function (Q) { Q.bvit = Math.min(Q.maxVit, Q.bvit + Q.maxVit * .25); });
+      else if (sm.fx === 'dodge') b.dodgeUp = .25;
+      else if (sm.fx === 'weaken') b.weak = .6;
+    }
   });
   if (anim.length) emit({ k: 'bA', a: anim });
-  b.log = lines.join(' · '); if (b.hp <= b.max / 2 && b.phase === 1 && b.hp > 0) { b.phase = 2; b.log += ' · The Elite shifts into PHASE 2!'; emit({ k: 'bphase', d: .15 + anim.length * .95 }); }
-  b.turn = 'resolving'; b.wait = TEST ? 1.3 : .5 + anim.length * .95 + (b.phase === 2 && b.log.indexOf('PHASE 2') >= 0 ? 1.2 : 0); bossTouch();
+  b.log = lines.join(' · '); if (b.hp <= b.max / 2 && b.phase === 1 && b.hp > 0) { b.phase = 2; b.log += ' · The Elite shifts into PHASE 2!'; emit({ k: 'bphase', d: .15 + anim.length * .95 + anim.filter(function (x) { return x[1] === 'super'; }).length * 2.5 }); }
+  b.turn = 'resolving'; b.wait = TEST ? 1.3 : .5 + anim.length * .95 + anim.filter(function (x) { return x[1] === 'super'; }).length * 2.5 + (b.phase === 2 && b.log.indexOf('PHASE 2') >= 0 ? 1.2 : 0); bossTouch();
 }
 function bossStrike() { // leader: the Elite's move hits every Evo, each with its own defence
   const b = bossState, mv = ELITE[b.intent], lines = ['ELITE uses ' + mv.name + '!'], anim = [], DF = L.DIFFS[S.cfg.diff] || L.DIFFS.ranger;
+  if (b.stun) { // a super move stunned / hijacked the Elite: it skips this attack
+    b.log = 'THE ELITE IS ' + (b.stun ? 'STUNNED' : '') + ' — ' + b.stun + '\'s super stopped its ' + mv.name + '!'; emit({ k: 'bE', mv: 'stun', a: [] }); b.stun = null; b.guard = {}; b.sguard = 0; b.dodgeUp = 0; b.weak = 0;
+    b.turn = 'striking'; b.wait = TEST ? 1.1 : 1.6; bossTouch(); return;
+  }
+  const sg = b.sguard || 0, du = b.dodgeUp || 0, wk = b.weak || 1; b.sguard = 0; b.dodgeUp = 0; b.weak = 0;
   bossAlive().forEach(function (P) {
     let out = P.name + ' '; const hits = [];
     mv.hits.forEach(function (raw) {
       if (P.bvit <= 0) return;
       if (P.eq.aegisHits > 0 && aegisAbsorb(P)) { out += '[absorbed] '; hits.push(['absorb', 0]); return; }
-      const r = L.resolveElite({ raw: raw * DF.bossHit, rng: S.rng, guarded: !!b.guard[P.id], guardStat: psx(P, 'guard'), mitigate: L.BOSS_MOVES.guard.mitigate, dodge: DF.dodge + psx(P, 'luck') * .5, crit: b.phase === 2 ? .15 : .08 });
+      const gm = b.guard[P.id] === true ? L.BOSS_MOVES.guard.mitigate : b.guard[P.id];
+      const r = L.resolveElite({ raw: raw * DF.bossHit * wk * (1 - sg), rng: S.rng, guarded: !!b.guard[P.id], guardStat: psx(P, 'guard'), mitigate: gm, dodge: DF.dodge + psx(P, 'luck') * .5 + du, crit: b.phase === 2 ? .15 : .08 });
       if (r.result === 'dodge') { out += '[dodged] '; hits.push(['dodge', 0]); return; }
       P.bvit -= r.damage; out += (r.result === 'crit' ? 'CRIT ' : '') + '-' + r.damage + ' '; hits.push([r.result, r.damage]);
     });
@@ -2386,17 +2473,23 @@ function renderBoss() {
   const pl = playerList();
   $('queue').innerHTML = pl.map(function (P) { const done = b.acted.indexOf(P.id) >= 0; return '<div class="qt mono ' + (b.turn === 'players' && !done && !P.down ? 'act' : '') + '" style="' + (P.down ? 'opacity:.35;' : '') + 'border-color:' + P.color + '">' + escapeHtml(P.name.slice(0, 10).toUpperCase()) + (P.down ? ' ✕' : done ? ' ✓' : '') + ' ' + Math.max(0, Math.round(P.bvit)) + '</div>'; }).join('') + '<div class="qt mono ' + (b.turn !== 'players' ? 'act' : '') + '">ELITE</div>' + (b.turn === 'players' ? '<div class="qt mono">' + Math.ceil(b.dl) + 's</div>' : '');
   const cards = $('cards'); cards.innerHTML = '';
-  [['strike', '1', 'Quick attack. Power 8. Reliable.'], ['surge', '2', 'Heavy attack. Power 16. Costs 2 charge, can miss more.'], ['guard', '3', 'Brace: cut the next Archive attack by 60%.']].forEach(function (c2) {
+  const bl = (S.cfg.bossLinkSec || 30) + ' s BOSS LINK';
+  [['strike', '1', 'Quick attack. Power 8. Reliable.'], ['surge', '2', 'Heavy attack. Power 16. Costs 2 charge, can miss more.'], ['guard', '3', 'Brace: cut the next Elite attack (more answers = stronger guard).']].forEach(function (c2) {
     const mv = L.BOSS_MOVES[c2[0]], d = document.createElement('div');
     d.className = 'card' + ((!myTurn || S.bossBusy || mv.cost > S.quiz.charge) ? ' off' : '');
-    d.innerHTML = '<div class="t mono">' + mv.name.toUpperCase() + ' [' + c2[1] + ']</div><div class="d">' + c2[2] + '</div><div class="c mono">' + (mv.cost ? 'COST ' + mv.cost + ' CHARGE · ' : '') + 'QUIZ FIRST</div>';
+    d.innerHTML = '<div class="t mono">' + mv.name.toUpperCase() + ' [' + c2[1] + ']</div><div class="d">' + c2[2] + '</div><div class="c mono">' + (mv.cost ? 'COST ' + mv.cost + ' CHARGE · ' : '') + bl + '</div>';
     d.onclick = function () { chooseCard(c2[0]); }; cards.appendChild(d);
   });
+  { const sm = L.superFor(me.studio, me.branch, me.lvl), se = me.superE | 0, d = document.createElement('div');
+    d.className = 'card super' + ((!myTurn || S.bossBusy || se < L.SUPER_COST) ? ' off' : '');
+    d.innerHTML = '<div class="t mono">⚡ ' + escapeHtml(sm.name.toUpperCase()) + ' [4]</div><div class="d">' + escapeHtml(sm.desc) + '</div><div class="c mono">SUPER ENERGY ' + Math.min(se, L.SUPER_COST) + '/' + L.SUPER_COST + ' · ' + bl + '</div>';
+    d.onclick = function () { chooseCard('super'); }; cards.appendChild(d); }
   if (acted && b.turn === 'players') { const w = document.createElement('div'); w.className = 'qt mono'; w.style.alignSelf = 'center'; w.textContent = 'MOVE LOCKED IN — WAITING FOR YOUR SQUAD'; cards.appendChild(w); }
   if (me.down) { cards.innerHTML = '<div class="qt mono">YOUR EVO IS DOWN — SPECTATING</div>'; }
 }
 function chooseCard(id) { // any squad member
-  const b = bossState, mv = L.BOSS_MOVES[id], me = S.p; if (!mv || !me || S.mode !== 'boss' || b.turn !== 'players' || S.bossBusy || S.quizOpen || b.acted.indexOf(S.me) >= 0 || me.down) return;
+  const b = bossState, me = S.p, mv = L.BOSS_MOVES[id] || (id === 'super' && me ? { id: 'super', name: L.superFor(me.studio, me.branch, me.lvl).name, cost: 0 } : null); if (!mv || !me || S.mode !== 'boss' || b.turn !== 'players' || S.bossBusy || S.quizOpen || b.acted.indexOf(S.me) >= 0 || me.down) return;
+  if (id === 'super' && (me.superE | 0) < L.SUPER_COST) { toast('SUPER needs ' + L.SUPER_COST + ' super energy — every 3-in-a-row streak in a boss LINK adds 1'); SFX.play('empty'); return; }
   if (mv.cost > S.quiz.charge) return;
   if (linkLocked()) { toast('BREACH — LINK locked for ' + linkLocked() + ' s'); SFX.play('empty'); return; }
   S.bossBusy = true; S.bossLocal = mv.name.toUpperCase() + ' selected — answer the LINK to lock it in.'; $('bossLog').textContent = S.bossLocal;
@@ -2404,7 +2497,7 @@ function chooseCard(id) { // any squad member
     if (res.correct && mv.cost) S.quiz.spend(mv.cost);
     me.charge = S.quiz.charge;
     S.score += res.correct ? 0 : 0; S.bossBusy = false;
-    if (S.isLeader) bossMove(me, id, res.correct); else netAct({ k: 'bossmove', card: id, ok: res.correct ? 1 : 0 });
+    if (S.isLeader) bossMove(me, id, res.correct, res.n | 0, res.st | 0); else netAct({ k: 'bossmove', card: id, ok: res.correct ? 1 : 0, n: res.n | 0, st: res.st | 0 });
     renderBoss();
   });
 }
@@ -2414,14 +2507,27 @@ function chooseCard(id) { // any squad member
 // danger zone, death sequence, GAME OVER voice, boss strike animations, SFX, victory perks, walls that match the map ══════════
 
 // ── Sound: small WebAudio synth (no files). Background music per stage plugs in through MUSIC when Ennis supplies the tracks. ──
+// v0.7: the big moments use clips from the PFLX Sound Library (assets/nexus-frontiers/sfx, copied from the platform library);
+// rapid-fire sounds (weapons, sparks, coins…) stay on the light synth, which is also the fallback while clips load.
+const SFX_CLIPS = {"hit": [["impact_027", "impact_031", "impact_034", "impact_037", "impact_042", "impact_023"], 0.9], "swing": [["impact_025", "impact_043", "impact_049", "impact_040"], 0.8], "miss": [["impact_038"], 0.7], "crit": [["impact_048", "impact_050", "impact_041"], 1.0], "charge": [["impact_026", "impact_033", "impact_030"], 0.8], "zap": [["transition_072"], 0.55], "block": [["blip_046"], 0.9], "riser": [["riser_021"], 0.8], "cutin": [["sting_hit_scifi_suspense_trailer"], 0.9], "gameover": [["powerdown_arcade_game_over"], 0.9], "down": [["powerdown_022"], 0.8], "shatter": [["glitch_001"], 0.6], "roar": [["transition_075"], 0.9], "victory": [["sting_hit_glass_interface_drift"], 0.8], "power": [["blip_002"], 0.6], "coin": [["blip_061"], 0.35], "reload": [["blip_017"], 0.6], "empty": [["blip_003"], 0.5], "low": [["blip_009"], 0.45], "build": [["riser_023"], 0.55], "slam": [["impact_045"], 0.9], "emp": [["glitch_005"], 0.6], "blink": [["glitch_002"], 0.6], "kill": [["impact_029"], 0.35], "wave_in": [["transition_048"], 0.5], "gate": [["transition_059"], 0.6], "breach": [["glitch_008"], 0.8], "streak": [["riser_011"], 0.6]};
 const SFX = (function () {
-  let ac = null, master = null, muted = false; const last = {};
+  let ac = null, master = null, muted = false, loading = false; const last = {}, buf = {};
+  function loadClips() {
+    if (loading || !ac) return; loading = true;
+    Object.keys(SFX_CLIPS).forEach(function (n) { SFX_CLIPS[n][0].forEach(function (id) { if (buf[id] !== undefined) return; buf[id] = null;
+      fetch(ASSET + 'sfx/' + id + '.mp3').then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
+        .then(function (a) { return new Promise(function (res, rej) { ac.decodeAudioData(a, res, rej); }); }).then(function (b) { buf[id] = b; }).catch(function () { buf[id] = false; }); }); });
+  }
+  function clip(n) {
+    const c = SFX_CLIPS[n]; if (!c) return false; const ok = c[0].filter(function (id) { return buf[id]; }); if (!ok.length) return false;
+    const src = ac.createBufferSource(), g = ac.createGain(); src.buffer = buf[ok[Math.floor(Math.random() * ok.length)]]; g.gain.value = c[1] * vk; src.connect(g); g.connect(master); src.start(); return true;
+  }
   function A() {
-    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = .55; master.connect(ac.destination); } catch (e) { return null; } }
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = .55; master.connect(ac.destination); loadClips(); } catch (e) { return null; } }
     if (ac.state === 'suspended') { try { ac.resume(); } catch (e) {} }
     return ac;
   }
-  let vk = 1;
+  let vk = 1; // (declared before the clip loader uses it)
   function tone(f0, f1, dur, type, vol, delay) { vol *= vk;
     const t = ac.currentTime + (delay || 0), o = ac.createOscillator(), g = ac.createGain();
     o.type = type || 'sine'; o.frequency.setValueAtTime(Math.max(20, f0), t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
@@ -2469,13 +2575,16 @@ const SFX = (function () {
     wave_in: function () { tone(150, 150, .18, 'square', .06); tone(150, 150, .18, 'square', .06, .25); },
     down: function () { tone(400, 50, 1.1, 'sawtooth', .18); noise(.9, .12, 900, 80); },
     gameover: function () { tone(110, 55, 2.2, 'sawtooth', .16); tone(165, 82, 2.2, 'triangle', .1); },
+    riser: function () { tone(150, 1800, 1.2, 'sawtooth', .07); noise(1.2, .08, 300, 6000, 0, 1.5); },
+    cutin: function () { tone(80, 40, .8, 'sawtooth', .3); noise(.6, .3, 3000, 200); },
+    streak: function () { [660, 880, 1320].forEach(function (f, i) { tone(f, f, .12, 'square', .06, i * .07); }); },
     portal: function () { tone(110, 220, 1.1, 'sine', .22); tone(330, 495, 1.1, 'triangle', .06); tone(660, 990, .5, 'sine', .03, .3); },
     roar: function () { tone(70, 35, 1.2, 'sawtooth', .3); noise(1.1, .25, 300, 90, 0, .7); tone(140, 60, 1, 'square', .08, .1); },
     charge: function () { tone(120, 900, .7, 'sawtooth', .07); noise(.7, .06, 400, 4000, 0, 2); },
     victory: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, f, .25, 'triangle', .12, i * .13); }); }
   };
   return {
-    play: function (n, gap, vol) { if (muted || !P[n]) return; const now = performance.now(); if (last[n] && now - last[n] < (gap || 45)) return; last[n] = now; if (!A()) return; vk = vol == null ? 1 : Math.max(0, Math.min(1.5, vol)); try { P[n](); } catch (e) {} vk = 1; },
+    play: function (n, gap, vol) { if (muted || (!P[n] && !SFX_CLIPS[n])) return; const now = performance.now(); if (last[n] && now - last[n] < (gap || 45)) return; last[n] = now; if (!A()) return; vk = vol == null ? 1 : Math.max(0, Math.min(1.5, vol)); try { if (!clip(n)) P[n](); } catch (e) {} vk = 1; },
     unlock: function () { A(); }, mute: function (v) { muted = !!v; }
   };
 })();
@@ -2742,7 +2851,11 @@ function bossPos(i, n) { // the squad lines up left of the Elite, clear of the H
   return [{ x: 150, y: 205 }, { x: 335, y: 230 }, { x: 150, y: 335 }, { x: 335, y: 355 }][i % 4]; }
 function onBossAnim(ev) {
   const t0 = bossNow();
-  if (ev.k === 'bA') (ev.a || []).forEach(function (x, i) { BA.list.push({ side: 'p', pid: x[0], mv: x[1], res: x[2], dmg: x[3] | 0, t0: t0 + .15 + i * .95, dur: .95, imp: x[1] === 'surge' ? .55 : .36, done: false }); });
+  if (ev.k === 'bA') { let off = .15; (ev.a || []).forEach(function (x) {
+    const sup = x[1] === 'super';
+    if (sup && x[2] !== 'fail') { const P = S.players[x[0]], at = off; setTimeout(function () { if (S.mode === 'boss') showCutin(P, x[4] || 'SUPER MOVE', false); }, at * 1000); off += 2.5; }
+    BA.list.push({ side: 'p', pid: x[0], mv: sup ? 'surge' : x[1], sup: sup, res: x[2], dmg: x[3] | 0, t0: t0 + off, dur: .95, imp: sup || x[1] === 'surge' ? .55 : .36, done: false }); off += .95; }); }
+  if (ev.k === 'bE' && ev.mv === 'stun') { banner('ELITE STUNNED'); SFX.play('emp'); SFX.play('block'); return; }
   if (ev.k === 'bE') { SFX.play(ev.mv === 'cross' ? 'roar' : 'charge', 10); const hitsT = ev.mv === 'barrage' ? [.75, 1.1] : ev.mv === 'cross' ? [.42] : [.72];
     (ev.a || []).forEach(function (x) { (x[1] || []).forEach(function (h, j) { BA.list.push({ side: 'e', pid: x[0], mv: ev.mv, res: h[0], dmg: h[1] | 0, t0: t0, dur: hitsT[j] + .6, imp: hitsT[j], j: j, down: !!x[2] && j === x[1].length - 1, done: false }); }); }); }
 }
@@ -2768,9 +2881,9 @@ function bossAnimFrame(pl) {
     const u = now - a.t0; if (u < 0 || idx[a.pid] == null) return; const pp = bossPos(idx[a.pid], n), me = out.pl[a.pid], col = (S.players[a.pid] || {}).color || '#7fd8ff';
     if (a.side === 'p') {
       if (a.mv === 'strike' && a.res !== 'fail' && a.res !== 'guard') { const k = u < a.imp ? Math.sin(Math.min(1, u / a.imp) * Math.PI / 2) : Math.max(0, 1 - (u - a.imp) / .4); me.dx += k * (EX - 150 - pp.x) * .75; me.dy += k * (EY + 20 - pp.y) * .5; if (u > a.imp - .12 && !a.sw) { a.sw = 1; SFX.play('swing', 10); } }
-      if (a.mv === 'surge' && a.res !== 'fail') { if (u < .25) me.glow = u / .25; else if (u < a.imp) { me.glow = 1 - (u - .25) / .3; const k = (u - .25) / (a.imp - .25); out.proj.push({ x: pp.x + (EX - pp.x) * k, y: pp.y - 20 + (EY - pp.y + 20) * k, c: col, r: 12 }); if (!a.zp) { a.zp = 1; SFX.play('zap', 10); } } }
+      if (a.mv === 'surge' && a.res !== 'fail') { if (u < .25) me.glow = u / .25; else if (u < a.imp) { me.glow = 1 - (u - .25) / .3; const k = (u - .25) / (a.imp - .25); out.proj.push({ x: pp.x + (EX - pp.x) * k, y: pp.y - 20 + (EY - pp.y + 20) * k, c: col, r: a.sup ? 26 : 12 }); if (!a.zp) { a.zp = 1; SFX.play('zap', 10); } } }
       if (a.res === 'guard' && u < .6) me.glow = 1 - u / .6;
-      if (u >= a.imp && !a.done) { a.done = true; bossImpact(a, a.res === 'fail' || a.res === 'guard' ? pp.x : EX, a.res === 'fail' || a.res === 'guard' ? pp.y + 60 : EY); }
+      if (u >= a.imp && !a.done) { a.done = true; bossImpact(a, a.res === 'fail' || a.res === 'guard' ? pp.x : EX, a.res === 'fail' || a.res === 'guard' ? pp.y + 60 : EY); if (a.sup && a.res !== 'fail' && a.res !== 'miss') { S.bzoom = .14; S.bflash = .8; S.bflashC = '255,255,255'; shake(18); SFX.play('crit', 10); } }
       const v = u - a.imp; if (v >= 0 && v < .5) { // Elite reaction
         if (a.res === 'hit') { out.elite.dx += Math.sin(v * 70) * 7 * (1 - v / .5); out.elite.flash = Math.max(out.elite.flash, 1 - v / .25); }
         if (a.res === 'crit') { out.elite.dx += Math.sin(v * 80) * 16 * (1 - v / .5); out.elite.dy += Math.cos(v * 70) * 6 * (1 - v / .5); out.elite.flash = Math.max(out.elite.flash, (Math.floor(v * 16) % 2) ? 1 : .3); out.elite.red = 1; }
@@ -2838,6 +2951,26 @@ function roomArt(m, i) {
   } catch (e) { m._rc[i] = 'x'; return null; }
 }
 
+// ── Evo card art (assets/exo: 196 cards = 4 lines × 10 levels × branches) and the anime cut-in ──
+function withExo(fn) { if (S.exoMan) return fn(S.exoMan); (S.exoQ = S.exoQ || []).push(fn); if (S.exoLoading) return; S.exoLoading = true;
+  fetch('/assets/exo/manifest.json').then(function (r) { return r.json(); }).then(function (m) { S.exoMan = m; (S.exoQ || []).forEach(function (f) { f(m); }); S.exoQ = []; }).catch(function () {}); }
+function cardArt(P) {
+  const m = S.exoMan; if (!m || !P) return null; const lvl = P.lvl | 0 || 1, br = String(P.branch || (lvl < 2 ? 'BASE' : 'A')).toUpperCase();
+  const all = Object.keys(m.cards || {}).map(function (k) { return m.cards[k]; }).filter(function (c) { return c.studio === P.studio && c.colorway === 'default' && c.form === 'standard'; });
+  const pick = all.filter(function (c) { return c.level === lvl && String(c.build).toUpperCase() === br; })[0] || all.filter(function (c) { return c.level === lvl && String(c.build).toUpperCase()[0] === br[0]; })[0]
+    || all.slice().sort(function (a, b) { return Math.abs(a.level - lvl) - Math.abs(b.level - lvl); })[0];
+  return pick ? '/' + (pick.web || pick.src) : null;
+}
+function showCutin(P, name, short) {
+  const el = $('cutin'); if (!el || !P) return; const k = kitOf(P), url = cardArt(P);
+  el.style.setProperty('--cc', k.color || '#7fd8ff'); $('ciImg').src = url || (iconFor(P) ? iconFor(P).src : ''); $('ciImg').style.display = url || iconFor(P) ? '' : 'none';
+  $('ciWho').textContent = (P.name || 'EVO').toUpperCase() + ' · ' + k.line + (P.branch && P.branch !== 'BASE' ? ' · ' + String(P.branch).toUpperCase() : '');
+  $('ciName').textContent = String(name || '').toUpperCase(); $('ciSub').textContent = short ? '' : (L.superFor(P.studio, P.branch, P.lvl).desc || '');
+  el.className = ''; void el.offsetWidth; el.className = 'on' + (short ? ' short' : '');
+  clearTimeout(showCutin.t); showCutin.t = setTimeout(function () { el.className = ''; }, short ? 1000 : 2500);
+  if (short) { SFX.play('swing', 60); SFX.play('power', 60, .6); }
+  else { SFX.play('riser', 100); setTimeout(function () { SFX.play('cutin', 100); SFX.play('crit', 100, .7); speak(String(name || '').split(':').pop()); }, 420); }
+}
 function portalHum(dd) { portalHum.t = 1; setTimeout(function () { portalHum.t = 0; }, 1250); SFX.play('portal', 1000, Math.max(.12, 1 - dd / 700)); }
 
 
@@ -2868,9 +3001,10 @@ function npcThink(P, dt) {
 }
 function npcBossMove(P, dt) { // the NPC picks a move after a short think and "answers" (~75%)
   P.lastSeen = performance.now(); const b = bossState; if (b.acts[P.id]) return; P.ai.bossAt = (P.ai.bossAt || (2 + Math.random() * 5)) - dt; if (P.ai.bossAt > 0) return; P.ai.bossAt = 0;
-  const low = P.bvit < P.maxVit * .35, card = low && Math.random() < .5 ? 'guard' : ammoOf(P) >= .4 && Math.random() < .4 ? 'surge' : 'strike', ok = Math.random() < .75;
+  const low = P.bvit < P.maxVit * .35, card = (P.superE | 0) >= L.SUPER_COST && Math.random() < .7 ? 'super' : low && Math.random() < .5 ? 'guard' : ammoOf(P) >= .4 && Math.random() < .4 ? 'surge' : 'strike', ok = Math.random() < .8;
+  const n = ok ? 2 + Math.floor(Math.random() * 6) : 0, st = Math.floor(n / 3) * (Math.random() < .6 ? 1 : 0);
   if (ok && card === 'surge') setAmmo(P, ammoOf(P) - .4);
-  bossMove(P, card, ok);
+  bossMove(P, card, ok, n, st);
 }
 
 // ─── src/e_view.js ───
@@ -2886,6 +3020,7 @@ function beginRound(msg) {
   S.rng = L.mulberry32(((msg.seed >>> 0) ^ 0xA5A5A5) >>> 0);
   S.order.forEach(function (id, i) { const r = S.round.roster[id], P = mkPlayer(id, r); buildEq(P); const sp = spawnPoint(k, i, n); P.x = sp.x; P.y = sp.y; P.tx = P.x; P.ty = P.y; S.players[id] = P; });
   S.p = S.players[S.me]; S.mirror();
+  withExo(function () { playerList().forEach(function (P) { const u = cardArt(P); if (u) img(u); }); });
   initEconomy(msg, k);
   const startAmmo = (L.DIFFS[S.cfg.diff] || L.DIFFS.ranger).startAmmo;
   S.meter = new L.Meter(S.cfg.meterTarget); S.meter.setFill(Math.max(startAmmo, phas(S.p, 'capacitor') ? pfx(S.p, 'capacitor').v : 0));
@@ -2906,14 +3041,14 @@ function beginRound(msg) {
 function beginWorld(n, opt) {
   opt = opt || {}; S.role = S.role === 'host' ? 'host' : (S.coop ? S.role : 'solo'); S.isLeader = true;
   const seed = (TEST && qs.get('seed')) ? (qs.get('seed') | 0) : ((Math.random() * 1e9) | 0 || 1);
-  const me = { id: S.me, name: S.player.brand, studio: L.studioKey(S.player.studioId), lvl: evoLevel(), tier: iconTier(), stats: (S.exo && S.exo.stats) || {}, perks: (S.nf && S.nf.perks) || {}, picks: L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()), wg: S.stake | 0 };
+  const me = { id: S.me, name: S.player.brand, studio: L.studioKey(S.player.studioId), lvl: evoLevel(), tier: iconTier(), stats: (S.exo && S.exo.stats) || {}, perks: (S.nf && S.nf.perks) || {}, branch: (S.exo && S.exo.branch) || '', picks: L.validateLoadout(S.ld.picks, S.nf.owned, evoLevel()), wg: S.stake | 0 };
   const roster = [me];
   if (S.practice && S.practice.npc) { // Danger Room squad: one NPC Evo from each of the other three studios
     const tag = { gentech: 'IRONWRIGHT', mindforge: 'RESONANT', emagination: 'MYTHWEAVER', innov8: 'NEONBORN' };
-    L.STUDIO_IDS.filter(function (st) { return st !== me.studio; }).slice(0, 3).forEach(function (st, i) { roster.push({ id: 'npc' + i + '_' + st, name: tag[st], studio: st, lvl: me.lvl, tier: me.tier, stats: { power: 2, guard: 2, speed: 2, luck: 2 }, perks: {}, picks: [], wg: 0, npc: true }); });
+    L.STUDIO_IDS.filter(function (st) { return st !== me.studio; }).slice(0, 3).forEach(function (st, i) { roster.push({ id: 'npc' + i + '_' + st, name: tag[st], studio: st, lvl: me.lvl, tier: me.tier, branch: me.lvl >= 5 ? ['A1', 'B1', 'C1'][i] : me.lvl >= 2 ? ['A', 'B', 'C'][i] : 'BASE', stats: { power: 2, guard: 2, speed: 2, luck: 2 }, perks: {}, picks: [], wg: 0, npc: true }); });
     S.cfg.team = 4;
   }
-  const msg = { id: 'solo' + Date.now(), seed: seed, resume: Math.max(0, Math.min(6, opt.resume | 0)), roster: roster, roundSec: opt.roundSec || (S.coop ? S.coop.rules.roundSec : 0), diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
+  const msg = { id: 'solo' + Date.now(), seed: seed, resume: Math.max(0, Math.min(6, opt.resume | 0)), roster: roster, roundSec: opt.roundSec || (S.coop ? S.coop.rules.roundSec : 0), diff: S.cfg.diff, meter: S.cfg.meterTarget, shop: S.cfg.shop, ls: S.cfg.linkSec, bs: S.cfg.bossLinkSec, leader: S.me, cap: L.bankCapFrom(S.config), goal: goalFromConfig() };
   S.round = { id: msg.id, msg: msg, roster: { [S.me]: me } };
   beginRound(msg);
 }
@@ -2933,7 +3068,7 @@ function encodeSnap() {
     ck: S.clock ? [r1(S.clock.left), S.clock.limit, S.clock.running ? 1 : 0] : 0, sc: S.score, sec: S.secCleared, bd: S.bossDone ? 1 : 0, ai: S.areaIdx, ob: [S.obj.t, S.obj.s],
     g: S.map.gateOpen.map(function (x) { return x ? 1 : 0; }).join(''), po: S.portal ? [r0(S.portal.x), r0(S.portal.y)] : 0, xd: S.xcDropped, bk: S.bank.state(), gl: S.goals.state(), rv: S.revives | 0, evn: S.evNames || [],
     ky: S.keyItems.map(function (k) { return [k.id, r0(k.x), r0(k.y), r1(k.life)]; }), rg: S.rg ? [r1(S.rg.left), Object.keys(S.rg.ready)] : 0,
-    P: pl.map(function (P) { return { i: P.id, x: r0(P.x), y: r0(P.y), v: r0(P.vit), m: P.maxVit, a: Math.round(P.face * 100) / 100, f: (P.inv > 0 ? 1 : 0) | (P.hit > 0 ? 2 : 0) | (P.down ? 4 : 0) | (P.away ? 8 : 0) | (P.protect > 0 ? 16 : 0), xc: P.xc, o: P.orbs, k: P.kills, bv: r0(P.bvit), tp: P.teleport | 0, bo: P.boost, am: Math.round(ammoOf(P) * 1000) / 1000, dm: P.dome ? Math.max(0, r0(P.dome.hp)) : 0, fm: P.fam ? [P.fam.n, r1(P.fam.t)] : 0, eq: P.eq ? { l: P.eq.list, s: P.eq.spent, a: P.eq.abilityLeft, h: P.eq.aegisHits } : 0 }; }),
+    P: pl.map(function (P) { return { i: P.id, x: r0(P.x), y: r0(P.y), v: r0(P.vit), m: P.maxVit, a: Math.round(P.face * 100) / 100, f: (P.inv > 0 ? 1 : 0) | (P.hit > 0 ? 2 : 0) | (P.down ? 4 : 0) | (P.away ? 8 : 0) | (P.protect > 0 ? 16 : 0), xc: P.xc, o: P.orbs, k: P.kills, bv: r0(P.bvit), tp: P.teleport | 0, bo: P.boost, am: Math.round(ammoOf(P) * 1000) / 1000, dm: P.dome ? Math.max(0, r0(P.dome.hp)) : 0, se: P.superE | 0, fm: P.fam ? [P.fam.n, r1(P.fam.t)] : 0, eq: P.eq ? { l: P.eq.list, s: P.eq.spent, a: P.eq.abilityLeft, h: P.eq.aegisHits } : 0 }; }),
     E: S.enemies.map(function (e) { const x = [e.id, ETYPES.indexOf(e.type), r0(e.x), r0(e.y), r1(e.hp), e.max, ESTATES.indexOf(e.state), (e.spawnT > 0 ? 1 : 0) | (e.stun > 0 ? 2 : 0) | (e.slowF ? 4 : 0), Math.round(e.tx * 100) / 100, Math.round(e.ty * 100) / 100]; if (e.petals) x.push(e.petals.map(function (q) { return [Math.round(q.a * 100) / 100, r1(q.hp), q.max]; })); return x; }),
     Sh: S.shots.map(function (s) { return [r0(s.x), r0(s.y), r0(s.vx), r0(s.vy), s.rad || 0, s.st | 0]; }),
     Cn: S.cons.map(function (c) { return [c.id, c.k === 'hard' ? 0 : 1, r0(c.x), r0(c.y), r0(c.hp), c.max, c.r]; }), EB: S.eshots.map(function (b) { return [r0(b.x), r0(b.y), r0(b.vx), r0(b.vy)]; }), Dr: S.drones.map(function (d) { return [d.id, r0(d.x), r0(d.y), r0(d.hp), d.max]; }),
@@ -2960,7 +3095,7 @@ function onSnap(sn) {
   const now = performance.now();
   sn.P.forEach(function (d) {
     let P = S.players[d.i]; if (!P) { const r = S.round.roster[d.i]; if (!r) return; P = mkPlayer(d.i, r); P.eq = { inv: [], list: [], spent: {}, bought: [], aegisHits: 0, abilityLeft: 0 }; S.players[d.i] = P; S.order = Object.keys(S.players).sort(); }
-    const prevHp = P.vit; P.vit = d.v; P.maxVit = d.m; P.down = !!(d.f & 4); P.away = !!(d.f & 8); P.protect = d.f & 16 ? 1 : 0; P.xc = d.xc; P.orbs = d.o; P.kills = d.k; P.bvit = d.bv; P.boost = d.bo || {}; P.lastSeen = now; P.am = d.am || 0; P.dome = d.dm ? { hp: d.dm, max: 70 } : null; P.fam = d.fm ? { n: d.fm[0], t: d.fm[1], cd: 0 } : null;
+    const prevHp = P.vit; P.vit = d.v; P.maxVit = d.m; P.down = !!(d.f & 4); P.away = !!(d.f & 8); P.protect = d.f & 16 ? 1 : 0; P.xc = d.xc; P.orbs = d.o; P.kills = d.k; P.bvit = d.bv; P.boost = d.bo || {}; P.lastSeen = now; P.am = d.am || 0; P.superE = d.se | 0; P.dome = d.dm ? { hp: d.dm, max: 70 } : null; P.fam = d.fm ? { n: d.fm[0], t: d.fm[1], cd: 0 } : null;
     if (P.id === S.me && S.meter && !S.quizOpen && d.am != null) { S.meter.setFill(d.am); S.quiz.setMeter(S.meter); }
     if (d.f & 2 && !(P.hit > 0)) P.hit = .2; if (d.f & 1) P.inv = Math.max(P.inv, .1);
     if (d.eq) { P.eq = P.eq || { inv: [], spent: {} }; P.eq.list = d.eq.l.slice(); P.eq.spent = d.eq.s; P.eq.abilityLeft = d.eq.a; P.eq.aegisHits = d.eq.h; }
@@ -3657,7 +3792,7 @@ if (TEST) window.__nf = {
   fillAmmo: function (f) { S.meter.setFill(f); S.quiz.setMeter(S.meter); renderHud(); },
   eq: function () { return S.p && S.p.eq; }, meter: function () { return S.meter; }, sprint: function () { return S.sprint; }, setPicks: function (l) { S.ld.picks = l; }, openLoadout: openLoadout, openShop: openShop, shopBuy: shopBuy, leaveSprint: leaveSprint,
   evoDown: function () { return evoDown(S.p); }, hurt: function (d, src) { return hurtPlayer(S.p, d, src); }, saveProgress: saveProgress, roundOver: roundOver, sprintTick: function (sec) { if (S.sprint) { S.sprint.tick(sec); renderSprintHud(); if (S.sprint.over && !answered) endSprint(); } },
-  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossWin: bossWin, endRound: finalizeRound, endRoundAnim: endRound, special: surge, dash: dash, breach: breach, ammoOf: ammoOf, clipOf: clipOf, shotsLeft: shotsLeft, maintenance: maintenance, consNow: function () { return S.cons; }, BA: BA, awardPerks: awardPerks, startBoss: startBoss, enterBoss: enterBoss,
+  chooseCard: chooseCard, pickOption: pickOption, openQuiz: openQuiz, curAttempt: function () { return curAttempt; }, begin: beginWorld, bossWin: bossWin, endRound: finalizeRound, endRoundAnim: endRound, special: surge, dash: dash, lockIn: leaveSprint, showCutin: function (n) { showCutin(S.p, n || 'TEST SUPER', false); }, cardArt: function () { return cardArt(S.p); }, withExo: withExo, breach: breach, ammoOf: ammoOf, clipOf: clipOf, shotsLeft: shotsLeft, maintenance: maintenance, consNow: function () { return S.cons; }, BA: BA, awardPerks: awardPerks, startBoss: startBoss, enterBoss: enterBoss,
   hurtId: function (id, d) { const P = S.players[id]; if (P) { P.hurtCd = 0; P.inv = 0; P.protect = 0; hurtPlayer(P, d, 't'); } }, strip: function (id) { const P = S.players[id]; if (P && P.eq) { P.eq.abilityLeft = 0; P.eq.list = []; P.eq.inv = []; P.eq.aq = []; P.eq.aegisHits = 0; } }, addXc: function (id, n) { const P = S.players[id]; if (P) P.xc += n; S.mirror(); }, addBank: function (n) { S.bank.grant(n); }, startRegroup: startRegroup, doGive: doGive, aegisAbsorb: aegisAbsorb, settleRound: settleRound, renderEndExtra: renderEndExtra, refreshEvents: refreshEvents,
   playerList: playerList, doBuy: doBuy, handleAct: handleAct, netAct: netAct, members: members, lobbyCheck: lobbyCheck, leaderId: leaderId, backToLobby: backToLobby, stepSim: stepSim,
   snapNow: function () { return encodeSnap && encodeSnap(); }

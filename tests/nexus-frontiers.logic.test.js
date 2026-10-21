@@ -327,6 +327,17 @@ t('v0.6 art walls: obstacles follow the painted sections, every section stays do
   }
 });
 
+t('v0.7 super moves: one per branch (12), Companion Strike at level 1, II at level 5+, power grows with level', () => {
+  const names = new Set(); for (const st of L.STUDIO_IDS) for (const b of ['A', 'B', 'C']) { const m = L.superFor(st, b, 3); assert.ok(m.name && m.desc && m.power > 0 && m.fx); names.add(m.name); }
+  assert.strictEqual(names.size, 12); assert.strictEqual(L.superFor('innov8', 'BASE', 1).name, 'Companion Strike'); assert.strictEqual(L.superFor('innov8', '', 1).name, 'Companion Strike');
+  assert.strictEqual(L.superFor('innov8', 'A', 3).name, 'Riftfang: Void Lance'); assert.strictEqual(L.superFor('innov8', 'B2', 6).name, 'Ghostwire: System Hijack II'); assert.strictEqual(L.superFor('gentech', 'H', 9).name, 'Forgeclaw: Molten Rend II');
+  assert.ok(L.superFor('mindforge', 'A1', 7).power > L.superFor('mindforge', 'A', 4).power); assert.strictEqual(L.superFor('innov8', '', 3).name, 'Riftfang: Void Lance', 'no branch on record at level 2+ uses branch A');
+});
+t('v0.7 boss LINK charge: every correct answer adds power, each 3-in-a-row streak more, capped ×3; guard grows with answers', () => {
+  assert.strictEqual(L.bossCharge(0, 0), 1); assert.ok(Math.abs(L.bossCharge(3, 1) - 1.61) < 1e-9); assert.strictEqual(L.bossCharge(40, 13), 3); assert.strictEqual(L.SUPER_COST, 3);
+  assert.strictEqual(L.guardMit(0), .5); assert.strictEqual(L.guardMit(100), .85);
+});
+
 // ── Co-op (Oct 2026) ──
 t('sentry wave brings Scout escorts: never a lone Sentry, escorts skip the 7:1 bag, clear needs all of them', () => {
   const e = new L.Encounter({ waves: 3, size: 2, interceptors: true, sentryAfter: [3], escort: 4 }, L.mulberry32(9));

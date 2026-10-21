@@ -5172,6 +5172,8 @@ function studioEditGame(id) {
     set('stNfSolo', (g.config && g.config.nfAllowSolo) ? 'on' : 'off');
     set('stNfStudio', (g.config && g.config.nfStudioRule === 'relaxed') ? 'relaxed' : 'strict');
     set('stNfMeter', (g.config && g.config.nfMeter) || 0);
+    set('stNfLinkSec', (g.config && g.config.nfLinkSec) || 60);
+    set('stNfBossSec', (g.config && g.config.nfBossLinkSec) || 30);
     set('stNfShop', (g.config && g.config.nfShop === false) ? 'off' : 'on');
     set('stNfGoalC', (g.config && g.config.nfGoalCorrect != null) ? g.config.nfGoalCorrect : 20);
     set('stNfGoalK', (g.config && g.config.nfGoalKeys != null) ? g.config.nfGoalKeys : 3);
@@ -5210,6 +5212,8 @@ function studioReadConfig() {
     nfStudioRule: studioSelTemplate === 'nexus-frontiers' ? (val('stNfStudio', 'strict') === 'relaxed' ? 'relaxed' : 'strict') : undefined,
     nfMeter: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(12, parseInt(val('stNfMeter', '0'), 10) || 0)) : undefined,
     nfShop: studioSelTemplate === 'nexus-frontiers' ? val('stNfShop', 'on') !== 'off' : undefined,
+    nfLinkSec: studioSelTemplate === 'nexus-frontiers' ? Math.max(20, Math.min(180, parseInt(val('stNfLinkSec', '60'), 10) || 60)) : undefined,
+    nfBossLinkSec: studioSelTemplate === 'nexus-frontiers' ? Math.max(10, Math.min(90, parseInt(val('stNfBossSec', '30'), 10) || 30)) : undefined,
     nfGoalCorrect: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(60, parseInt(val('stNfGoalC', '20'), 10) || 0)) : undefined,
     nfGoalKeys: studioSelTemplate === 'nexus-frontiers' ? Math.max(0, Math.min(6, parseInt(val('stNfGoalK', '3'), 10) || 0)) : undefined,
     nfGoalClear: studioSelTemplate === 'nexus-frontiers' ? val('stNfGoalX', 'on') !== 'off' : undefined,
@@ -5223,7 +5227,7 @@ function studioConfigOf(c) {
   const o = { accent: c.accent, background: c.background, emblem: c.emblem, difficulty: c.difficulty,
            ordered: c.ordered, sound: c.sound, music: c.music, powerups: c.powerups, rivalName: c.rivalName, roundTime: c.roundTime };
   // Nexus Frontiers host pre-launch settings (saved with the game / session, so they carry through the season)
-  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfRoundMin = c.nfRoundMin || 10; o.nfAllowSolo = !!c.nfAllowSolo; o.nfStudioRule = c.nfStudioRule || 'strict'; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; o.nfGoalCorrect = c.nfGoalCorrect == null ? 20 : c.nfGoalCorrect; o.nfGoalKeys = c.nfGoalKeys == null ? 3 : c.nfGoalKeys; o.nfGoalClear = c.nfGoalClear !== false; o.nfBankCap = c.nfBankCap || 2000; o.nfAwardMinTeams = c.nfAwardMinTeams || 2; }
+  if (c.template === 'nexus-frontiers') { o.nfDifficulty = c.nfDifficulty || 'ranger'; o.nfRoundMin = c.nfRoundMin || 10; o.nfAllowSolo = !!c.nfAllowSolo; o.nfStudioRule = c.nfStudioRule || 'strict'; o.nfShop = c.nfShop !== false; if (c.nfMeter) o.nfMeter = c.nfMeter; o.nfLinkSec = c.nfLinkSec || 60; o.nfBossLinkSec = c.nfBossLinkSec || 30; o.nfGoalCorrect = c.nfGoalCorrect == null ? 20 : c.nfGoalCorrect; o.nfGoalKeys = c.nfGoalKeys == null ? 3 : c.nfGoalKeys; o.nfGoalClear = c.nfGoalClear !== false; o.nfBankCap = c.nfBankCap || 2000; o.nfAwardMinTeams = c.nfAwardMinTeams || 2; }
   return o;
 }
 
@@ -5503,6 +5507,10 @@ function renderStudio() {
           <select id="stNfMeter" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="0" selected>Auto — set by difficulty</option>${[4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (n) { return '<option value="' + n + '">' + n + ' answers</option>'; }).join('')}
           </select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">LINK SPRINT (FIELD RELOAD) TIMER</div>
+          <select id="stNfLinkSec" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[30, 45, 60, 75, 90, 120].map(function (n) { return '<option value="' + n + '"' + (n === 60 ? ' selected' : '') + '>' + n + ' seconds' + (n === 60 ? ' (default)' : '') + '</option>'; }).join('')}</select></div>
+        <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">BOSS LINK TIMER (ANSWERS POWER EACH MOVE)</div>
+          <select id="stNfBossSec" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">${[15, 20, 30, 45, 60].map(function (n) { return '<option value="' + n + '"' + (n === 30 ? ' selected' : '') + '>' + n + ' seconds' + (n === 30 ? ' (default)' : '') + '</option>'; }).join('')}</select></div>
         <div><div style="font-size:0.5rem;color:#ffd740;letter-spacing:0.12em;margin-bottom:4px">IN-ROUND FIELD SHOP</div>
           <select id="stNfShop" style="width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,215,64,0.35);border-radius:6px;padding:9px 8px;font-size:0.65rem;color:#e6f8ff">
             <option value="on" selected>On — spend the team bank on upgrades</option><option value="off">Off</option>
@@ -13310,6 +13318,7 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
   var key = String(p.get('nfs') || '').replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 50); if (!key) return;
   var sid = 'sess_xl_' + key, mins = Math.max(1, Math.min(10, parseInt(p.get('nfm'), 10) || 10));
   var diff = ['cadet', 'ranger', 'veteran', 'expert'].indexOf(p.get('nfd')) >= 0 ? p.get('nfd') : 'ranger';
+  var linkSec = Math.max(20, Math.min(180, parseInt(p.get('nfls'), 10) || 60)), bossSec = Math.max(10, Math.min(90, parseInt(p.get('nfbs'), 10) || 30));
   var solo = p.get('nfo') === '1', deckName = String(p.get('nfk') || '').trim().toLowerCase(), title = String(p.get('nft') || 'Nexus Frontiers').slice(0, 60);
   var started = Date.now(), done = false, lastReload = 0;
   function banner(t) {
@@ -13331,7 +13340,7 @@ body.pflx-in-iframe [class*="login"]:not([data-pflx-keep]) { display: none !impo
     var d = pickDeck();
     if (!d) { banner('⚠ NEXUS FRONTIERS NEEDS A KNOWLEDGE DECK<br><span style="font-size:0.65rem;color:#9bb8d6;letter-spacing:0.05em">Import a deck with 4+ cards on the Arena DECKS screen, then reopen this activity.</span>'); return null; }
     var sess = { id: sid, title: title, template: 'nexus-frontiers', deckId: d.id, xlive: key,
-      config: { nfDifficulty: diff, nfRoundMin: mins, nfAllowSolo: solo, nfStudioRule: 'strict', nfShop: true, nfGoalCorrect: 20, nfGoalKeys: 3, nfGoalClear: true, nfBankCap: 2000, nfAwardMinTeams: 2 },
+      config: { nfDifficulty: diff, nfRoundMin: mins, nfLinkSec: linkSec, nfBossLinkSec: bossSec, nfAllowSolo: solo, nfStudioRule: 'strict', nfShop: true, nfGoalCorrect: 20, nfGoalKeys: 3, nfGoalClear: true, nfBankCap: 2000, nfAwardMinTeams: 2 },
       launchedBy: (state.player && state.player.id) || 'host', launchedByName: (state.player && state.player.brand) || 'Host',
       startsAt: now, endsAt: now + (mins + 20) * 60000, createdAt: now };
     await baSessions.upsert(sess);
